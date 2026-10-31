@@ -7,8 +7,8 @@ services:
     env: node
     plan: starter
     region: oregon
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @grand-bandhan/shared run build && pnpm --filter @grand-bandhan/validation run build && pnpm --filter @grand-bandhan/database run prisma:generate && pnpm --filter @grand-bandhan/database run build && pnpm --filter @grand-bandhan/api run build
-    startCommand: node apps/api/dist/server.js
+    buildCommand: npm install -g pnpm@10.11.0 && pnpm install --frozen-lockfile && pnpm run build:api
+    startCommand: pnpm run start:api
     healthCheckPath: /health
     autoDeploy: true
     envVars:
