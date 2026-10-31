@@ -67,7 +67,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
           // Verify token validity by calling /me in background
           try {
             const freshUser = await authService.getMe();
-            set({ user: freshUser, role: freshUser.role });
+            if (freshUser) {
+              set({ user: freshUser, role: freshUser.role });
+            }
           } catch (err) {
             console.warn('Background profile refresh failed:', err);
           }
@@ -82,7 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           });
         }
       } catch (err: any) {
-        console.error('Failed to hydrate auth session:', err);
+        console.warn('Could not restore Keystore session:', err);
         set({
           user: null,
           role: null,

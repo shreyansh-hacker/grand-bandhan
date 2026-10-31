@@ -1,10 +1,4 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
-import { UserRole } from '@grand-bandhan/shared';
-
-// Auth Stack
-export type AuthStackParamList = {
-  Login: undefined;
-};
 
 // Common Screens Params
 export type CommonScreensParamList = {
@@ -70,7 +64,7 @@ export type ClientTabParamList = {
 
 // Root Navigator Param List
 export type RootStackParamList = {
-  Auth: NavigatorScreenParams<AuthStackParamList>;
+  Login: undefined;
   SuperAdminRoot: NavigatorScreenParams<AdminTabParamList>;
   AgencyAdminRoot: NavigatorScreenParams<AgencyTabParamList>;
   WeddingPlannerRoot: NavigatorScreenParams<PlannerTabParamList>;

@@ -18,11 +18,10 @@ export async function saveAuthSession(session: StoredAuthSession): Promise<boole
     await Keychain.setGenericPassword(session.user.id, payload, {
       service: KEYCHAIN_SERVICE,
       accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE,
     });
     return true;
   } catch (error) {
-    console.error('Failed to securely save session in Keystore:', error);
+    console.warn('Failed to securely save session in Keystore:', error);
     return false;
   }
 }
@@ -36,13 +35,24 @@ export async function getAuthSession(): Promise<StoredAuthSession | null> {
       service: KEYCHAIN_SERVICE,
     });
 
-    if (credentials && credentials.password) {
-      const parsed: StoredAuthSession = JSON.parse(credentials.password);
-      return parsed;
+    if (
+      credentials &&
+      typeof credentials === 'object' &&
+      credentials.password &&
+      typeof credentials.password === 'string'
+    ) {
+      try {
+        const parsed: StoredAuthSession = JSON.parse(credentials.password);
+        return parsed;
+      } catch (parseErr) {
+        console.warn('Stored session payload is corrupted, clearing...');
+        await clearAuthSession();
+        return null;
+      }
     }
     return null;
   } catch (error) {
-    console.error('Failed to read session from Keystore:', error);
+    console.warn('No existing Keystore credentials found or read error:', error);
     return null;
   }
 }
@@ -51,8 +61,12 @@ export async function getAuthSession(): Promise<StoredAuthSession | null> {
  * Retrieves the raw access token for API requests
  */
 export async function getStoredAccessToken(): Promise<string | null> {
-  const session = await getAuthSession();
-  return session ? session.accessToken : null;
+  try {
+    const session = await getAuthSession();
+    return session ? session.accessToken : null;
+  } catch (err) {
+    return null;
+  }
 }
 
 /**
@@ -75,7 +89,7 @@ export async function clearAuthSession(): Promise<boolean> {
     await Keychain.resetGenericPassword({ service: KEYCHAIN_SERVICE });
     return true;
   } catch (error) {
-    console.error('Failed to clear session from Keystore:', error);
+    console.warn('Failed to clear session from Keystore:', error);
     return false;
   }
 }
