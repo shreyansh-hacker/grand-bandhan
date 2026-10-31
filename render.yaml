@@ -5,17 +5,15 @@ services:
   - type: web
     name: grand-bandhan-api
     env: node
-    plan: starter
+    plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@10.11.0 && pnpm install --frozen-lockfile && pnpm run build:api
+    buildCommand: pnpm install && pnpm run build:api
     startCommand: pnpm run start:api
     healthCheckPath: /health
     autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 4000
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_URL_UNPOOLED
