@@ -179,3 +179,107 @@ export async function respondToProposal(req: Request, res: Response): Promise<vo
     res.status(500).json({ success: false, message: err.message });
   }
 }
+
+/**
+ * List proposals for agency or filtered by enquiryId
+ */
+export async function listProposals(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+    const agencyId = req.user?.agencyId;
+    const enquiryId = req.query.enquiryId as string;
+
+    const where: any = {};
+    if (!isSuperAdmin) {
+      if (!agencyId) {
+        res.status(403).json({ success: false, message: 'Agency context missing' });
+        return;
+      }
+      where.agencyId = agencyId;
+    }
+    if (enquiryId) {
+      where.enquiryId = enquiryId;
+    }
+
+    const proposals = await prisma.weddingProposal.findMany({
+      where,
+      include: {
+        enquiry: {
+          select: {
+            id: true,
+            customerName: true,
+            email: true,
+            phone: true,
+            weddingDate: true,
+            location: true,
+            guestCount: true,
+            referenceNumber: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({ success: true, data: proposals });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Update proposal terms or budget
+ */
+export async function updateProposal(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+    const agencyId = req.user?.agencyId;
+
+    const existing = await prisma.weddingProposal.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Proposal not found' });
+      return;
+    }
+
+    if (!isSuperAdmin && existing.agencyId !== agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    const {
+      packageType,
+      estimatedBudget,
+      proposedServices,
+      planningScope,
+      termsContent,
+      paymentMilestones,
+      validUntil,
+      status,
+    } = req.body;
+
+    const updated = await prisma.weddingProposal.update({
+      where: { id },
+      data: {
+        ...(packageType && { packageType }),
+        ...(estimatedBudget !== undefined && { estimatedBudget: Number(estimatedBudget) }),
+        ...(proposedServices !== undefined && { proposedServices }),
+        ...(planningScope !== undefined && { planningScope }),
+        ...(termsContent !== undefined && { termsContent }),
+        ...(paymentMilestones !== undefined && { paymentMilestones }),
+        ...(validUntil && { validUntil: new Date(validUntil) }),
+        ...(status && { status }),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Proposal successfully updated.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}

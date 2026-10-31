@@ -376,3 +376,172 @@ export async function updateMyAgency(req: AuthenticatedRequest, res: Response): 
     res.status(500).json({ success: false, message: err.message });
   }
 }
+
+/**
+ * Agency Admin: List users belonging to this agency
+ */
+export async function listAgencyUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+    const agencyId = (isSuperAdmin && req.query.agencyId as string) || req.user?.agencyId;
+
+    if (!agencyId) {
+      res.status(400).json({ success: false, message: 'Agency context missing' });
+      return;
+    }
+
+    const users = await prisma.user.findMany({
+      where: { agencyId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        accountStatus: true,
+        isActive: true,
+        department: true,
+        specialization: true,
+        lastLoginAt: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({ success: true, data: users });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Agency Admin: Invite / Create internal user (Planner, Coordinator, Staff)
+ */
+export async function createAgencyUser(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+    const agencyId = (isSuperAdmin && req.body.agencyId) || req.user?.agencyId;
+
+    if (!agencyId) {
+      res.status(400).json({ success: false, message: 'Agency context missing' });
+      return;
+    }
+
+    const { name, email, password, role, phone, department, specialization } = req.body;
+
+    if (!name || !email || !password) {
+      res.status(400).json({ success: false, message: 'Name, email and password are required' });
+      return;
+    }
+
+    // Prohibit regular agency admins from creating Super Admins
+    const targetRole = role || UserRole.COORDINATOR;
+    if (targetRole === UserRole.SUPER_ADMIN && !isSuperAdmin) {
+      res.status(403).json({ success: false, message: 'Cannot assign Super Admin role' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      res.status(400).json({ success: false, message: 'A user with this email already exists' });
+      return;
+    }
+
+    const passwordHash = await hashPassword(password);
+    const user = await prisma.user.create({
+      data: {
+        agencyId,
+        name: name.trim(),
+        email: normalizedEmail,
+        passwordHash,
+        role: targetRole,
+        phone: phone || null,
+        department: department || null,
+        specialization: specialization || null,
+        accountStatus: AccountStatus.ACTIVE,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        accountStatus: true,
+        department: true,
+        specialization: true,
+        createdAt: true,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: user,
+      message: `User ${user.name} (${user.role}) successfully created in agency.`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Agency Admin: Update agency user role or status
+ */
+export async function updateAgencyUser(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.params.userId as string;
+  try {
+    const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+    const agencyId = req.user?.agencyId;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    if (!isSuperAdmin && user.agencyId !== agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    const { role, accountStatus, isActive, name, phone, department, specialization } = req.body;
+
+    if (role === UserRole.SUPER_ADMIN && !isSuperAdmin) {
+      res.status(403).json({ success: false, message: 'Cannot assign Super Admin role' });
+      return;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(role && { role }),
+        ...(accountStatus && { accountStatus }),
+        ...(isActive !== undefined && { isActive }),
+        ...(name && { name: name.trim() }),
+        ...(phone !== undefined && { phone }),
+        ...(department !== undefined && { department }),
+        ...(specialization !== undefined && { specialization }),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        accountStatus: true,
+        isActive: true,
+        department: true,
+        specialization: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'User details updated successfully.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}

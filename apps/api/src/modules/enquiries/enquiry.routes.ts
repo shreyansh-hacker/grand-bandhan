@@ -9,6 +9,7 @@ import {
   updateEnquiryStatus,
   scheduleConsultation,
 } from './enquiry.controller';
+import { convertEnquiryToWedding } from '../weddings/wedding.controller';
 import { authenticate } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
 import { UserRole } from '@grand-bandhan/shared';
@@ -40,6 +41,12 @@ router.post(
   authenticate,
   requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
   scheduleConsultation
+);
+router.post(
+  '/:id/convert',
+  authenticate,
+  requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
+  convertEnquiryToWedding
 );
 
 export default router;

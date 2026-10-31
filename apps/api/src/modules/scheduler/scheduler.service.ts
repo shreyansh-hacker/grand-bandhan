@@ -89,6 +89,19 @@ export class ProductionSchedulerService {
       // 8. Vendor Service Verification Day-of Checkpoints
       result.vendorVerifications = await this.checkVendorVerifications(now);
 
+      const totalDispatched =
+        result.paymentDueReminders +
+        result.paymentOverdueReminders +
+        result.taskDeadlineReminders +
+        result.taskOverdueReminders +
+        result.weddingReminders +
+        result.eventReminders +
+        result.vendorVerifications;
+
+      if (totalDispatched > 0 || result.retriesProcessed > 0) {
+        console.log(`⏱️ [Scheduler] Sweep completed: ${totalDispatched} reminders dispatched, ${result.retriesProcessed} retries processed.`);
+      }
+
       return result;
     } catch (err: any) {
       console.error('[Scheduler] Error during scheduled check sweep:', err.message);
@@ -100,7 +113,8 @@ export class ProductionSchedulerService {
 
   /**
    * Atomically claims a scheduled reminder record in Neon DB.
-   * Returns true if successfully claimed, false if already processed or claimed by another worker.
+   * Performs an efficient pre-check to eliminate routine P2002 constraint error noise in logs,
+   * while preserving database-level uniqueness as the ultimate concurrency safeguard across instances.
    */
   private static async claimReminder(
     reminderType: string,
@@ -110,6 +124,23 @@ export class ProductionSchedulerService {
     metadata?: any
   ): Promise<boolean> {
     try {
+      // 1. Efficient pre-check to eliminate routine constraint collision logs
+      const existing = await prisma.scheduledReminder.findUnique({
+        where: {
+          reminderType_entityType_entityId: {
+            reminderType,
+            entityType,
+            entityId,
+          },
+        },
+        select: { id: true, status: true },
+      });
+
+      if (existing) {
+        return false;
+      }
+
+      // 2. Atomic insert: DB unique constraint serves as final concurrency safeguard
       const scheduled = await prisma.scheduledReminder.create({
         data: {
           agencyId: agencyId || null,
@@ -123,7 +154,7 @@ export class ProductionSchedulerService {
       });
       return !!scheduled;
     } catch (err: any) {
-      // Unique constraint violation P2002 means reminder was already claimed
+      // Unique constraint violation P2002 means reminder was already claimed concurrently
       if (err.code === 'P2002') {
         return false;
       }

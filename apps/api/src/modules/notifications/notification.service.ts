@@ -176,7 +176,7 @@ export class NotificationService {
    * Re-dispatches a single failed or queued notification record safely.
    * Reconstructs the exact email from the stored event and payload.
    */
-  public static async dispatchSingleLog(logId: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  public static async dispatchSingleLog(logId: string): Promise<{ success: boolean; messageId?: string; error?: string; alreadyClaimed?: boolean }> {
     const log = await prisma.emailLog.findUnique({ where: { id: logId } });
     if (!log) {
       return { success: false, error: 'Notification log not found' };
@@ -186,16 +186,26 @@ export class NotificationService {
       return { success: false, error: `Maximum retry limit (${log.maxRetries}) reached.` };
     }
 
-    try {
-      // Mark as PROCESSING
-      await prisma.emailLog.update({
-        where: { id: logId },
-        data: {
-          status: EmailDeliveryStatus.PROCESSING,
-          retryCount: { increment: 1 },
-        },
-      });
+    // Atomic conditional claim: transition from FAILED or QUEUED to PROCESSING in Neon DB.
+    // Only the single worker whose update query successfully matches and modifies the row proceeds.
+    const claimResult = await prisma.emailLog.updateMany({
+      where: {
+        id: logId,
+        status: { in: [EmailDeliveryStatus.FAILED, EmailDeliveryStatus.QUEUED] },
+        retryCount: { lt: log.maxRetries },
+      },
+      data: {
+        status: EmailDeliveryStatus.PROCESSING,
+        retryCount: { increment: 1 },
+      },
+    });
 
+    if (claimResult.count === 0) {
+      // Already claimed by a concurrent worker, reached max retries, or already delivered
+      return { success: true, alreadyClaimed: true };
+    }
+
+    try {
       const eventEnum = (log.eventType as NotificationEvent) || NotificationEvent.PROFILE_UPDATED;
       const payloadData = (log.payload as Record<string, any>) || {};
       const template = renderEmailTemplate(eventEnum, payloadData);
@@ -215,8 +225,9 @@ export class NotificationService {
 
       return { success: true, messageId: result.messageId };
     } catch (err: any) {
-      const nextBackoffMs = Math.pow(2, log.retryCount) * 60 * 1000;
-      const nextRetryAt = log.retryCount + 1 < log.maxRetries ? new Date(Date.now() + nextBackoffMs) : null;
+      const updatedRetryCount = log.retryCount + 1;
+      const nextBackoffMs = Math.pow(2, updatedRetryCount) * 60 * 1000;
+      const nextRetryAt = updatedRetryCount < log.maxRetries ? new Date(Date.now() + nextBackoffMs) : null;
 
       await prisma.emailLog.update({
         where: { id: logId },
@@ -225,7 +236,9 @@ export class NotificationService {
           errorMessage: err.message,
           nextRetryAt,
         },
-      }).catch(() => {});
+      }).catch((dbErr: any) => {
+        console.warn(`[NotificationService] Error writing retry failure for ${logId}:`, dbErr.message);
+      });
 
       return { success: false, error: err.message };
     }
@@ -233,9 +246,27 @@ export class NotificationService {
 
   /**
    * Scans for failed notification logs eligible for bounded retry and re-dispatches them.
+   * Atomically reclaims orphaned PROCESSING rows older than 5 minutes from unexpected worker terminations.
    */
   public static async processPendingRetries(limit = 10): Promise<{ processed: number; succeeded: number; failed: number }> {
     const now = new Date();
+
+    // 1. Recover orphaned PROCESSING rows older than 5 minutes (e.g. from server/container crash during execution)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    await prisma.emailLog.updateMany({
+      where: {
+        status: EmailDeliveryStatus.PROCESSING,
+        updatedAt: { lt: fiveMinutesAgo },
+        retryCount: { lt: 3 },
+      },
+      data: {
+        status: EmailDeliveryStatus.FAILED,
+        errorMessage: 'Processing worker timed out or restarted unexpectedly; auto-recovered for retry',
+        nextRetryAt: now,
+      },
+    }).catch(() => {});
+
+    // 2. Select eligible failed logs
     const pendingLogs = await prisma.emailLog.findMany({
       where: {
         status: EmailDeliveryStatus.FAILED,
@@ -251,6 +282,9 @@ export class NotificationService {
 
     for (const log of pendingLogs) {
       const result = await this.dispatchSingleLog(log.id);
+      if (result.alreadyClaimed) {
+        continue;
+      }
       if (result.success) {
         succeeded++;
       } else {

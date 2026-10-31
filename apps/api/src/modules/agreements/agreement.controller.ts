@@ -234,3 +234,44 @@ export async function signAgreement(req: Request, res: Response): Promise<void> 
     res.status(500).json({ success: false, message: err.message });
   }
 }
+
+/**
+ * Update agreement terms or content before client signature
+ */
+export async function updateAgreementTerms(req: Request, res: Response): Promise<void> {
+  const weddingId = String(req.params.weddingId);
+  try {
+    const { termsContent } = req.body;
+    if (!termsContent || typeof termsContent !== 'string') {
+      res.status(400).json({ success: false, message: 'termsContent is required' });
+      return;
+    }
+
+    const agreement = await prisma.digitalAgreement.findUnique({
+      where: { weddingId },
+    });
+
+    if (!agreement) {
+      res.status(404).json({ success: false, message: 'Agreement not found' });
+      return;
+    }
+
+    if (agreement.status === AgreementStatus.SIGNED) {
+      res.status(400).json({ success: false, message: 'Cannot edit an agreement that has already been legally signed' });
+      return;
+    }
+
+    const updated = await prisma.digitalAgreement.update({
+      where: { weddingId },
+      data: { termsContent },
+    });
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Agreement terms updated successfully.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
