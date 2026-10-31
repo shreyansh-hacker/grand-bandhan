@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-navy: #0A2540;
+    --secondary-blue: #1E3A8A;
+    --accent-gold: #C9A96A;
+    --light-gold: #E6D6B8;
+    --bg-cream: #F7F4ED;
+    --dark-text: #1F2937;
+  }
+
+  body {
+    background-color: var(--bg-cream);
+    color: var(--dark-text);
+    font-family: var(--font-inter), sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-serif {
+    font-family: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Luxury Gold & Navy Utilities */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #C9A96A 0%, #E6D6B8 50%, #B28E46 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #C9A96A 0%, #F5E8CB 50%, #B28E46 100%);
+}
+
+.border-gold-glow {
+  border: 1px solid rgba(201, 169, 106, 0.4);
+  box-shadow: 0 0 15px -3px rgba(201, 169, 106, 0.2);
+}
+
+.navy-card {
+  background: linear-gradient(145deg, #0A2540 0%, #102A43 100%);
+  border: 1px solid rgba(201, 169, 106, 0.25);
+}
+
+.gold-badge {
+  background: rgba(201, 169, 106, 0.12);
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  color: #8C6C29;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F0EAE1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C9A96A;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B28E46;
+}
