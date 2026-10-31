@@ -28,7 +28,7 @@ The login portal (`/login`) includes **1-Click Role Evaluator Buttons** allowing
 | Role | Email | Password | Access Capabilities |
 |---|---|---|---|
 | **👑 Super Admin** | `admin@grandbandhan.com` | `GrandBandhan@2025` | Full cross-agency governance, database audits, and platform settings |
-| **📋 Wedding Planner** | `planner@grandbandhan.com` | `GrandBandhan@2025` | Lead intake, 3-vendor RFPs, 25+ task scheduling, and live timeline |
+| **📋 Wedding Planner** | `planner@grandbandhan.com` | `GrandBandhan@2025` | Lead intake, vendor selection RFPs, 25+ task scheduling, and live timeline |
 | **📍 On-ground Staff** | `coordinator@grandbandhan.com` | `GrandBandhan@2025` | Loading dock vendor arrivals, day-of run-sheets, service verifications |
 | **💍 Client / Couple** | `client@grandbandhan.com` | `GrandBandhan@2025` | Quotation decision matrix, digital canvas signing, service confirmations |
 | **🤝 Vendor Partner** | `caterer1@grandbandhan.com` | `GrandBandhan@2025` | Sealed quotation submission, plate pricing, gate check-in, dispute response |

@@ -34,12 +34,7 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center bg-navy-gradient text-white overflow-hidden py-24 px-4 sm:px-6 lg:px-8 border-b border-gold/40">
-        {/* Subtle Decorative Background Mesh */}
-        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#C9A96A_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-royal/30 blur-3xl pointer-events-none" />
-
+      <section className="relative min-h-[90vh] flex items-center justify-center bg-white text-navy-900 overflow-hidden py-24 px-4 sm:px-6 lg:px-8 border-b border-navy-100">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -51,22 +46,22 @@ export default function HomePage() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/40 bg-navy-950/70 backdrop-blur-md shadow-gold-glow"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full gold-badge shadow-sm"
           >
-            <Crown className="w-4 h-4 text-gold" />
-            <span className="text-xs uppercase tracking-[0.2em] text-gold font-semibold">
+            <Crown className="w-4 h-4 text-gold-dark" />
+            <span className="text-xs uppercase tracking-[0.2em] font-semibold">
               Imperial Wedding Operations Platform
             </span>
           </motion.div>
 
           {/* Majestic Heading */}
-          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-cream leading-[1.15]">
+          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-navy-900 leading-[1.15]">
             Where Imperial Grandeur Meets{' '}
             <span className="text-gold-gradient italic">Precision Operations</span>
           </h1>
 
           {/* Subheading */}
-          <p className="max-w-3xl mx-auto text-lg sm:text-xl text-cream-200 font-normal leading-relaxed">
+          <p className="max-w-3xl mx-auto text-lg sm:text-xl text-darkText/80 font-normal leading-relaxed">
             The definitive platform for luxury Indian weddings. Streamline multi-channel enquiries, compare vendor quotations side-by-side, auto-generate 25+ lead-time milestone plans, and verify wedding-day services in real-time.
           </p>
 
@@ -85,7 +80,7 @@ export default function HomePage() {
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
               <Link
                 href="/login"
-                className="w-full sm:w-auto px-8 py-4 rounded-xl border border-gold/50 text-gold hover:bg-gold/15 font-semibold text-base transition-colors flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl border border-navy-300 text-navy-900 hover:bg-navy-50 font-semibold text-base transition-colors flex items-center justify-center gap-2"
               >
                 <span>Agency & Client Portal</span>
                 <ArrowRight className="w-4 h-4" />
@@ -94,22 +89,22 @@ export default function HomePage() {
           </div>
 
           {/* Key Metrics Strip */}
-          <div className="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-gold/20 text-left">
+          <div className="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-navy-100 text-left">
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-gold">3-Vendor</div>
-              <p className="text-xs text-cream-300 mt-0.5">RFP Quotation Comparison</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">Vendor Selection </div>
+              <p className="text-xs text-darkText/70 mt-0.5">RFP Quotation Comparison</p>
             </div>
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-gold">25+ Tasks</div>
-              <p className="text-xs text-cream-300 mt-0.5">Instant Plan Auto-Generator</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">25+ Tasks</div>
+              <p className="text-xs text-darkText/70 mt-0.5">Instant Plan Auto-Generator</p>
             </div>
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-gold">Live Radar</div>
-              <p className="text-xs text-cream-300 mt-0.5">Day-of Vendor Arrival Gate</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">Live Radar</div>
+              <p className="text-xs text-darkText/70 mt-0.5">Day-of Vendor Arrival Gate</p>
             </div>
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-gold">Audited</div>
-              <p className="text-xs text-cream-300 mt-0.5">Service Verification Escrow</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">Audited</div>
+              <p className="text-xs text-darkText/70 mt-0.5">Service Verification Escrow</p>
             </div>
           </div>
         </motion.div>
