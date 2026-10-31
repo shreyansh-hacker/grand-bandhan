@@ -10,15 +10,23 @@ import { NotificationEvent } from '../notifications/notification.types';
 export async function listWeddings(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+    const isClient = req.user?.role === UserRole.CLIENT;
     const agencyId = req.user?.agencyId;
 
     const where: any = {};
     if (!isSuperAdmin) {
-      if (!agencyId) {
-        res.status(403).json({ success: false, message: 'Agency context missing' });
-        return;
+      if (isClient) {
+        where.OR = [
+          { clientId: req.user?.userId },
+          { clientEmail: req.user?.email },
+        ];
+      } else {
+        if (!agencyId) {
+          res.status(403).json({ success: false, message: 'Agency context missing' });
+          return;
+        }
+        where.agencyId = agencyId;
       }
-      where.agencyId = agencyId;
     }
 
     const weddings = await prisma.wedding.findMany({
@@ -88,7 +96,10 @@ export async function getWeddingById(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (req.user?.role !== UserRole.SUPER_ADMIN && wedding.agencyId !== req.user?.agencyId) {
+    const isClient = req.user?.role === UserRole.CLIENT;
+    const isOwnerClient = isClient && (wedding.clientId === req.user?.userId || wedding.clientEmail === req.user?.email);
+
+    if (req.user?.role !== UserRole.SUPER_ADMIN && wedding.agencyId !== req.user?.agencyId && !isOwnerClient) {
       res.status(403).json({ success: false, message: 'Access denied' });
       return;
     }

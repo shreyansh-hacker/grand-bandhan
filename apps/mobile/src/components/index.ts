@@ -7,3 +7,5 @@ export * from './EmptyState';
 export * from './ErrorView';
 export * from './ImperialHeader';
 export * from './ImperialLogo';
+export * from './ServiceVerificationModal';
+export * from './NotificationModal';

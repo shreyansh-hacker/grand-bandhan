@@ -48,6 +48,11 @@ export async function createOAuthHandoffTicket(req: AuthenticatedRequest, res: R
  * GET /api/email/oauth/start
  */
 export async function startOAuth(req: AuthenticatedRequest, res: Response): Promise<void> {
+  // Security headers: Prevent token/ticket caching and referrer leakage to third parties
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+
   try {
     let userId = req.user?.userId;
     let agencyId = req.user?.agencyId;

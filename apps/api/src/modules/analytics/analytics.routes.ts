@@ -13,4 +13,11 @@ router.get(
   getExecutiveAnalytics
 );
 
+router.get(
+  '/overview',
+  authenticate,
+  requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
+  getExecutiveAnalytics
+);
+
 export default router;

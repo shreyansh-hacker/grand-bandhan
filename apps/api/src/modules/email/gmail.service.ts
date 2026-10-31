@@ -34,6 +34,9 @@ export class GmailService {
     userId: string,
     agencyId?: string
   ): Promise<{ ticket: string; expiresAt: Date }> {
+    // Opportunistic cleanup of expired states
+    await this.cleanupExpiredStates().catch(() => {});
+
     const ticket = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 60 * 1000); // 60-second validity
 
@@ -50,8 +53,8 @@ export class GmailService {
   }
 
   /**
-   * Validates and single-use consumes a handoff ticket from Neon PostgreSQL.
-   * Immediately deletes the ticket to prevent replay attacks.
+   * Atomically validates and consumes a handoff ticket from Neon PostgreSQL in a transaction.
+   * Guarantees single-use consumption and eliminates race condition windows.
    */
   public static async validateAndConsumeHandoffTicket(
     ticket: string
@@ -61,28 +64,30 @@ export class GmailService {
     }
 
     const stateKey = `handoff_${ticket}`;
-    const record = await prisma.oAuthState.findUnique({
-      where: { state: stateKey },
-    });
+    try {
+      // Transactional atomic consumption in Neon PostgreSQL
+      const record = await prisma.$transaction(async (tx) => {
+        const row = await tx.oAuthState.findUnique({
+          where: { state: stateKey },
+        });
+        if (!row) return null;
+        await tx.oAuthState.delete({
+          where: { id: row.id },
+        });
+        return row;
+      });
 
-    if (!record) {
+      if (!record || new Date() > record.expiresAt) {
+        return null;
+      }
+
+      return {
+        userId: record.userId,
+        agencyId: record.agencyId,
+      };
+    } catch {
       return null;
     }
-
-    // Single-use: delete immediately to eliminate replay windows
-    await prisma.oAuthState.delete({
-      where: { id: record.id },
-    }).catch(() => {});
-
-    // Check expiration
-    if (new Date() > record.expiresAt) {
-      return null;
-    }
-
-    return {
-      userId: record.userId,
-      agencyId: record.agencyId,
-    };
   }
 
   /**
@@ -97,6 +102,9 @@ export class GmailService {
     if (!envValidation.isValid) {
       throw new Error(`Google OAuth environment variables missing: ${envValidation.missing.join(', ')}`);
     }
+
+    // Opportunistic cleanup of expired states
+    await this.cleanupExpiredStates().catch(() => {});
 
     // 1. Generate CSRF state nonce
     const state = crypto.randomBytes(32).toString('hex');
@@ -130,9 +138,9 @@ export class GmailService {
   }
 
   /**
-   * Validates OAuth state nonce against Neon PostgreSQL (CSRF Prevention)
-   * and consumes the nonce so it cannot be reused.
-   * Returns bound admin and agency context if valid.
+   * Atomically validates and consumes the OAuth state nonce against Neon PostgreSQL in a transaction.
+   * Guarantees single-use consumption and eliminates CSRF replay attacks.
+   * Returns bound admin and agency context if valid and non-expired.
    */
   public static async validateAndConsumeState(state: string): Promise<OAuthStateRecord | null> {
     if (!state || typeof state !== 'string') {
@@ -144,25 +152,43 @@ export class GmailService {
       return null;
     }
 
-    const record = await prisma.oAuthState.findUnique({
-      where: { state },
-    });
+    try {
+      // Transactional atomic consumption in Neon PostgreSQL
+      const record = await prisma.$transaction(async (tx) => {
+        const row = await tx.oAuthState.findUnique({
+          where: { state },
+        });
+        if (!row) return null;
+        await tx.oAuthState.delete({
+          where: { id: row.id },
+        });
+        return row;
+      });
 
-    if (!record) {
+      if (!record || new Date() > record.expiresAt) {
+        return null;
+      }
+
+      return record;
+    } catch {
       return null;
     }
+  }
 
-    // Delete state immediately to prevent replay attacks
-    await prisma.oAuthState.delete({
-      where: { id: record.id },
-    }).catch(() => {});
-
-    // Check expiration
-    if (new Date() > record.expiresAt) {
-      return null;
+  /**
+   * Cleans up expired OAuth states and abandoned handoff tickets from Neon DB.
+   */
+  public static async cleanupExpiredStates(): Promise<number> {
+    try {
+      const result = await prisma.oAuthState.deleteMany({
+        where: {
+          expiresAt: { lt: new Date() },
+        },
+      });
+      return result.count;
+    } catch {
+      return 0;
     }
-
-    return record;
   }
 
   /**

@@ -3,20 +3,13 @@ import { View, Text, StyleSheet, StatusBar, ActivityIndicator } from 'react-nati
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './src/api/queryClient';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { useAuthStore } from './src/store/authStore';
-import { colors, typography, shadows } from './src/theme';
-import { ImperialLogo } from './src/components';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 60 * 2,
-    },
-  },
-});
+import { colors, typography } from './src/theme';
+import { ImperialLogo, ServiceVerificationModal } from './src/components';
+import { useVerificationManager } from './src/hooks';
 
 function HydrationSplash() {
   return (
@@ -30,7 +23,8 @@ function HydrationSplash() {
 }
 
 function MainAppContent() {
-  const { isHydrating, hydrate } = useAuthStore();
+  const { isHydrating, hydrate, isAuthenticated } = useAuthStore();
+  const { activeVerification, isOpen, closeModal } = useVerificationManager();
 
   useEffect(() => {
     hydrate();
@@ -43,6 +37,13 @@ function MainAppContent() {
   return (
     <NavigationContainer>
       <RootNavigator />
+      {isAuthenticated && (
+        <ServiceVerificationModal
+          visible={isOpen}
+          verification={activeVerification}
+          onClose={closeModal}
+        />
+      )}
     </NavigationContainer>
   );
 }
