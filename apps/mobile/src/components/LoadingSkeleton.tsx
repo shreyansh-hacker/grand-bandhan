@@ -13,6 +13,7 @@ export interface LoadingSkeletonProps {
   width?: number | string;
   height?: number;
   borderRadiusValue?: number;
+  count?: number;
   style?: ViewStyle;
 }
 
@@ -20,6 +21,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   width = '100%',
   height = 20,
   borderRadiusValue = borderRadius.sm,
+  count = 1,
   style,
 }) => {
   const opacity = useSharedValue(0.3);
@@ -35,6 +37,28 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
+
+  if (count > 1) {
+    return (
+      <View style={{ gap: spacing.sm }}>
+        {Array.from({ length: count }).map((_, idx) => (
+          <Animated.View
+            key={idx}
+            style={[
+              styles.skeleton,
+              {
+                width: width as any,
+                height,
+                borderRadius: borderRadiusValue,
+              },
+              animatedStyle,
+              style,
+            ]}
+          />
+        ))}
+      </View>
+    );
+  }
 
   return (
     <Animated.View
@@ -67,7 +91,7 @@ export const CardSkeleton: React.FC<{ style?: ViewStyle }> = ({ style }) => {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E2D9C8',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   cardContainer: {
     backgroundColor: colors.white,

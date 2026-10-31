@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { initSocketIO } from './socket';
+import { startVerificationScheduler } from './modules/verifications/verification.scheduler';
 import { checkDatabaseConnection, isUsingPostgres } from './db';
 import { seedDemoDataIfEmpty } from './seed-data';
 
@@ -161,6 +162,8 @@ async function startServer() {
   server.listen(env.PORT, () => {
     console.log(`👑 Grand Bandhan Imperial API Server running on port ${env.PORT}`);
     console.log(`🔗 API Base URL: ${env.API_URL}`);
+    // Start persistent verification background worker
+    startVerificationScheduler(60000);
   });
 }
 

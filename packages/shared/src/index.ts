@@ -33,6 +33,7 @@ export enum ProposalStatus {
 
 export enum EmailDeliveryStatus {
   QUEUED = 'QUEUED',
+  PROCESSING = 'PROCESSING',
   SENT = 'SENT',
   DELIVERED = 'DELIVERED',
   FAILED = 'FAILED',

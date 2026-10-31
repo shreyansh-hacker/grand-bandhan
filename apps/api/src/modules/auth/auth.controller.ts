@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { prisma } from '@grand-bandhan/database';
 import { hashPassword, comparePassword } from '../../utils/hash';
@@ -5,6 +6,26 @@ import { generateAccessToken, generateRefreshToken, generateSecurePortalToken, g
 import { loginSchema, registerSchema } from '@grand-bandhan/validation';
 import { UserRole, AgencyStatus, AccountStatus } from '@grand-bandhan/shared';
 import { AuthenticatedRequest } from '../../middleware/auth';
+import { NotificationService } from '../notifications/notification.service';
+import { NotificationEvent } from '../notifications/notification.types';
+import { env } from '../../config/env';
+
+// In-memory rate limiting map for password reset requests
+const resetRequestLimits = new Map<string, { count: number; resetAt: number }>();
+
+function checkResetRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const entry = resetRequestLimits.get(identifier);
+  if (!entry || now > entry.resetAt) {
+    resetRequestLimits.set(identifier, { count: 1, resetAt: now + 15 * 60 * 1000 });
+    return true;
+  }
+  if (entry.count >= 5) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
 
 export async function login(req: Request, res: Response): Promise<void> {
   try {
@@ -305,12 +326,54 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
-    if (user) {
-      const resetToken = generatePasswordResetToken(user.id, user.email);
-      console.log(`[Password Reset] Dispatched reset instructions for user: ${user.email}`);
-      // When email service is wired, send branded template; in development, token is safely handled without logging.
+    // Rate-limit check per IP and email to prevent abuse
+    if (!checkResetRateLimit(`ip_${clientIp}`) || !checkResetRateLimit(`email_${normalizedEmail}`)) {
+      res.status(429).json({ success: false, message: 'Too many password reset requests. Please try again later.' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: { agency: true },
+    });
+
+    if (user && user.accountStatus !== AccountStatus.SUSPENDED) {
+      // 1. Generate 32-byte cryptographically secure random token
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      // 2. Invalidate any prior unused reset tokens for this user
+      await prisma.passwordResetToken.deleteMany({
+        where: { userId: user.id },
+      });
+
+      // 3. Store only the secure hash with 1-hour expiry
+      await prisma.passwordResetToken.create({
+        data: {
+          tokenHash,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 60 minutes
+        },
+      });
+
+      // 4. Construct secure reset URL using configured frontend URL
+      const frontendBase = env.FRONTEND_URL || 'https://grand-bandhan-theta.vercel.app';
+      const resetUrl = `${frontendBase}/reset-password?token=${rawToken}`;
+
+      // 5. Emit Password Reset email through existing Gmail notification pipeline
+      await NotificationService.emit(NotificationEvent.PASSWORD_RESET, {
+        agencyId: user.agencyId,
+        recipientEmail: user.email,
+        recipientName: user.name,
+        data: {
+          name: user.name,
+          email: user.email,
+          resetUrl,
+          token: rawToken,
+        },
+      });
     }
 
     // Return uniform message to prevent account enumeration
@@ -336,28 +399,60 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const payload = verifyPasswordResetToken(token);
-    if (!payload) {
-      res.status(400).json({ success: false, message: 'Password reset link is invalid or has expired. Please request a new one.' });
-      return;
+    // 1. Hash incoming token and look up in PasswordResetToken table
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const resetRecord = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    let targetUserId: string | null = null;
+    let targetUserTokenVersion = 1;
+
+    if (resetRecord && !resetRecord.usedAt && resetRecord.expiresAt > new Date()) {
+      targetUserId = resetRecord.userId;
+      targetUserTokenVersion = resetRecord.user?.tokenVersion || 1;
+
+      // Mark token as consumed atomically
+      await prisma.passwordResetToken.update({
+        where: { id: resetRecord.id },
+        data: { usedAt: new Date() },
+      });
+    } else {
+      // Backward-compatible fallback for legacy JWT reset tokens
+      const jwtPayload = verifyPasswordResetToken(token);
+      if (jwtPayload) {
+        const user = await prisma.user.findUnique({ where: { id: jwtPayload.userId } });
+        if (user) {
+          targetUserId = user.id;
+          targetUserTokenVersion = user.tokenVersion || 1;
+        }
+      }
     }
 
-    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-    if (!user) {
-      res.status(404).json({ success: false, message: 'User account not found' });
+    if (!targetUserId) {
+      res.status(400).json({
+        success: false,
+        message: 'Password reset link is invalid or has expired. Please request a new one.',
+      });
       return;
     }
 
     const passwordHash = await hashPassword(newPassword);
 
-    // Update password and increment tokenVersion to invalidate existing refresh tokens
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        tokenVersion: (user.tokenVersion || 1) + 1,
-      },
-    });
+    // Atomically update password, increment tokenVersion (revoking active access), and purge refresh tokens
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          passwordHash,
+          tokenVersion: targetUserTokenVersion + 1,
+        },
+      }),
+      prisma.refreshToken.deleteMany({
+        where: { userId: targetUserId },
+      }),
+    ]);
 
     res.json({
       success: true,

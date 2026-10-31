@@ -4,7 +4,7 @@ import { colors, typography, spacing, borderRadius } from '../theme';
 
 export interface ImperialBadgeProps {
   label: string;
-  variant?: 'gold' | 'success' | 'warning' | 'danger' | 'navy' | 'neutral' | 'info';
+  variant?: 'gold' | 'success' | 'warning' | 'danger' | 'navy' | 'neutral' | 'info' | 'default' | 'muted';
   size?: 'sm' | 'md';
   style?: ViewStyle;
   textStyle?: TextStyle;
@@ -30,7 +30,9 @@ export const ImperialBadge: React.FC<ImperialBadgeProps> = ({
       case 'info':
         return { bg: '#EFF6FF', text: '#1E40AF', border: '#BFDBFE' };
       case 'neutral':
+      case 'muted':
         return { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' };
+      case 'default':
       case 'gold':
       default:
         return { bg: '#FAF5EA', text: '#8D6E2E', border: '#E6D6B8' };

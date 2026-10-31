@@ -11,6 +11,8 @@ export function formatINR(amount: number | null | undefined): string {
   }).format(amount);
 }
 
+export const formatCurrency = formatINR;
+
 export function formatINRCompact(amount: number | null | undefined): string {
   if (amount == null || isNaN(amount)) return '₹0';
   if (amount >= 10000000) {

@@ -109,6 +109,35 @@ export async function registerAgency(req: Request, res: Response): Promise<void>
       },
     });
 
+    // Notify Super Admin of pending review
+    try {
+      const superAdmins = await prisma.user.findMany({
+        where: { role: UserRole.SUPER_ADMIN, isActive: true },
+        select: { email: true, name: true },
+      });
+      const superAdminEmails = superAdmins.length > 0
+        ? superAdmins.map((sa) => sa.email)
+        : [process.env.GMAIL_SENDER_EMAIL || 'admin@grandbandhan.com'];
+
+      for (const saEmail of superAdminEmails) {
+        await NotificationService.emit(NotificationEvent.AGENCY_SUBMITTED_FOR_APPROVAL, {
+          recipientEmail: saEmail,
+          recipientName: 'Imperial Super Admin',
+          recipientRole: 'SUPER_ADMIN',
+          data: {
+            agencyName: result.agency.name,
+            ownerName: result.agency.ownerName || result.user.name,
+            email: result.user.email,
+            phone: result.agency.contactPhone,
+            city: result.agency.city,
+            state: result.agency.state,
+          },
+        });
+      }
+    } catch (saErr: any) {
+      console.warn('[Agency] Could not notify Super Admin:', saErr.message);
+    }
+
     res.status(201).json({
       success: true,
       status: AgencyStatus.PENDING_APPROVAL,

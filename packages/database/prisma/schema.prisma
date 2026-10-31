@@ -43,6 +43,7 @@ enum ProposalStatus {
 
 enum EmailDeliveryStatus {
   QUEUED
+  PROCESSING
   SENT
   DELIVERED
   FAILED
@@ -265,6 +266,7 @@ model User {
   auditLogs            AuditLog[]
   uploadedFiles        StoredFile[]
   notificationPreference NotificationPreference?
+  passwordResetTokens  PasswordResetToken[]
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 }
@@ -661,10 +663,48 @@ model EmailLog {
   providerMessageId String?
   errorMessage      String?
   retryCount        Int                 @default(0)
+  maxRetries        Int                 @default(3)
+  nextRetryAt       DateTime?
+  payload           Json?
+  idempotencyKey    String?             @unique
   relatedEntityType String?
   relatedEntityId   String?
   sentAt            DateTime?
   createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now()) @updatedAt
+
+  @@index([status, nextRetryAt])
+  @@index([agencyId])
+  @@index([eventType])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model ScheduledReminder {
+  id           String    @id @default(uuid())
+  agencyId     String?
+  reminderType String
+  entityType   String
+  entityId     String
+  scheduledFor DateTime
+  sentAt       DateTime?
+  status       String    @default("PENDING")
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([reminderType, entityType, entityId])
+  @@index([status, scheduledFor])
 }
 
 model NotificationPreference {

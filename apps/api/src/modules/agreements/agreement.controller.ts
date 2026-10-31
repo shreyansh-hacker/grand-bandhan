@@ -23,6 +23,7 @@ export async function getAgreement(req: Request, res: Response): Promise<void> {
             budgetMin: true,
             budgetMax: true,
             packageType: true,
+            clientEmail: true,
             agency: { select: { name: true, contactEmail: true, contactPhone: true } },
           },
         },
@@ -40,6 +41,66 @@ export async function getAgreement(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function sendAgreement(req: Request, res: Response): Promise<void> {
+  const weddingId = String(req.params.weddingId);
+  try {
+    const agreement = await prisma.digitalAgreement.findUnique({
+      where: { weddingId },
+      include: {
+        wedding: {
+          select: {
+            id: true,
+            agencyId: true,
+            weddingCode: true,
+            brideName: true,
+            groomName: true,
+            clientEmail: true,
+            agency: { select: { name: true, contactEmail: true } },
+            assignedPlanner: { select: { name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    if (!agreement) {
+      res.status(404).json({ success: false, message: 'Agreement not found' });
+      return;
+    }
+
+    // Update status to SENT if draft
+    const updated = await prisma.digitalAgreement.update({
+      where: { weddingId },
+      data: {
+        status: agreement.status === AgreementStatus.SIGNED ? AgreementStatus.SIGNED : AgreementStatus.SENT,
+      },
+    });
+
+    // Dispatch AGREEMENT_SENT to client
+    if (agreement.wedding.clientEmail) {
+      await NotificationService.emit(NotificationEvent.AGREEMENT_SENT, {
+        agencyId: agreement.wedding.agencyId,
+        recipientEmail: agreement.wedding.clientEmail,
+        recipientName: `${agreement.wedding.brideName} & ${agreement.wedding.groomName}`,
+        recipientRole: 'CLIENT',
+        data: {
+          weddingCode: agreement.wedding.weddingCode,
+          coupleNames: `${agreement.wedding.brideName} & ${agreement.wedding.groomName}`,
+          agreementTitle: agreement.agreementNumber || 'Wedding Services Agreement',
+          agencyName: agreement.wedding.agency?.name,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Agreement dispatched to client for digital signature.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 export async function signAgreement(req: Request, res: Response): Promise<void> {
   const weddingId = String(req.params.weddingId);
   try {
@@ -47,7 +108,20 @@ export async function signAgreement(req: Request, res: Response): Promise<void> 
 
     const agreement = await prisma.digitalAgreement.findUnique({
       where: { weddingId },
-      include: { wedding: { select: { agencyId: true, weddingCode: true, brideName: true, groomName: true, status: true } } },
+      include: {
+        wedding: {
+          select: {
+            agencyId: true,
+            weddingCode: true,
+            brideName: true,
+            groomName: true,
+            clientEmail: true,
+            status: true,
+            agency: { select: { name: true, contactEmail: true } },
+            assignedPlanner: { select: { name: true, email: true } },
+          },
+        },
+      },
     });
 
     if (!agreement) {
@@ -100,16 +174,52 @@ export async function signAgreement(req: Request, res: Response): Promise<void> 
       return updated;
     });
 
-    await NotificationService.emit(NotificationEvent.AGREEMENT_SIGNED, {
-      agencyId: agreement.wedding.agencyId,
-      recipientEmail: 'concierge@grandbandhan.com',
-      recipientName: 'Agency Concierge Desk',
-      data: {
-        weddingCode: agreement.wedding.weddingCode,
-        signedByName: parsed.signedByName,
-        couple: `${agreement.wedding.brideName} & ${agreement.wedding.groomName}`,
-      },
-    });
+    const coupleNames = `${agreement.wedding.brideName} & ${agreement.wedding.groomName}`;
+
+    // 1. Notify Agency Admin (from real database relationship, not hardcoded concierge)
+    if (agreement.wedding.agency?.contactEmail) {
+      await NotificationService.emit(NotificationEvent.AGREEMENT_SIGNED, {
+        agencyId: agreement.wedding.agencyId,
+        recipientEmail: agreement.wedding.agency.contactEmail,
+        recipientName: `${agreement.wedding.agency.name || 'Agency'} Admin Desk`,
+        recipientRole: 'AGENCY_ADMIN',
+        data: {
+          weddingCode: agreement.wedding.weddingCode,
+          signedByName: parsed.signedByName,
+          couple: coupleNames,
+        },
+      });
+    }
+
+    // 2. Notify Assigned Planner if assigned
+    if (agreement.wedding.assignedPlanner?.email) {
+      await NotificationService.emit(NotificationEvent.AGREEMENT_SIGNED, {
+        agencyId: agreement.wedding.agencyId,
+        recipientEmail: agreement.wedding.assignedPlanner.email,
+        recipientName: agreement.wedding.assignedPlanner.name || 'Lead Planner',
+        recipientRole: 'WEDDING_PLANNER',
+        data: {
+          weddingCode: agreement.wedding.weddingCode,
+          signedByName: parsed.signedByName,
+          couple: coupleNames,
+        },
+      });
+    }
+
+    // 3. Send Signed Execution Receipt to the Couple / Client
+    if (agreement.wedding.clientEmail) {
+      await NotificationService.emit(NotificationEvent.AGREEMENT_SIGNED, {
+        agencyId: agreement.wedding.agencyId,
+        recipientEmail: agreement.wedding.clientEmail,
+        recipientName: coupleNames,
+        recipientRole: 'CLIENT',
+        data: {
+          weddingCode: agreement.wedding.weddingCode,
+          signedByName: parsed.signedByName,
+          couple: coupleNames,
+        },
+      });
+    }
 
     res.json({
       success: true,

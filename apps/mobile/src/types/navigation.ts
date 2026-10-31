@@ -21,7 +21,7 @@ export type AgencyTabParamList = {
   AgencyDashboard: undefined;
   AgencyEnquiries: undefined;
   AgencyWeddings: undefined;
-  AgencyStaff: undefined;
+  AgencySettlements: undefined;
   AgencyProfile: undefined;
 };
 
@@ -31,7 +31,6 @@ export type PlannerTabParamList = {
   PlannerWeddings: undefined;
   PlannerTasks: undefined;
   PlannerQuotations: undefined;
-  PlannerEvents: undefined;
   PlannerProfile: undefined;
 };
 
@@ -39,7 +38,6 @@ export type PlannerTabParamList = {
 export type CoordinatorTabParamList = {
   CoordinatorDashboard: undefined;
   CoordinatorTimeline: undefined;
-  CoordinatorArrivals: undefined;
   CoordinatorVerifications: undefined;
   CoordinatorProfile: undefined;
 };
@@ -56,9 +54,8 @@ export type VendorTabParamList = {
 // Client Tabs
 export type ClientTabParamList = {
   ClientDashboard: undefined;
-  ClientOverview: undefined;
   ClientQuotations: undefined;
-  ClientApprovals: undefined;
+  ClientPayments: undefined;
   ClientProfile: undefined;
 };
 

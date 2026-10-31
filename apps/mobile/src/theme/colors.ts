@@ -1,6 +1,7 @@
 /**
  * Grand Bandhan Luxury Imperial Theme Palette
- * Specifically curated for high-end wedding operations and royal aesthetic
+ * Specifically curated for high-end wedding operations, royal aesthetic,
+ * and high-fidelity Imperial Glassmorphism surfaces.
  */
 
 export const colors = {
@@ -27,6 +28,17 @@ export const colors = {
   surfaceDark: '#0A1E33',
   backgroundLight: '#F8F6F0',
   backgroundDark: '#061626',
+
+  // Imperial Glassmorphism Surface Tokens
+  glassNavy: 'rgba(10, 37, 64, 0.78)',
+  glassNavyDark: 'rgba(6, 24, 43, 0.90)',
+  glassWhite: 'rgba(255, 255, 255, 0.85)',
+  glassWhiteLight: 'rgba(255, 255, 255, 0.55)',
+  glassGold: 'rgba(201, 169, 106, 0.14)',
+  glassGoldDeep: 'rgba(201, 169, 106, 0.25)',
+  glassBorderGold: 'rgba(201, 169, 106, 0.40)',
+  glassBorderLight: 'rgba(255, 255, 255, 0.28)',
+  glassShine: 'rgba(255, 255, 255, 0.15)',
 
   // Typography
   textPrimary: '#1F2937',

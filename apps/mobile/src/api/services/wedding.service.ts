@@ -1,6 +1,6 @@
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../endpoints';
-import { Wedding } from '@grand-bandhan/shared';
+import { Wedding, WeddingPackageType, WeddingStatus } from '@grand-bandhan/shared';
 
 export interface WeddingSummary extends Partial<Wedding> {
   id: string;
@@ -14,8 +14,8 @@ export interface WeddingSummary extends Partial<Wedding> {
   guestCount: number;
   budgetMin?: number;
   budgetMax?: number;
-  packageType: any;
-  status: any;
+  packageType: WeddingPackageType;
+  status: WeddingStatus;
   agreementStatus?: string;
   tasksCount?: number;
   tasksCompleted?: number;
@@ -23,6 +23,20 @@ export interface WeddingSummary extends Partial<Wedding> {
   plannerName?: string;
   totalPaid?: number;
   totalAmount?: number;
+}
+
+export interface CreateWeddingInput {
+  brideName: string;
+  groomName: string;
+  primaryContactEmail: string;
+  primaryContactPhone: string;
+  weddingDate: string;
+  location: string;
+  guestCount: number;
+  budgetMin?: number;
+  budgetMax?: number;
+  packageType: WeddingPackageType;
+  assignedPlannerId?: string;
 }
 
 export const weddingService = {
@@ -36,6 +50,22 @@ export const weddingService = {
   async getById(id: string): Promise<any> {
     const response = await apiClient.get<{ success: boolean; data: any }>(
       ENDPOINTS.WEDDINGS.DETAIL(id)
+    );
+    return response.data.data;
+  },
+
+  async create(data: CreateWeddingInput): Promise<Wedding> {
+    const response = await apiClient.post<{ success: boolean; data: Wedding }>(
+      ENDPOINTS.WEDDINGS.CREATE,
+      data
+    );
+    return response.data.data;
+  },
+
+  async update(id: string, data: Partial<CreateWeddingInput>): Promise<Wedding> {
+    const response = await apiClient.patch<{ success: boolean; data: Wedding }>(
+      ENDPOINTS.WEDDINGS.UPDATE(id),
+      data
     );
     return response.data.data;
   },

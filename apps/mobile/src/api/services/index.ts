@@ -6,3 +6,6 @@ export * from './verification.service';
 export * from './task.service';
 export * from './event.service';
 export * from './payment.service';
+export * from './enquiry.service';
+export * from './quotation.service';
+export * from './vendor.service';

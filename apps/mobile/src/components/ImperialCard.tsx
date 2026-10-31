@@ -5,7 +5,7 @@ import { colors, spacing, borderRadius, shadows } from '../theme';
 export interface ImperialCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
-  variant?: 'elevated' | 'outlined' | 'goldAccent' | 'navySurface';
+  variant?: 'elevated' | 'outlined' | 'goldAccent' | 'navySurface' | 'glassNavy' | 'glassLight' | 'glassGold';
   padding?: keyof typeof spacing;
 }
 
@@ -49,6 +49,30 @@ export const ImperialCard: React.FC<ImperialCardProps> = ({
           backgroundColor: colors.imperialNavy,
           borderWidth: 1,
           borderColor: colors.borderGold,
+          ...shadows.md,
+        };
+      case 'glassNavy':
+        return {
+          ...base,
+          backgroundColor: colors.glassNavy,
+          borderWidth: 1,
+          borderColor: colors.glassBorderGold,
+          ...shadows.lg,
+        };
+      case 'glassLight':
+        return {
+          ...base,
+          backgroundColor: colors.glassWhite,
+          borderWidth: 1,
+          borderColor: colors.glassBorderLight,
+          ...shadows.sm,
+        };
+      case 'glassGold':
+        return {
+          ...base,
+          backgroundColor: colors.glassGold,
+          borderWidth: 1.5,
+          borderColor: colors.gold,
           ...shadows.md,
         };
       case 'elevated':

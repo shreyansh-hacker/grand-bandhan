@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { prisma } from '@grand-bandhan/database';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { UserRole } from '@grand-bandhan/shared';
+import { NotificationService } from './notification.service';
 
 export async function listNotificationLogs(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -40,23 +41,25 @@ export async function getNotificationHealth(req: AuthenticatedRequest, res: Resp
 
     const whereClause: any = isSuperAdmin ? {} : { agencyId };
 
-    const [total, sent, failed, queued] = await Promise.all([
+    const [total, sent, failed, queued, processing] = await Promise.all([
       prisma.emailLog.count({ where: whereClause }),
       prisma.emailLog.count({ where: { ...whereClause, status: 'SENT' } }),
       prisma.emailLog.count({ where: { ...whereClause, status: 'FAILED' } }),
       prisma.emailLog.count({ where: { ...whereClause, status: 'QUEUED' } }),
+      prisma.emailLog.count({ where: { ...whereClause, status: 'PROCESSING' } }),
     ]);
 
     res.json({
       success: true,
       data: {
-        provider: process.env.EMAIL_API_KEY ? 'Resend (Production)' : 'Sandbox Logger (Local Evaluation)',
+        provider: 'Gmail API OAuth 2.0 (Verified Primary)',
         totalLogged: total,
         metrics: {
           total,
           sent,
           failed,
           queued,
+          processing,
         },
       },
     });
@@ -74,25 +77,30 @@ export async function retryNotification(req: AuthenticatedRequest, res: Response
       return;
     }
 
-    // Tenant check
+    // Tenant check: Super Admin or same agency
     if (req.user?.role !== UserRole.SUPER_ADMIN && log.agencyId !== req.user?.agencyId) {
       res.status(403).json({ success: false, message: 'Unauthorized to retry this email' });
       return;
     }
 
-    const updated = await prisma.emailLog.update({
-      where: { id },
-      data: {
-        retryCount: { increment: 1 },
-        status: 'SENT',
-        sentAt: new Date(),
-        errorMessage: null,
-      },
-    });
+    // Actually dispatch the email via Gmail API / NotificationService
+    const dispatchResult = await NotificationService.dispatchSingleLog(id);
+
+    const updated = await prisma.emailLog.findUnique({ where: { id } });
+
+    if (!dispatchResult.success) {
+      res.status(500).json({
+        success: false,
+        message: `Retry dispatch failed: ${dispatchResult.error}`,
+        data: updated,
+      });
+      return;
+    }
 
     res.json({
       success: true,
-      message: `Notification ${id} marked for retry.`,
+      message: `Notification ${id} successfully re-dispatched via Gmail API.`,
+      providerMessageId: dispatchResult.messageId,
       data: updated,
     });
   } catch (err: any) {

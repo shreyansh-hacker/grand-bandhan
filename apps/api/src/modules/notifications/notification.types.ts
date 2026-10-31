@@ -27,6 +27,7 @@ export enum NotificationEvent {
   SERVICE_ISSUE_REPORTED = 'SERVICE_ISSUE_REPORTED',
   SERVICE_ISSUE_RESOLVED = 'SERVICE_ISSUE_RESOLVED',
   VENDOR_SETTLEMENT_COMPLETED = 'VENDOR_SETTLEMENT_COMPLETED',
+  PASSWORD_RESET = 'PASSWORD_RESET',
 }
 
 export interface NotificationPayload {
@@ -39,4 +40,5 @@ export interface NotificationPayload {
   data: Record<string, any>;
   relatedEntityType?: string;
   relatedEntityId?: string;
+  idempotencyKey?: string;
 }

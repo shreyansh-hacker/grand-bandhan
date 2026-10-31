@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ClientTabParamList } from '../types/navigation';
 import { ClientDashboardScreen } from '../screens/client/ClientDashboardScreen';
-import { ApiHealthScreen } from '../screens/common/ApiHealthScreen';
+import { QuotationsScreen, PaymentsScreen } from '../screens/business';
 import { ProfileScreen } from '../screens/common/ProfileScreen';
 import { colors, typography } from '../theme';
 
@@ -18,14 +18,14 @@ export const ClientNavigator: React.FC = () => {
           backgroundColor: colors.imperialNavyDark,
           borderTopColor: colors.borderGold,
           borderTopWidth: 1,
-          height: 60,
+          height: 62,
           paddingBottom: 8,
           paddingTop: 6,
         },
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: '#8E9CAE',
         tabBarLabelStyle: {
-          fontSize: typography.fontSize.xs,
+          fontSize: typography.fontSize.xs - 1,
           fontWeight: typography.fontWeight.semibold,
         },
       }}
@@ -34,16 +34,24 @@ export const ClientNavigator: React.FC = () => {
         name="ClientDashboard"
         component={ClientDashboardScreen}
         options={{
-          tabBarLabel: 'Wedding Lounge',
+          tabBarLabel: 'Lounge',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🏰</Text>,
         }}
       />
       <Tab.Screen
-        name="ClientOverview"
-        component={ApiHealthScreen}
+        name="ClientQuotations"
+        component={QuotationsScreen}
         options={{
-          tabBarLabel: 'System Status',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>⚡</Text>,
+          tabBarLabel: '3-Way Quotes',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>⚖️</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="ClientPayments"
+        component={PaymentsScreen}
+        options={{
+          tabBarLabel: 'Escrow',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>💰</Text>,
         }}
       />
       <Tab.Screen

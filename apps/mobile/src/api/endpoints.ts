@@ -22,6 +22,7 @@ export const ENDPOINTS = {
   ENQUIRIES: {
     LIST: '/api/enquiries',
     CREATE: '/api/enquiries',
+    PUBLIC_CREATE: '/api/enquiries/public',
     DETAIL: (id: string) => `/api/enquiries/${id}`,
     UPDATE_STATUS: (id: string) => `/api/enquiries/${id}/status`,
     ASSIGN: (id: string) => `/api/enquiries/${id}/assign`,
@@ -36,10 +37,11 @@ export const ENDPOINTS = {
 
   QUOTATIONS: {
     LIST: '/api/quotations',
-    REQUESTS: '/api/quotations/requests',
-    REQUEST_DETAIL: (id: string) => `/api/quotations/requests/${id}`,
-    SUBMIT: '/api/quotations',
-    SELECT: (id: string) => `/api/quotations/${id}/select`,
+    REQUESTS: '/api/quotations',
+    DETAIL: (id: string) => `/api/quotations/${id}`,
+    COMPARISON: (id: string) => `/api/quotations/${id}/comparison`,
+    SUBMIT: (requestId: string) => `/api/quotations/${requestId}/quotes`,
+    SELECT: (requestId: string) => `/api/quotations/${requestId}/select`,
   },
 
   TASKS: {
@@ -47,6 +49,7 @@ export const ENDPOINTS = {
     CREATE: '/api/tasks',
     UPDATE: (id: string) => `/api/tasks/${id}`,
     UPDATE_STATUS: (id: string) => `/api/tasks/${id}`,
+    REGENERATE: '/api/tasks/regenerate',
   },
 
   EVENTS: {
@@ -72,6 +75,12 @@ export const ENDPOINTS = {
   SETTLEMENTS: {
     LIST: '/api/settlements',
     CLOSE: (id: string) => `/api/settlements/${id}/close`,
+  },
+
+  VENDORS: {
+    LIST: '/api/vendors',
+    DETAIL: (id: string) => `/api/vendors/${id}`,
+    CREATE: '/api/vendors',
   },
 
   ANALYTICS: {

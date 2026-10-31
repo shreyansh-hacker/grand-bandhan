@@ -16,6 +16,8 @@ export interface SendGmailEmailParams {
   agencyId?: string;
   relatedEntityType?: string;
   relatedEntityId?: string;
+  logId?: string;
+  skipLogging?: boolean;
 }
 
 export interface GmailSendResult {

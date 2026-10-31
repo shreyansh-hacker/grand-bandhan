@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CoordinatorTabParamList } from '../types/navigation';
 import { CoordinatorDashboardScreen } from '../screens/coordinator/CoordinatorDashboardScreen';
-import { ApiHealthScreen } from '../screens/common/ApiHealthScreen';
+import { TimelineScreen, VerificationsScreen } from '../screens/business';
 import { ProfileScreen } from '../screens/common/ProfileScreen';
 import { colors, typography } from '../theme';
 
@@ -18,14 +18,14 @@ export const CoordinatorNavigator: React.FC = () => {
           backgroundColor: colors.imperialNavyDark,
           borderTopColor: colors.borderGold,
           borderTopWidth: 1,
-          height: 60,
+          height: 62,
           paddingBottom: 8,
           paddingTop: 6,
         },
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: '#8E9CAE',
         tabBarLabelStyle: {
-          fontSize: typography.fontSize.xs,
+          fontSize: typography.fontSize.xs - 1,
           fontWeight: typography.fontWeight.semibold,
         },
       }}
@@ -40,10 +40,18 @@ export const CoordinatorNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="CoordinatorTimeline"
-        component={ApiHealthScreen}
+        component={TimelineScreen}
         options={{
-          tabBarLabel: 'System Status',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>⚡</Text>,
+          tabBarLabel: 'Timeline & Radar',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>⏱️</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="CoordinatorVerifications"
+        component={VerificationsScreen}
+        options={{
+          tabBarLabel: 'Audits',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🔍</Text>,
         }}
       />
       <Tab.Screen

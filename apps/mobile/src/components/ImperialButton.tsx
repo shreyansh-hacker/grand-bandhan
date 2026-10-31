@@ -12,7 +12,7 @@ import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 export interface ImperialButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'gold';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   disabled?: boolean;
@@ -81,6 +81,7 @@ export const ImperialButton: React.FC<ImperialButtonProps> = ({
           backgroundColor: colors.danger,
         });
         break;
+      case 'gold':
       case 'primary':
       default:
         Object.assign(base, {
@@ -129,6 +130,7 @@ export const ImperialButton: React.FC<ImperialButtonProps> = ({
       case 'danger':
         Object.assign(base, { color: colors.white });
         break;
+      case 'gold':
       case 'primary':
       default:
         Object.assign(base, { color: colors.imperialNavyDark, fontWeight: typography.fontWeight.bold });
@@ -148,7 +150,7 @@ export const ImperialButton: React.FC<ImperialButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? colors.imperialNavyDark : colors.gold}
+          color={variant === 'primary' || variant === 'gold' ? colors.imperialNavyDark : colors.gold}
           style={styles.spinner}
         />
       ) : (
