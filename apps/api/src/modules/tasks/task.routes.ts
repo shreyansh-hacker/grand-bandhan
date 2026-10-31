@@ -7,6 +7,7 @@ const router = Router();
 router.get('/', authenticate, listTasks);
 router.post('/', authenticate, createTask);
 router.patch('/:id', authenticate, updateTask);
+router.patch('/:id/status', authenticate, updateTask);
 router.post('/regenerate', authenticate, regeneratePlan);
 
 export default router;

@@ -46,7 +46,7 @@ export const ENDPOINTS = {
     LIST: '/api/tasks',
     CREATE: '/api/tasks',
     UPDATE: (id: string) => `/api/tasks/${id}`,
-    UPDATE_STATUS: (id: string) => `/api/tasks/${id}/status`,
+    UPDATE_STATUS: (id: string) => `/api/tasks/${id}`,
   },
 
   EVENTS: {
@@ -76,5 +76,6 @@ export const ENDPOINTS = {
 
   ANALYTICS: {
     OVERVIEW: '/api/analytics/overview',
+    DASHBOARD: '/api/analytics/dashboard',
   },
 } as const;
