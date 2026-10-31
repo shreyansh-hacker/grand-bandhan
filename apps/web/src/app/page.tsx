@@ -94,21 +94,29 @@ export default function HomePage() {
           </div>
 
           {/* Key Metrics Strip */}
-          <div className="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-white/15 text-left">
-            <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">Vendor Selection </div>
+          <div className="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto border-t border-white/15 text-left">
+            <div className="p-2 sm:p-3">
+              <div className="font-serif text-xl sm:text-2xl lg:text-[26px] font-bold text-white whitespace-nowrap">
+                Vendor Selection
+              </div>
               <p className="text-xs text-cream/70 mt-0.5">RFP Quotation Comparison</p>
             </div>
-            <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">25+ Tasks</div>
+            <div className="p-2 sm:p-3">
+              <div className="font-serif text-xl sm:text-2xl lg:text-[26px] font-bold text-white whitespace-nowrap">
+                25+ Tasks
+              </div>
               <p className="text-xs text-cream/70 mt-0.5">Instant Plan Auto-Generator</p>
             </div>
-            <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">Live Radar</div>
+            <div className="p-2 sm:p-3">
+              <div className="font-serif text-xl sm:text-2xl lg:text-[26px] font-bold text-white whitespace-nowrap">
+                Live Radar
+              </div>
               <p className="text-xs text-cream/70 mt-0.5">Day-of Vendor Arrival Gate</p>
             </div>
-            <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">Audited</div>
+            <div className="p-2 sm:p-3">
+              <div className="font-serif text-xl sm:text-2xl lg:text-[26px] font-bold text-white whitespace-nowrap">
+                Audited
+              </div>
               <p className="text-xs text-cream/70 mt-0.5">Service Verification Escrow</p>
             </div>
           </div>

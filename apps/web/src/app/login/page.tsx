@@ -77,12 +77,8 @@ export default function LoginPage() {
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-royal/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3 relative z-10">
-        <Link href="/" className="inline-flex items-center gap-3 group">
-          <div className="w-12 h-12 rounded-full bg-gold-gradient p-0.5 shadow-gold-glow flex items-center justify-center">
-            <div className="w-full h-full bg-navy-950 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Crown className="w-6 h-6 text-gold" />
-            </div>
-          </div>
+        <Link href="/">
+       
         </Link>
         <h2 className="font-serif text-3xl font-bold tracking-tight text-cream">
           Grand Bandhan Command Portal
