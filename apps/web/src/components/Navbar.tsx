@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Crown, Sparkles, User, Calendar, Menu, X, ArrowRight } from 'lucide-react';
 import EnquiryModal from './EnquiryModal';
 
@@ -15,20 +16,15 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-11 h-11 rounded-full bg-gold-gradient p-0.5 shadow-gold-glow flex items-center justify-center">
-                <div className="w-full h-full bg-navy-950 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <Crown className="w-6 h-6 text-gold" />
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-serif text-2xl font-bold tracking-wider text-gold-gradient">
-                  GRAND BANDHAN
-                </span>
-                <span className="text-[10px] uppercase tracking-[0.25em] text-gold-light/80 -mt-1 font-medium">
-                  Imperial Wedding Operations
-                </span>
-              </div>
+            <Link href="/" className="flex items-center group">
+              <Image
+                src="/logo.png"
+                alt="Grand Bandhan"
+                width={180}
+                height={64}
+                className="h-14 sm:h-16 w-auto object-contain rounded-md transition-transform group-hover:scale-[1.02]"
+                priority
+              />
             </Link>
 
             {/* Desktop Navigation */}
