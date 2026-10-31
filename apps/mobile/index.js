@@ -16,6 +16,41 @@ if (!RNScreens.compatibilityFlags) {
   };
 }
 
+if (!RNScreens.ScreenStackItem) {
+  const React = require('react');
+  const { StyleSheet, View } = require('react-native');
+  // @ts-ignore
+  RNScreens.ScreenStackItem = React.forwardRef(function ScreenStackItem(props, ref) {
+    const {
+      children,
+      headerConfig,
+      activityState,
+      shouldFreeze,
+      screenId,
+      style,
+      contentStyle,
+      stackPresentation,
+      ...rest
+    } = props;
+
+    return React.createElement(
+      RNScreens.Screen,
+      {
+        ref,
+        enabled: true,
+        isNativeStack: true,
+        activityState,
+        shouldFreeze,
+        stackPresentation,
+        style: [StyleSheet.absoluteFill, style],
+        ...rest,
+      },
+      headerConfig ? React.createElement(RNScreens.ScreenStackHeaderConfig, headerConfig) : null,
+      React.createElement(View, { style: [StyleSheet.absoluteFill, contentStyle] }, children)
+    );
+  });
+}
+
 import App from './App';
 import {name as appName} from './app.json';
 
