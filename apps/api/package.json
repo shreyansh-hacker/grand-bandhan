@@ -12,6 +12,8 @@
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
     "typecheck": "tsc --noEmit",
+    "scheduler:worker": "tsx src/modules/scheduler/scheduler.worker.ts",
+    "scheduler:cron": "tsx src/modules/scheduler/scheduler.worker.ts --once",
     "clean": "rimraf dist"
   },
   "dependencies": {

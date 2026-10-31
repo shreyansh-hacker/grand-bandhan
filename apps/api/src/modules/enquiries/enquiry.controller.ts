@@ -71,16 +71,20 @@ export async function createPublicEnquiry(req: Request, res: Response): Promise<
         location: enquiry.location,
         guestCount: enquiry.guestCount,
         planningFor: enquiry.planningFor,
+        notes: enquiry.notes,
+        phone: enquiry.phone,
       },
-    });
+    }).catch((err) => console.warn('[Enquiry] Customer email notification error:', err?.message));
 
     // 2. Emit Internal Agency Alert
+    const isUrgent = enquiry.notes?.includes('🚨') || enquiry.notes?.includes('EMERGENCY') || enquiry.notes?.includes('DISPATCH');
+    const subjectPrefix = isUrgent ? '🚨 URGENT Dispatch Desk' : '👑 New Imperial Wedding Enquiry';
     await NotificationService.emit(NotificationEvent.NEW_ENQUIRY_RECEIVED, {
       agencyId: agency.id,
       recipientEmail: agency.contactEmail,
       recipientName: `${agency.name} Concierge Desk`,
       recipientRole: 'AGENCY_ADMIN',
-      subject: `👑 New Imperial Wedding Enquiry: ${enquiry.referenceNumber} (${enquiry.customerName})`,
+      subject: `${subjectPrefix}: ${enquiry.referenceNumber} (${enquiry.customerName})`,
       data: {
         customerName: enquiry.customerName,
         referenceNumber: enquiry.referenceNumber,
@@ -88,8 +92,11 @@ export async function createPublicEnquiry(req: Request, res: Response): Promise<
         location: enquiry.location,
         guestCount: enquiry.guestCount,
         planningFor: enquiry.planningFor,
+        notes: enquiry.notes,
+        phone: enquiry.phone,
+        subject: `${subjectPrefix}: ${enquiry.referenceNumber} (${enquiry.customerName})`,
       },
-    });
+    }).catch((err) => console.warn('[Enquiry] Agency email notification error:', err?.message));
 
     res.status(201).json({
       success: true,
@@ -141,6 +148,48 @@ export async function createEnquiry(req: AuthenticatedRequest, res: Response): P
         notes: parsed.notes || null,
       },
     });
+
+    // 1. Emit Customer Confirmation Email
+    await NotificationService.emit(NotificationEvent.NEW_ENQUIRY_RECEIVED, {
+      agencyId,
+      recipientEmail: enquiry.email,
+      recipientName: enquiry.customerName,
+      data: {
+        customerName: enquiry.customerName,
+        referenceNumber: enquiry.referenceNumber,
+        weddingDate: enquiry.weddingDate,
+        location: enquiry.location,
+        guestCount: enquiry.guestCount,
+        planningFor: enquiry.planningFor,
+        notes: enquiry.notes,
+        phone: enquiry.phone,
+      },
+    }).catch((err) => console.warn('[Enquiry] Customer email notification error:', err?.message));
+
+    // 2. Emit Internal Agency / Admin Alert
+    const agency = await prisma.agency.findUnique({ where: { id: agencyId } });
+    if (agency) {
+      const isUrgent = enquiry.notes?.includes('🚨') || enquiry.notes?.includes('EMERGENCY') || enquiry.notes?.includes('DISPATCH');
+      const subjectPrefix = isUrgent ? '🚨 URGENT Dispatch Desk' : '👑 New Imperial Wedding Enquiry';
+      await NotificationService.emit(NotificationEvent.NEW_ENQUIRY_RECEIVED, {
+        agencyId: agency.id,
+        recipientEmail: agency.contactEmail,
+        recipientName: `${agency.name} Concierge Desk`,
+        recipientRole: 'AGENCY_ADMIN',
+        subject: `${subjectPrefix}: ${enquiry.referenceNumber} (${enquiry.customerName})`,
+        data: {
+          customerName: enquiry.customerName,
+          referenceNumber: enquiry.referenceNumber,
+          weddingDate: enquiry.weddingDate,
+          location: enquiry.location,
+          guestCount: enquiry.guestCount,
+          planningFor: enquiry.planningFor,
+          notes: enquiry.notes,
+          phone: enquiry.phone,
+          subject: `${subjectPrefix}: ${enquiry.referenceNumber} (${enquiry.customerName})`,
+        },
+      }).catch((err) => console.warn('[Enquiry] Agency email notification error:', err?.message));
+    }
 
     res.status(201).json({
       success: true,
@@ -350,6 +399,21 @@ export async function updateEnquiryStatus(req: AuthenticatedRequest, res: Respon
       },
     });
 
+    // Emit Enquiry Status Changed Event
+    await NotificationService.emit(NotificationEvent.ENQUIRY_STATUS_CHANGED, {
+      agencyId: enquiry.agencyId,
+      recipientEmail: enquiry.email,
+      recipientName: enquiry.customerName,
+      recipientRole: 'CLIENT',
+      data: {
+        referenceNumber: enquiry.referenceNumber || enquiry.id.slice(0, 8),
+        customerName: enquiry.customerName,
+        oldStatus: enquiry.status,
+        newStatus: parsed.status,
+        notes: parsed.notes,
+      },
+    });
+
     res.json({
       success: true,
       data: updated,
@@ -360,6 +424,85 @@ export async function updateEnquiryStatus(req: AuthenticatedRequest, res: Respon
       res.status(400).json({ success: false, errors: err.errors });
       return;
     }
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Schedule Wedding Consultation
+ */
+export async function scheduleConsultation(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  try {
+    const { consultationDate, consultationType, notes } = req.body;
+    if (!consultationDate) {
+      res.status(400).json({ success: false, message: 'consultationDate is required' });
+      return;
+    }
+
+    const enquiry = await prisma.customerEnquiry.findUnique({
+      where: { id },
+      include: { assignedPlanner: { select: { id: true, name: true, email: true } } },
+    });
+
+    if (!enquiry) {
+      res.status(404).json({ success: false, message: 'Enquiry not found' });
+      return;
+    }
+
+    if (req.user?.role !== UserRole.SUPER_ADMIN && enquiry.agencyId !== req.user?.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    const scheduledDate = new Date(consultationDate);
+    const updated = await prisma.customerEnquiry.update({
+      where: { id },
+      data: {
+        status: EnquiryStatus.CONSULTATION_SCHEDULED,
+        followUpDate: scheduledDate,
+        notes: notes ? `${enquiry.notes || ''}\nConsultation scheduled: ${notes}` : enquiry.notes,
+      },
+    });
+
+    // 1. Notify Client
+    await NotificationService.emit(NotificationEvent.CONSULTATION_SCHEDULED, {
+      agencyId: enquiry.agencyId,
+      recipientEmail: enquiry.email,
+      recipientName: enquiry.customerName,
+      recipientRole: 'CLIENT',
+      data: {
+        customerName: enquiry.customerName,
+        consultationDate: scheduledDate.toISOString(),
+        consultationType: consultationType || 'Video Design Consultation',
+        plannerName: enquiry.assignedPlanner?.name || 'Lead Wedding Planner',
+        notes,
+      },
+    });
+
+    // 2. Notify Assigned Planner if assigned
+    if (enquiry.assignedPlanner?.email) {
+      await NotificationService.emit(NotificationEvent.CONSULTATION_SCHEDULED, {
+        agencyId: enquiry.agencyId,
+        recipientEmail: enquiry.assignedPlanner.email,
+        recipientName: enquiry.assignedPlanner.name,
+        recipientRole: 'WEDDING_PLANNER',
+        data: {
+          customerName: enquiry.customerName,
+          consultationDate: scheduledDate.toISOString(),
+          consultationType: consultationType || 'Video Design Consultation',
+          plannerName: enquiry.assignedPlanner.name,
+          notes,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Consultation successfully scheduled and notifications dispatched.',
+    });
+  } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
 }

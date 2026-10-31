@@ -229,26 +229,29 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
 
     case NotificationEvent.NEW_ENQUIRY_RECEIVED:
       return {
-        subject: `👑 Royal Wedding Enquiry Received: ${data.referenceNumber || 'New Enquiry'}`,
+        subject: data.subject || `👑 Royal Wedding Enquiry Received: ${data.referenceNumber || 'New Enquiry'}`,
         html: baseTemplate(
           'Enquiry Confirmation',
           `
           <div class="badge">ENQUIRY REFERENCE: ${escapeHtml(data.referenceNumber || 'GB-ENQ-2026')}</div>
           <h2 class="heading">Thank You for Inquiring with Grand Bandhan</h2>
           <p>Dear <strong>${escapeHtml(data.customerName)}</strong>,</p>
-          <p>It is our pleasure to receive your imperial celebration enquiry. Our senior wedding planners have been notified and are reviewing your envisioned wedding parameters.</p>
+          <p>It is our pleasure to receive your imperial celebration enquiry. Our senior wedding planners and concierge desk have been notified and are reviewing your request.</p>
           <div class="card">
             <div class="detail-row"><span class="detail-label">Reference No:</span><span class="detail-value">${escapeHtml(data.referenceNumber || 'GB-ENQ-2026')}</span></div>
+            <div class="detail-row"><span class="detail-label">Client Name:</span><span class="detail-value">${escapeHtml(data.customerName)}</span></div>
+            ${data.phone ? `<div class="detail-row"><span class="detail-label">Phone:</span><span class="detail-value">${escapeHtml(data.phone)}</span></div>` : ''}
             <div class="detail-row"><span class="detail-label">Wedding Date:</span><span class="detail-value">${data.weddingDate ? new Date(data.weddingDate).toLocaleDateString('en-IN') : 'Flexible'}</span></div>
             <div class="detail-row"><span class="detail-label">Destination / City:</span><span class="detail-value">${escapeHtml(data.location || 'India')}</span></div>
             <div class="detail-row"><span class="detail-label">Expected Guests:</span><span class="detail-value">${escapeHtml(data.guestCount || '250')} Guests</span></div>
             <div class="detail-row"><span class="detail-label">Planning Side:</span><span class="detail-value">${escapeHtml(data.planningFor || 'Joint')}</span></div>
+            ${data.notes ? `<div class="detail-row"><span class="detail-label">Message / Dispatch:</span><span class="detail-value" style="color:#C9A96A;font-weight:bold;">${escapeHtml(data.notes)}</span></div>` : ''}
           </div>
-          <p>Your dedicated planner will reach out within 4 business hours to arrange an initial design consultation.</p>
+          <p>Your dedicated planner / concierge officer will reach out promptly.</p>
           `,
           { label: 'Track Enquiry Status', url: `${appUrl}/enquiry/${data.referenceNumber || ''}` }
         ),
-        text: `Thank you for your enquiry with Grand Bandhan! Ref: ${data.referenceNumber}. Our team will contact you shortly. Track status: ${appUrl}/enquiry/${data.referenceNumber}`,
+        text: `Thank you for your enquiry with Grand Bandhan! Ref: ${data.referenceNumber}. Phone: ${data.phone || ''}. Notes: ${data.notes || ''}. Track status: ${appUrl}/enquiry/${data.referenceNumber}`,
       };
 
     case NotificationEvent.ENQUIRY_ASSIGNED:

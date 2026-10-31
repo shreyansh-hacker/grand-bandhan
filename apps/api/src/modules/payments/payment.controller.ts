@@ -146,3 +146,103 @@ export async function recordPaymentTransaction(req: AuthenticatedRequest, res: R
     res.status(500).json({ success: false, message: err.message });
   }
 }
+
+export async function recordPaymentFailure(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  try {
+    const { reason, amount } = req.body;
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      include: {
+        wedding: { select: { agencyId: true, weddingCode: true, clientEmail: true, brideName: true, groomName: true } },
+      },
+    });
+
+    if (!payment) {
+      res.status(404).json({ success: false, message: 'Payment record not found' });
+      return;
+    }
+
+    if (req.user?.role !== UserRole.SUPER_ADMIN && payment.wedding.agencyId !== req.user?.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    const updated = await prisma.payment.update({
+      where: { id },
+      data: {
+        notes: reason ? `${payment.notes || ''}\nPayment attempt failed: ${reason}` : payment.notes,
+      },
+    });
+
+    // Emit Payment Failed Notification
+    if (payment.wedding.clientEmail) {
+      await NotificationService.emit(NotificationEvent.PAYMENT_FAILED, {
+        agencyId: payment.wedding.agencyId,
+        recipientEmail: payment.wedding.clientEmail,
+        recipientName: `${payment.wedding.brideName} & ${payment.wedding.groomName}`,
+        recipientRole: 'CLIENT',
+        data: {
+          weddingCode: payment.wedding.weddingCode,
+          clientName: `${payment.wedding.brideName} & ${payment.wedding.groomName}`,
+          amount: amount || payment.amount,
+          milestoneName: payment.milestoneName,
+          reason: reason || 'Gateway transaction declined',
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Payment failure recorded and client notified.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function sendPaymentReminder(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      include: {
+        wedding: { select: { agencyId: true, weddingCode: true, clientEmail: true, brideName: true, groomName: true } },
+      },
+    });
+
+    if (!payment) {
+      res.status(404).json({ success: false, message: 'Payment record not found' });
+      return;
+    }
+
+    if (req.user?.role !== UserRole.SUPER_ADMIN && payment.wedding.agencyId !== req.user?.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    if (payment.wedding.clientEmail) {
+      await NotificationService.emit(NotificationEvent.PAYMENT_DUE, {
+        agencyId: payment.wedding.agencyId,
+        recipientEmail: payment.wedding.clientEmail,
+        recipientName: `${payment.wedding.brideName} & ${payment.wedding.groomName}`,
+        recipientRole: 'CLIENT',
+        data: {
+          weddingCode: payment.wedding.weddingCode,
+          clientName: `${payment.wedding.brideName} & ${payment.wedding.groomName}`,
+          amount: payment.amount - (payment.paidAmount || 0),
+          milestoneName: payment.milestoneName,
+          dueDate: payment.dueDate ? payment.dueDate.toISOString() : undefined,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment reminder dispatched to client.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}

@@ -3,6 +3,8 @@ import { prisma } from '@grand-bandhan/database';
 import { calculateSettlementSchema } from '@grand-bandhan/validation';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { SettlementStatus, WeddingStatus, UserRole } from '@grand-bandhan/shared';
+import { NotificationService } from '../notifications/notification.service';
+import { NotificationEvent } from '../notifications/notification.types';
 
 export async function getSettlement(req: AuthenticatedRequest, res: Response): Promise<void> {
   const weddingId = String(req.params.weddingId);
@@ -57,7 +59,7 @@ export async function saveSettlement(req: AuthenticatedRequest, res: Response): 
 
     const wedding = await prisma.wedding.findUnique({
       where: { id: weddingId },
-      include: { weddingVendors: true },
+      include: { weddingVendors: { include: { vendor: true } } },
     });
 
     if (!wedding) {
@@ -139,6 +141,25 @@ export async function saveSettlement(req: AuthenticatedRequest, res: Response): 
 
       return s;
     });
+
+    // Notify vendors of settlement completion
+    for (const wv of wedding.weddingVendors) {
+      if (wv.vendor?.email) {
+        await NotificationService.emit(NotificationEvent.VENDOR_SETTLEMENT_COMPLETED, {
+          agencyId: wedding.agencyId,
+          recipientEmail: wv.vendor.email,
+          recipientName: wv.vendor.name,
+          recipientRole: 'VENDOR',
+          data: {
+            vendorName: wv.vendor.name,
+            weddingCode: wedding.weddingCode,
+            amount: wv.agreedAmount || 0,
+            paymentMethod: 'Bank Transfer / Settlement Finalized',
+            transactionRef: `SETTLE-${settlement.id.slice(0, 8)}`,
+          },
+        }).catch((err: any) => console.warn('[Settlement] Vendor notification warning:', err.message));
+      }
+    }
 
     res.json({
       success: true,

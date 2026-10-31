@@ -5,6 +5,8 @@ import { AuthenticatedRequest } from '../../middleware/auth';
 import { generateInstantWeddingPlan } from './task.service';
 import { broadcastWeddingUpdate } from '../../socket';
 import { SOCKET_EVENTS, TaskStatus, UserRole } from '@grand-bandhan/shared';
+import { NotificationService } from '../notifications/notification.service';
+import { NotificationEvent } from '../notifications/notification.types';
 
 export async function listTasks(req: AuthenticatedRequest, res: Response): Promise<void> {
   const weddingId = req.query.weddingId as string;
@@ -80,6 +82,38 @@ export async function createTask(req: AuthenticatedRequest, res: Response): Prom
     });
 
     broadcastWeddingUpdate(parsed.weddingId, SOCKET_EVENTS.TASK_STATUS_UPDATED, { task });
+
+    // Emit Task Assigned event if assigned to staff
+    if (parsed.assignedUserId) {
+      try {
+        const assignedUser = await prisma.user.findUnique({
+          where: { id: parsed.assignedUserId },
+          select: { name: true, email: true },
+        });
+        const weddingDetail = await prisma.wedding.findUnique({
+          where: { id: parsed.weddingId },
+          select: { weddingCode: true, agencyId: true },
+        });
+        if (assignedUser && assignedUser.email) {
+          await NotificationService.emit(NotificationEvent.TASK_ASSIGNED, {
+            agencyId: weddingDetail?.agencyId,
+            recipientEmail: assignedUser.email,
+            recipientName: assignedUser.name,
+            recipientRole: 'STAFF',
+            data: {
+              taskTitle: task.title,
+              category: task.category,
+              priority: task.priority,
+              dueDate: task.deadline?.toISOString(),
+              weddingCode: weddingDetail?.weddingCode,
+            },
+          });
+        }
+      } catch (notifErr: any) {
+        console.warn('[Task] Could not emit TASK_ASSIGNED notification:', notifErr.message);
+      }
+    }
+
     res.status(201).json({ success: true, data: task });
   } catch (err: any) {
     if (err.errors) {
@@ -120,6 +154,37 @@ export async function updateTask(req: AuthenticatedRequest, res: Response): Prom
     });
 
     broadcastWeddingUpdate(existing.weddingId, SOCKET_EVENTS.TASK_STATUS_UPDATED, { task: updated });
+
+    if (parsed.assignedUserId && parsed.assignedUserId !== existing.assignedUserId) {
+      try {
+        const assignedUser = await prisma.user.findUnique({
+          where: { id: parsed.assignedUserId },
+          select: { name: true, email: true },
+        });
+        const weddingDetail = await prisma.wedding.findUnique({
+          where: { id: existing.weddingId },
+          select: { weddingCode: true, agencyId: true },
+        });
+        if (assignedUser && assignedUser.email) {
+          await NotificationService.emit(NotificationEvent.TASK_ASSIGNED, {
+            agencyId: weddingDetail?.agencyId,
+            recipientEmail: assignedUser.email,
+            recipientName: assignedUser.name,
+            recipientRole: 'STAFF',
+            data: {
+              taskTitle: updated.title,
+              category: updated.category,
+              priority: updated.priority,
+              dueDate: updated.deadline?.toISOString(),
+              weddingCode: weddingDetail?.weddingCode,
+            },
+          });
+        }
+      } catch (notifErr: any) {
+        console.warn('[Task] Could not emit TASK_ASSIGNED notification:', notifErr.message);
+      }
+    }
+
     res.json({ success: true, data: updated });
   } catch (err: any) {
     if (err.errors) {

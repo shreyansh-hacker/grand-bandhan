@@ -7,6 +7,7 @@ import {
   getEnquiryByReference,
   assignPlanner,
   updateEnquiryStatus,
+  scheduleConsultation,
 } from './enquiry.controller';
 import { authenticate } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
@@ -33,6 +34,12 @@ router.patch(
   authenticate,
   requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
   updateEnquiryStatus
+);
+router.post(
+  '/:id/consultation',
+  authenticate,
+  requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
+  scheduleConsultation
 );
 
 export default router;

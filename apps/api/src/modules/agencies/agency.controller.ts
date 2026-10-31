@@ -278,6 +278,19 @@ export async function updateAgencyStatus(req: AuthenticatedRequest, res: Respons
             rejectionReason: parsed.rejectionReason,
           },
         });
+      } else if (parsed.status === AgencyStatus.SUSPENDED) {
+        await NotificationService.emit(NotificationEvent.AGENCY_SUSPENDED, {
+          agencyId: agency.id,
+          agencyName: agency.name,
+          recipientEmail: adminUser.email,
+          recipientName: adminUser.name,
+          recipientRole: 'AGENCY_ADMIN',
+          data: {
+            agencyName: agency.name,
+            ownerName: agency.ownerName || adminUser.name,
+            reason: parsed.rejectionReason || 'Administrative compliance review',
+          },
+        });
       }
     }
 

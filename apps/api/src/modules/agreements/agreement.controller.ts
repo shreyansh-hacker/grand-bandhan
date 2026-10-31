@@ -56,7 +56,7 @@ export async function sendAgreement(req: Request, res: Response): Promise<void> 
             groomName: true,
             clientEmail: true,
             agency: { select: { name: true, contactEmail: true } },
-            assignedPlanner: { select: { name: true, email: true } },
+            planner: { select: { name: true, email: true } },
           },
         },
       },
@@ -118,7 +118,7 @@ export async function signAgreement(req: Request, res: Response): Promise<void> 
             clientEmail: true,
             status: true,
             agency: { select: { name: true, contactEmail: true } },
-            assignedPlanner: { select: { name: true, email: true } },
+            planner: { select: { name: true, email: true } },
           },
         },
       },
@@ -192,11 +192,11 @@ export async function signAgreement(req: Request, res: Response): Promise<void> 
     }
 
     // 2. Notify Assigned Planner if assigned
-    if (agreement.wedding.assignedPlanner?.email) {
+    if (agreement.wedding.planner?.email) {
       await NotificationService.emit(NotificationEvent.AGREEMENT_SIGNED, {
         agencyId: agreement.wedding.agencyId,
-        recipientEmail: agreement.wedding.assignedPlanner.email,
-        recipientName: agreement.wedding.assignedPlanner.name || 'Lead Planner',
+        recipientEmail: agreement.wedding.planner.email,
+        recipientName: agreement.wedding.planner.name || 'Lead Planner',
         recipientRole: 'WEDDING_PLANNER',
         data: {
           weddingCode: agreement.wedding.weddingCode,

@@ -84,6 +84,22 @@ export async function createVerificationTrigger(req: AuthenticatedRequest, res: 
     });
 
     broadcastWeddingUpdate(weddingId, SOCKET_EVENTS.SERVICE_VERIFICATION_TRIGGERED, { verification });
+
+    // Emit Service Verification Requested event to Vendor
+    if (verification.vendor?.email) {
+      await NotificationService.emit(NotificationEvent.SERVICE_VERIFICATION_REQUESTED, {
+        agencyId: wedding.agencyId,
+        recipientEmail: verification.vendor.email,
+        recipientName: verification.vendor.name,
+        recipientRole: 'VENDOR',
+        data: {
+          vendorName: verification.vendor.name,
+          serviceName: verification.serviceName,
+          scheduledTime: verification.scheduledConfirmationTime?.toISOString(),
+        },
+      });
+    }
+
     res.status(201).json({ success: true, data: verification });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });

@@ -143,21 +143,28 @@ export async function respondToProposal(req: Request, res: Response): Promise<vo
       return p;
     });
 
-    // Notify agency admin
-    await NotificationService.emit(
-      parsed.status === 'ACCEPTED' ? NotificationEvent.PROPOSAL_ACCEPTED : NotificationEvent.PROPOSAL_REJECTED,
-      {
+    // Notify agency admin with specific event
+    let eventToEmit: NotificationEvent = NotificationEvent.PROPOSAL_REJECTED;
+    if (parsed.status === 'ACCEPTED') {
+      eventToEmit = NotificationEvent.PROPOSAL_ACCEPTED;
+    } else if (parsed.status === 'REVISION_REQUESTED') {
+      eventToEmit = NotificationEvent.PROPOSAL_REVISION_REQUESTED;
+    }
+
+    if (proposal.agency?.contactEmail) {
+      await NotificationService.emit(eventToEmit, {
         agencyId: proposal.agencyId,
-        recipientEmail: proposal.agency?.contactEmail,
-        recipientName: proposal.agency?.name,
+        recipientEmail: proposal.agency.contactEmail,
+        recipientName: proposal.agency.name,
+        recipientRole: 'AGENCY_ADMIN',
         data: {
           customerName: proposal.enquiry?.customerName,
           proposalNumber: proposal.proposalNumber,
           decision: parsed.status,
           notes: parsed.customerNotes || 'No notes provided',
         },
-      }
-    );
+      });
+    }
 
     res.json({
       success: true,

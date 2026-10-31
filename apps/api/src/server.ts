@@ -8,6 +8,7 @@ import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { initSocketIO } from './socket';
 import { startVerificationScheduler } from './modules/verifications/verification.scheduler';
+import { ProductionSchedulerService } from './modules/scheduler/scheduler.service';
 import { checkDatabaseConnection, isUsingPostgres } from './db';
 import { seedDemoDataIfEmpty } from './seed-data';
 
@@ -164,6 +165,21 @@ async function startServer() {
     console.log(`🔗 API Base URL: ${env.API_URL}`);
     // Start persistent verification background worker
     startVerificationScheduler(60000);
+
+    // Start production notification & reminder scheduler
+    if (process.env.ENABLE_SCHEDULER !== 'false') {
+      console.log('⏱️ Initializing Grand Bandhan Production Notification & Reminder Scheduler (interval: 60s)');
+      setInterval(() => {
+        ProductionSchedulerService.runAllChecks().catch((err) => {
+          console.warn('[Scheduler] Pass error:', err.message);
+        });
+      }, 60000);
+      setTimeout(() => {
+        ProductionSchedulerService.runAllChecks().catch((err) => {
+          console.warn('[Scheduler] Initial pass error:', err.message);
+        });
+      }, 10000);
+    }
   });
 }
 

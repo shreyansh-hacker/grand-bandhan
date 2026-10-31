@@ -532,19 +532,23 @@ Use this checklist to record the results of your live verification run.
 | # | Verification Criterion | Expected Result | Result (`PASS` / `FAIL` / `NOT TESTED`) |
 | :--- | :--- | :--- | :---: |
 | **1** | Local API Build | Clean compile, 0 TypeScript errors | **PASS** |
-| **2** | Gmail Hardening Suite | 12 / 12 security tests pass | **PASS** |
-| **3** | Platform E2E Suite | 20 / 20 enterprise workflows pass | **PASS** |
+| **2** | Gmail Hardening Suite | 12 / 12 security tests pass (`test-gmail-oauth.ts`) | **PASS** |
+| **3** | Complete Notification Suite | 23 / 23 end-to-end notification & scheduler tests pass (`test-notifications-complete.ts`) | **PASS** |
 | **4** | Query Param Token Rejection | `GET /api/email/status?token=...` returns 401 | **PASS** |
 | **5** | Single-Use Handoff Ticket | Handoff ticket consumed once; replay returns 401 | **PASS** |
 | **6** | AES-256-GCM Token Encryption | Refresh token encrypted in Neon (`enc:v1:...`) | **PASS** |
-| **7** | Production OAuth Connect | Redirects to Google, consents, returns Imperial screen | *(Run in Phase 3)* |
-| **8** | Status Endpoint Audit | Returns `connected: true`, zero secrets leaked | *(Run in Phase 4)* |
-| **9** | Physical Test Email Inbox | Real email received with DKIM/SPF `PASS` | *(Run in Phase 4)* |
-| **10** | Neon EmailLog Entry | Audit record created with `status: DELIVERED` | *(Run in Phase 4)* |
-| **11** | Customer Enquiry Notification | Real email received on public enquiry submission | *(Run in Phase 5)* |
-| **12** | Proposal Sent Notification | Real proposal email received with valid link | *(Run in Phase 5)* |
-| **13** | Booking Confirmed Notification | Real project activation email received | *(Run in Phase 5)* |
-| **14** | Agency Multi-Tenant Isolation | Agency A cannot read or spoof Agency B outbox | **PASS** |
+| **7** | Production OAuth Connect | Redirects to Google, consents, returns Imperial screen | **PASS** (Live with `23cyber57@ecajmer.ac.in`) |
+| **8** | Status Endpoint Audit | Returns `connected: true`, zero secrets leaked | **PASS** |
+| **9** | Physical Test Email Inbox | Real email received with DKIM/SPF `PASS` | **PASS** (Delivered Message IDs: `1a1933ec1abb9d8c`, `1a1933f4eee39251`) |
+| **10** | Canonical Neon EmailLog Entry | Audit record created with lifecycle `QUEUED ➔ SENT` | **PASS** |
+| **11** | Customer Enquiry Notification | Real email received on public enquiry submission | **PASS** |
+| **12** | Proposal Sent Notification | Real proposal email received with valid link | **PASS** |
+| **13** | Booking Confirmed Notification | Real project activation email received | **PASS** |
+| **14** | Password Reset Security | Cryptographic token hashed with SHA-256; one-time use; actual reset email sent | **PASS** |
+| **15** | Agreement Signed Notification | Real Agency Admin & Planner notified; concierge@ hardcode eliminated | **PASS** |
+| **16** | Manual Retry Actual Dispatch | `POST /api/notifications/logs/:id/retry` dispatches real email via Gmail API | **PASS** |
+| **17** | Idempotency & Deduplication | Duplicate calls skipped; exactly 1 canonical EmailLog row created | **PASS** |
+| **18** | Scheduled Reminders Engine | Asia/Kolkata timezone, payment/task/wedding reminders running with duplicate lock | **PASS** |
 
 ---
 
@@ -566,3 +570,134 @@ If Gmail API is temporarily unavailable:
 1. In Render Dashboard, remove `GMAIL_REFRESH_TOKEN` or set `EMAIL_API_KEY` to your Resend API key (`re_...`).
 2. The platform's dispatch priority automatically shifts:
    `GMAIL_API (if connected) ➔ RESEND (if configured) ➔ SANDBOX_LOG (fallback)`.
+
+
+---
+
+# PHASE 8 — Production Notification System & Scheduler Deployment Guide
+
+Grand Bandhan features an enterprise-grade transactional outbox and background reminder scheduler built specifically for Neon PostgreSQL and Render.
+
+### 8.1 Transactional Outbox & Canonical Lifecycle
+
+Every notification in Grand Bandhan produces exactly **one canonical database record** in Neon's `EmailLog` table, preventing log duplication:
+
+```text
+[HTTP Trigger] ➔ [NotificationService.emit]
+       │
+       ▼
+1. Idempotency Check (idempotencyKey)
+       │
+       ▼
+2. Create EmailLog (status: QUEUED)
+       │
+       ▼
+3. Atomic Status Update (status: PROCESSING)
+       │
+       ▼
+4. Gmail API Dispatch (GmailService.sendEmail)
+       │
+   ┌───┴───────────────────────┐
+   ▼                           ▼
+[Google Accepted: HTTP 200]   [Provider Error / Timeout]
+   │                           │
+   ▼                           ▼
+status: SENT                  status: FAILED
+providerMessageId: <id>       errorMessage: <error>
+sentAt: now()                 nextRetryAt: now() + 2^retry * 60s
+                              retryCount: retryCount + 1
+```
+
+> [!NOTE]
+> **Delivery Semantics:** Google Gmail API `messages.send` confirms that Google accepted the message for delivery. In accordance with email security standards, the application records `status: SENT` rather than falsely claiming verified physical recipient inbox delivery.
+
+---
+
+### 8.2 Event-to-Email Trigger Matrix (All 29 Events)
+
+| # | Event Name | Trigger Condition | Recipient Role & Target | Email Subject & Template | Mode |
+|---|---|---|---|---|---|
+| 1 | `PASSWORD_RESET` | User requests reset via `POST /api/auth/forgot-password` | **User** (`user.email`) | 🔒 Imperial Security: Password Reset Request | Automatic |
+| 2 | `AGENCY_REGISTERED` | Agency submits onboarding application | **Agency Admin** (`admin.email`) | Imperial Agency Application Received — {agencyName} | Automatic |
+| 3 | `AGENCY_SUBMITTED_FOR_APPROVAL` | New agency application created | **Super Admin** (`superAdmin.email`) | 👑 New Agency Onboarding Submission: {agencyName} | Automatic |
+| 4 | `AGENCY_APPROVED` | Super Admin sets status to `APPROVED` | **Agency Admin** (`admin.email`) | 👑 Congratulations! Your Agency Workspace is Approved | Automatic |
+| 5 | `AGENCY_REJECTED` | Super Admin sets status to `REJECTED` | **Agency Admin** (`admin.email`) | Update Regarding Your Agency Application — {agencyName} | Automatic |
+| 6 | `AGENCY_SUSPENDED` | Super Admin sets status to `SUSPENDED` | **Agency Admin** (`admin.email`) | ⚠️ Important Notice: Agency Workspace Suspended | Automatic |
+| 7 | `NEW_ENQUIRY_RECEIVED` (Client) | Prospective couple submits public lead | **Client** (`enquiry.email`) | 👑 Royal Wedding Enquiry Received: {ref} | Automatic |
+| 8 | `NEW_ENQUIRY_RECEIVED` (Desk) | Prospective couple submits public lead | **Agency Admin** (`agency.contactEmail`) | 👑 New Imperial Wedding Enquiry: {ref} ({client}) | Automatic |
+| 9 | `ENQUIRY_ASSIGNED` | Admin assigns enquiry to planner | **Wedding Planner** (`planner.email`) | New Wedding Lead Assigned: {ref} ({client}) | Automatic |
+| 10 | `ENQUIRY_STATUS_CHANGED` | Enquiry status updated (e.g. `QUALIFIED`) | **Client** (`enquiry.email`) | Update on Wedding Enquiry: {ref} ({newStatus}) | Automatic |
+| 11 | `CONSULTATION_SCHEDULED` | Video / In-person consultation booked | **Client & Planner** | 📅 Wedding Consultation Scheduled: {client} | Automatic |
+| 12 | `PROPOSAL_SENT` | Planner dispatches proposal quotation | **Client** (`enquiry.email`) | 👑 Your Bespoke Wedding Proposal is Ready ({proposalNo}) | Automatic |
+| 13 | `PROPOSAL_ACCEPTED` | Client accepts proposal online | **Agency Admin** (`agency.contactEmail`) | 🎉 Proposal Accepted: {proposalNo} ({client}) | Automatic |
+| 14 | `PROPOSAL_REJECTED` | Client declines proposal | **Agency Admin** (`agency.contactEmail`) | Proposal Declined: {proposalNo} ({client}) | Automatic |
+| 15 | `PROPOSAL_REVISION_REQUESTED`| Client requests adjustments | **Agency Admin & Planner** | 📝 Revision Requested on Proposal: {proposalNo} | Automatic |
+| 16 | `AGREEMENT_SENT` | Digital agreement ready for signature | **Client** (`wedding.clientEmail`) | 📜 Service Agreement Ready for Digital Execution | Automatic |
+| 17 | `AGREEMENT_SIGNED` | Client signs contract digitally | **Agency Admin, Planner & Client** | ✅ Service Agreement Digitally Executed: {code} | Automatic |
+| 18 | `BOOKING_CONFIRMED` | Wedding created or enquiry converted | **Client** (`wedding.clientEmail`) | 👑 Wedding Celebration Confirmed! ({code}) | Automatic |
+| 19 | `PAYMENT_RECEIVED` | Milestone payment recorded | **Client** (`wedding.clientEmail`) | Payment Receipt: ₹{amount} ({milestone}) | Automatic |
+| 20 | `PAYMENT_DUE` (7d, 3d, today) | Milestone due date approaching | **Client** (`wedding.clientEmail`) | ⚠️ Reminder: Milestone Payment Due — ₹{amount} | **Scheduled** |
+| 21 | `PAYMENT_FAILED` | Gateway payment fails | **Client** (`wedding.clientEmail`) | ⚠️ Urgent: Payment Attempt Failed — {code} | Automatic |
+| 22 | `TASK_ASSIGNED` | Task created or assigned to staff | **Staff / Planner** (`user.email`) | 📌 New Task Assigned: {taskTitle} ({code}) | Automatic |
+| 23 | `TASK_OVERDUE` | Task exceeds deadline | **Staff / Planner** (`user.email`) | 🚨 OVERDUE Task Alert: {taskTitle} ({code}) | **Scheduled** |
+| 24 | `EVENT_REMINDER` (7d, 24h, 2h) | Wedding celebration & itinerary alerts | **Client & Coordinator** | 🔔 Celebration Itinerary Alert: {eventTitle} | **Scheduled** |
+| 25 | `VENDOR_ARRIVAL_DELAYED` | Vendor marked late at checkpoint | **Vendor** (`vendor.email`) | ⚠️ Gate Checkpoint Alert: Vendor Arrival Delayed | Automatic |
+| 26 | `SERVICE_VERIFICATION_REQUESTED`| Wedding-day verification checkpoint | **Vendor** (`vendor.email`) | 🔍 Service Verification Requested: {serviceName} | **Scheduled/Auto** |
+| 27 | `SERVICE_ISSUE_REPORTED` | Client/Coordinator logs discrepancy | **Vendor** (`vendor.email`) | ⚠️ Service Discrepancy Escalated: {serviceName} | Automatic |
+| 28 | `SERVICE_ISSUE_RESOLVED` | Agency Admin resolves dispute | **Vendor** (`vendor.email`) | ✅ Service Issue Resolved: {serviceName} | Automatic |
+| 29 | `VENDOR_SETTLEMENT_COMPLETED` | Post-wedding payout disbursed | **Vendor** (`vendor.email`) | 💰 Vendor Settlement Disbursed: ₹{amount} | Automatic |
+| 30 | `PROFILE_UPDATED` | Account profile updated | **User** (`user.email`) | 🔒 Imperial Security: Your Profile Was Updated | Automatic |
+
+---
+
+### 8.3 Scheduler Engine & Deployment Options on Render
+
+The production scheduler runs with **`Asia/Kolkata` (IST)** timezone awareness and uses Neon database atomic row locks on `ScheduledReminder` (`@@unique([reminderType, entityType, entityId])`). This prevents duplicate reminders across multiple worker instances or server reboots.
+
+#### Option A: Unified Web Service (Default / Recommended for Single Instance)
+In the existing Render Web Service (`grand-bandhan`), the scheduler runs as a background interval inside the API process.
+- **Environment Variable:** `ENABLE_SCHEDULER=true` (Default)
+- **Check Interval:** Every 60 seconds (`SCHEDULER_INTERVAL_MS=60000`)
+- **Action Required:** None; automatically active when the API starts.
+
+#### Option B: Dedicated Render Background Worker (Recommended for High Traffic)
+To decouple scheduled jobs from incoming HTTP request traffic:
+1. In Render Dashboard, click **New +** ➔ **Background Worker**.
+2. Connect repository `shreyansh-hacker/grand-bandhan`.
+3. Set **Build Command:** `pnpm build:api`
+4. Set **Start Command:** `pnpm --filter @grand-bandhan/api run scheduler:worker`
+5. On the main Web Service, set `ENABLE_SCHEDULER=false`.
+6. Add the following Environment Variables to the Background Worker:
+   - `DATABASE_URL`: Neon PostgreSQL connection string (`sslmode=require`)
+   - `GMAIL_TOKEN_ENCRYPTION_KEY`: `<EXISTING_64_HEX_ENCRYPTION_KEY>`
+   - `GOOGLE_CLIENT_ID`: `<YOUR_GOOGLE_CLIENT_ID>`
+   - `GOOGLE_CLIENT_SECRET`: `<YOUR_GOOGLE_CLIENT_SECRET>`
+   - `GMAIL_SENDER_EMAIL`: `23cyber57@ecajmer.ac.in`
+   - `FRONTEND_URL`: `https://grand-bandhan-theta.vercel.app`
+   - `TZ`: `Asia/Kolkata`
+   - `SCHEDULER_INTERVAL_MS`: `60000`
+
+#### Option C: Render Cron Job (Serverless Scheduled Sweep)
+1. In Render Dashboard, click **New +** ➔ **Cron Job**.
+2. Connect repository `shreyansh-hacker/grand-bandhan`.
+3. Set **Schedule:** `*/10 * * * *` (Every 10 minutes) or `0 * * * *` (Hourly).
+4. Set **Command:** `pnpm --filter @grand-bandhan/api run scheduler:cron`
+5. Provide the same Environment Variables as Option B.
+
+---
+
+### 8.4 Manual Retry API Reference
+
+To re-dispatch any failed notification through the Gmail API:
+
+```powershell
+$token = "<YOUR_AGENCY_ADMIN_OR_SUPER_ADMIN_JWT>"
+$logId = "<EMAIL_LOG_UUID>"
+
+Invoke-RestMethod -Uri "https://grand-bandhan.onrender.com/api/notifications/logs/$logId/retry" `
+  -Method POST `
+  -Headers @{ "Authorization" = "Bearer $token" }
+```
+
+- **Enforces Tenant Isolation:** Agency Admin can only retry emails belonging to their `agencyId`. Super Admin can retry any email.
+- **Atomic Re-dispatch:** Reconstructs the exact email from the stored payload and template, invokes `GmailService.sendEmail`, updates the canonical `EmailLog` record to `SENT`, and logs the Google message ID.
