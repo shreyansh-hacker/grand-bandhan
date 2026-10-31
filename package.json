@@ -1,0 +1,27 @@
+{
+  "name": "grand-bandhan-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Grand Bandhan - Premium Wedding Planning & Operations Management Platform",
+  "scripts": {
+    "dev": "pnpm --parallel run dev",
+    "dev:api": "pnpm --filter @grand-bandhan/api run dev",
+    "dev:web": "pnpm --filter @grand-bandhan/web run dev",
+    "build": "pnpm --filter @grand-bandhan/shared run build && pnpm --filter @grand-bandhan/validation run build && pnpm --filter @grand-bandhan/api run build && pnpm --filter @grand-bandhan/web run build",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r run clean"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "bcryptjs"
+    ]
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@10.11.0"
+}
