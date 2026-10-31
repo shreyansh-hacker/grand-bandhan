@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../../theme';
-import { ImperialHeader, ImperialCard, ImperialBadge, ImperialButton } from '../../components';
+import { ImperialHeader, ImperialCard, ImperialBadge, ImperialButton, ImperialLogo } from '../../components';
 import { useAuthStore } from '../../store/authStore';
 import { formatRoleLabel } from '../../utils/formatters';
 

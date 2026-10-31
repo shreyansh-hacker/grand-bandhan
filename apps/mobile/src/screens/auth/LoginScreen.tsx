@@ -13,7 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
-import { ImperialButton, ImperialInput, ImperialCard, ImperialBadge } from '../../components';
+import { ImperialButton, ImperialInput, ImperialCard, ImperialBadge, ImperialLogo } from '../../components';
 import { useAuthStore } from '../../store/authStore';
 
 const loginFormSchema = z.object({
@@ -76,11 +76,7 @@ export const LoginScreen: React.FC = () => {
       >
         {/* Brand Crest & Luxury Title */}
         <View style={styles.brandContainer}>
-          <View style={styles.crestCircle}>
-            <Text style={styles.crestIcon}>👑</Text>
-          </View>
-          <Text style={styles.brandTitle}>GRAND BANDHAN</Text>
-          <Text style={styles.brandSubtitle}>ROYAL WEDDING OPERATIONS PLATFORM</Text>
+          <ImperialLogo size="xl" showText textColor={colors.imperialNavy} withGlow />
           <View style={styles.goldDivider} />
         </View>
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { colors, typography, spacing, shadows } from '../theme';
+import { ImperialLogo } from './ImperialLogo';
 
 export interface ImperialHeaderProps {
   title: string;
@@ -23,7 +24,7 @@ export const ImperialHeader: React.FC<ImperialHeaderProps> = ({
       <View style={styles.headerContent}>
         <View style={styles.titleArea}>
           <View style={styles.crestRow}>
-            <Text style={styles.crest}>👑</Text>
+            <ImperialLogo size="xs" withGlow={false} />
             <Text style={styles.brandTitle}>GRAND BANDHAN</Text>
           </View>
           <Text style={styles.screenTitle}>{title}</Text>

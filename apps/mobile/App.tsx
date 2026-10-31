@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { useAuthStore } from './src/store/authStore';
 import { colors, typography, shadows } from './src/theme';
+import { ImperialLogo } from './src/components';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,11 +22,7 @@ function HydrationSplash() {
   return (
     <View style={styles.splashContainer}>
       <StatusBar barStyle="light-content" backgroundColor={colors.imperialNavyDark} />
-      <View style={styles.crestCircle}>
-        <Text style={styles.crestIcon}>👑</Text>
-      </View>
-      <Text style={styles.brandTitle}>GRAND BANDHAN</Text>
-      <Text style={styles.brandSubtitle}>ROYAL WEDDING OPERATIONS</Text>
+      <ImperialLogo size="hero" showText textColor={colors.gold} withGlow />
       <ActivityIndicator size="small" color={colors.gold} style={styles.spinner} />
       <Text style={styles.keystoreText}>Verifying Android Keystore session...</Text>
     </View>
@@ -71,34 +68,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.imperialNavyDark,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  crestCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.imperialNavy,
-    borderWidth: 2,
-    borderColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    ...shadows.goldGlow,
-  },
-  crestIcon: {
-    fontSize: 40,
-  },
-  brandTitle: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.heavy,
-    color: colors.gold,
-    letterSpacing: 4,
-  },
-  brandSubtitle: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.goldLight,
-    letterSpacing: 2,
-    marginTop: 4,
+    padding: 24,
   },
   spinner: {
     marginTop: 32,
