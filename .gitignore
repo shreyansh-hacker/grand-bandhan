@@ -36,3 +36,4 @@ dev.db
 dev.db-journal
 *.sqlite
 local-store.json
+.neon
