@@ -679,3 +679,26 @@ model NotificationPreference {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
+
+model GmailOAuthToken {
+  id           String    @id @default("default")
+  agencyId     String?
+  senderEmail  String
+  refreshToken String
+  accessToken  String?
+  expiryDate   DateTime?
+  scope        String    @default("https://www.googleapis.com/auth/gmail.send")
+  tokenType    String    @default("Bearer")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model OAuthState {
+  id        String   @id @default(uuid())
+  state     String   @unique
+  userId    String?
+  agencyId  String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+

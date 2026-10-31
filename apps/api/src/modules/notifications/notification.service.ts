@@ -35,7 +35,40 @@ export class NotificationService {
         console.warn('[NotificationService] Could not write to EmailLog table:', dbErr);
       }
 
-      // 2. Dispatch via Transactional Provider (Resend or Sandbox Fallback)
+      // 2. Dispatch via Priority Provider: Gmail API -> Resend -> Sandbox Fallback
+      let sentViaGmail = false;
+      try {
+        const gmailToken = await prisma.gmailOAuthToken.findUnique({ where: { id: 'default' } });
+        if ((gmailToken && gmailToken.refreshToken) || process.env.GMAIL_REFRESH_TOKEN) {
+          const { GmailService } = await import('../email/gmail.service');
+          const result = await GmailService.sendEmail({
+            to: payload.recipientEmail,
+            subject,
+            html: template.html,
+            agencyId: payload.agencyId,
+            relatedEntityType: payload.relatedEntityType,
+            relatedEntityId: payload.relatedEntityId,
+          });
+          if (logRecord?.id) {
+            await prisma.emailLog.update({
+              where: { id: logRecord.id },
+              data: {
+                status: EmailDeliveryStatus.DELIVERED,
+                providerMessageId: result.messageId,
+                sentAt: new Date(),
+              },
+            }).catch(() => {});
+          }
+          sentViaGmail = true;
+        }
+      } catch (gmailErr: any) {
+        console.warn('[NotificationService] Gmail API dispatch attempt failed, falling back:', gmailErr.message);
+      }
+
+      if (sentViaGmail) {
+        return;
+      }
+
       const apiKey = process.env.EMAIL_API_KEY;
       const fromEmail = process.env.EMAIL_FROM || 'Grand Bandhan Concierge <onboarding@resend.dev>';
 

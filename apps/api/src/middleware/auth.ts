@@ -22,6 +22,9 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
   } else if (req.cookies && req.cookies.accessToken) {
     // 2. Check HTTP-only cookie
     token = req.cookies.accessToken;
+  } else if (req.query && typeof req.query.token === 'string') {
+    // 3. Check query param (e.g. for browser-initiated admin operations)
+    token = req.query.token;
   }
 
   // 3. Check for portal token in query or x-portal-token header

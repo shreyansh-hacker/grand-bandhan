@@ -21,4 +21,27 @@ export const env = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
   API_URL: process.env.API_URL || 'http://localhost:4000',
   MAX_FILE_SIZE_BYTES: 15 * 1024 * 1024, // 15MB binary storage limit in PostgreSQL BYTEA
+
+  // Google OAuth 2.0 & Gmail API Configuration
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || 'https://grand-bandhan.onrender.com/api/email/oauth2/callback',
+  GMAIL_SENDER_EMAIL: process.env.GMAIL_SENDER_EMAIL || 'shreyanshsharma049@gmail.com',
+  GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN || '',
 };
+
+/**
+ * Validates whether required Google OAuth environment variables are present.
+ */
+export function validateGmailEnv(): { isValid: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!env.GOOGLE_CLIENT_ID) missing.push('GOOGLE_CLIENT_ID');
+  if (!env.GOOGLE_CLIENT_SECRET) missing.push('GOOGLE_CLIENT_SECRET');
+  if (!env.GOOGLE_REDIRECT_URI) missing.push('GOOGLE_REDIRECT_URI');
+  if (!env.GMAIL_SENDER_EMAIL) missing.push('GMAIL_SENDER_EMAIL');
+
+  return {
+    isValid: missing.length === 0,
+    missing,
+  };
+}

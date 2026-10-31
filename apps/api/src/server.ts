@@ -28,6 +28,7 @@ import agencyRoutes from './modules/agencies/agency.routes';
 import profileRoutes from './modules/profile/profile.routes';
 import proposalRoutes from './modules/proposals/proposal.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
+import emailRoutes from './modules/email/email.routes';
 
 const app = express();
 const server = http.createServer(app);
@@ -144,6 +145,7 @@ app.use('/api/agencies', agencyRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/email', emailRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
