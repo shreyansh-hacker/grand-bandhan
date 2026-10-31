@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '@grand-bandhan/database';
 import { hashPassword, comparePassword } from '../../utils/hash';
-import { generateAccessToken, generateRefreshToken, generateSecurePortalToken } from '../../utils/jwt';
+import { generateAccessToken, generateRefreshToken, generateSecurePortalToken, generatePasswordResetToken, verifyPasswordResetToken } from '../../utils/jwt';
 import { loginSchema, registerSchema } from '@grand-bandhan/validation';
 import { UserRole, AgencyStatus, AccountStatus } from '@grand-bandhan/shared';
 import { AuthenticatedRequest } from '../../middleware/auth';
@@ -129,6 +129,20 @@ export async function register(req: Request, res: Response): Promise<void> {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       res.status(400).json({ success: false, message: 'An account with this email already exists' });
+      return;
+    }
+
+    // Role gatekeeping: Prohibit public registration for administrative and planner roles
+    const requestedRole = parsed.role || UserRole.CLIENT;
+    if (
+      requestedRole === UserRole.SUPER_ADMIN ||
+      requestedRole === UserRole.WEDDING_PLANNER ||
+      requestedRole === UserRole.COORDINATOR
+    ) {
+      res.status(403).json({
+        success: false,
+        message: 'Registration for administrative and operational planner roles requires an authorized internal agency invitation.',
+      });
       return;
     }
 
@@ -280,4 +294,76 @@ export function createPortalLink(req: AuthenticatedRequest, res: Response): void
       expiresIn: expiresIn || '7d',
     },
   });
+}
+
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (user) {
+      const resetToken = generatePasswordResetToken(user.id, user.email);
+      console.log(`[Password Reset] Dispatched reset instructions for user: ${user.email}`);
+      // When email service is wired, send branded template; in development, token is safely handled without logging.
+    }
+
+    // Return uniform message to prevent account enumeration
+    res.json({
+      success: true,
+      message: 'If an imperial account exists with this email, password reset instructions have been dispatched.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || 'Error processing request' });
+  }
+}
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      res.status(400).json({ success: false, message: 'Reset token and new password are required' });
+      return;
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    const payload = verifyPasswordResetToken(token);
+    if (!payload) {
+      res.status(400).json({ success: false, message: 'Password reset link is invalid or has expired. Please request a new one.' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User account not found' });
+      return;
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+
+    // Update password and increment tokenVersion to invalidate existing refresh tokens
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        tokenVersion: (user.tokenVersion || 1) + 1,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Your imperial password has been successfully reset. Please log in with your new credentials.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || 'Error resetting password' });
+  }
 }

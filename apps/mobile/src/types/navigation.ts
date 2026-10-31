@@ -65,6 +65,9 @@ export type ClientTabParamList = {
 // Root Navigator Param List
 export type RootStackParamList = {
   Login: undefined;
+  Register: { defaultRole?: 'CLIENT' | 'VENDOR' } | undefined;
+  ForgotPassword: undefined;
+  ResetPassword: { email?: string; token?: string } | undefined;
   SuperAdminRoot: NavigatorScreenParams<AdminTabParamList>;
   AgencyAdminRoot: NavigatorScreenParams<AgencyTabParamList>;
   WeddingPlannerRoot: NavigatorScreenParams<PlannerTabParamList>;

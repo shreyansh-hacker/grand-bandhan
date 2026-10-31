@@ -28,6 +28,7 @@ export const env = {
   GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || 'https://grand-bandhan.onrender.com/api/email/oauth2/callback',
   GMAIL_SENDER_EMAIL: process.env.GMAIL_SENDER_EMAIL || 'shreyanshsharma049@gmail.com',
   GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN || '',
+  GMAIL_TOKEN_ENCRYPTION_KEY: process.env.GMAIL_TOKEN_ENCRYPTION_KEY || '',
 };
 
 /**

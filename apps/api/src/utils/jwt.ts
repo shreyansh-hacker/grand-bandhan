@@ -53,3 +53,19 @@ export function verifySecurePortalToken(token: string): PortalTokenPayload | nul
     return null;
   }
 }
+
+export function generatePasswordResetToken(userId: string, email: string): string {
+  return jwt.sign({ userId, email, purpose: 'password_reset' }, env.JWT_ACCESS_SECRET, {
+    expiresIn: '1h',
+  });
+}
+
+export function verifyPasswordResetToken(token: string): { userId: string; email: string } | null {
+  try {
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as any;
+    if (decoded?.purpose !== 'password_reset') return null;
+    return { userId: decoded.userId, email: decoded.email };
+  } catch (error) {
+    return null;
+  }
+}

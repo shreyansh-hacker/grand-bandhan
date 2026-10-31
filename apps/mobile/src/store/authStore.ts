@@ -5,7 +5,7 @@ import {
   getAuthSession,
   clearAuthSession,
 } from '../utils/storage';
-import { authService, LoginRequest } from '../api/services/auth.service';
+import { authService, LoginRequest, RegisterRequest } from '../api/services/auth.service';
 import { registerSessionExpiryHandler } from '../api/client';
 
 interface AuthState {
@@ -20,6 +20,7 @@ interface AuthState {
 
   // Actions
   login: (credentials: LoginRequest) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
   clearError: () => void;
@@ -126,6 +127,35 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
     },
 
+
+    register: async (data: RegisterRequest) => {
+      try {
+        set({ isLoading: true, error: null });
+        const resData = await authService.register(data);
+
+        await saveAuthSession({
+          accessToken: resData.accessToken,
+          refreshToken: resData.refreshToken,
+          user: resData.user,
+        });
+
+        set({
+          user: resData.user,
+          role: resData.user.role,
+          accessToken: resData.accessToken,
+          refreshToken: resData.refreshToken,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
+      } catch (err: any) {
+        set({
+          isLoading: false,
+          error: err.message || 'Registration failed. Please try again.',
+        });
+        throw err;
+      }
+    },
     logout: async () => {
       try {
         set({ isLoading: true });

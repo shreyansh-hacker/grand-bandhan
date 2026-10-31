@@ -8,6 +8,7 @@ import {
   GmailSendResult,
   EmailStatusData,
 } from './email.types';
+import { encryptToken, decryptToken, isEncrypted } from './token-encryption';
 import { EmailDeliveryStatus } from '@grand-bandhan/shared';
 
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
@@ -15,12 +16,83 @@ const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const GMAIL_SEND_ENDPOINT = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
 
+export interface OAuthStateRecord {
+  id: string;
+  state: string;
+  userId: string | null;
+  agencyId: string | null;
+  expiresAt: Date;
+}
+
 export class GmailService {
+  /**
+   * Creates a short-lived (60s), single-use authorization handoff ticket.
+   * This allows secure initiation of OAuth via browser redirection without
+   * exposing sensitive JWTs or user credentials in URL query parameters.
+   */
+  public static async createHandoffTicket(
+    userId: string,
+    agencyId?: string
+  ): Promise<{ ticket: string; expiresAt: Date }> {
+    const ticket = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 1000); // 60-second validity
+
+    await prisma.oAuthState.create({
+      data: {
+        state: `handoff_${ticket}`,
+        userId,
+        agencyId: agencyId || null,
+        expiresAt,
+      },
+    });
+
+    return { ticket, expiresAt };
+  }
+
+  /**
+   * Validates and single-use consumes a handoff ticket from Neon PostgreSQL.
+   * Immediately deletes the ticket to prevent replay attacks.
+   */
+  public static async validateAndConsumeHandoffTicket(
+    ticket: string
+  ): Promise<{ userId: string | null; agencyId: string | null } | null> {
+    if (!ticket || typeof ticket !== 'string') {
+      return null;
+    }
+
+    const stateKey = `handoff_${ticket}`;
+    const record = await prisma.oAuthState.findUnique({
+      where: { state: stateKey },
+    });
+
+    if (!record) {
+      return null;
+    }
+
+    // Single-use: delete immediately to eliminate replay windows
+    await prisma.oAuthState.delete({
+      where: { id: record.id },
+    }).catch(() => {});
+
+    // Check expiration
+    if (new Date() > record.expiresAt) {
+      return null;
+    }
+
+    return {
+      userId: record.userId,
+      agencyId: record.agencyId,
+    };
+  }
+
   /**
    * Generates a cryptographically secure OAuth 2.0 authorization URL
    * with CSRF protection state persisted to Neon PostgreSQL.
    */
-  public static async generateAuthUrl(userId?: string, agencyId?: string): Promise<{ url: string; state: string }> {
+  public static async generateAuthUrl(
+    userId?: string,
+    agencyId?: string
+  ): Promise<{ url: string; state: string }> {
     const envValidation = validateGmailEnv();
     if (!envValidation.isValid) {
       throw new Error(`Google OAuth environment variables missing: ${envValidation.missing.join(', ')}`);
@@ -60,10 +132,16 @@ export class GmailService {
   /**
    * Validates OAuth state nonce against Neon PostgreSQL (CSRF Prevention)
    * and consumes the nonce so it cannot be reused.
+   * Returns bound admin and agency context if valid.
    */
-  public static async validateAndConsumeState(state: string): Promise<boolean> {
+  public static async validateAndConsumeState(state: string): Promise<OAuthStateRecord | null> {
     if (!state || typeof state !== 'string') {
-      return false;
+      return null;
+    }
+
+    // Reject handoff tickets masquerading as Google OAuth state nonces
+    if (state.startsWith('handoff_')) {
+      return null;
     }
 
     const record = await prisma.oAuthState.findUnique({
@@ -71,7 +149,7 @@ export class GmailService {
     });
 
     if (!record) {
-      return false;
+      return null;
     }
 
     // Delete state immediately to prevent replay attacks
@@ -81,16 +159,21 @@ export class GmailService {
 
     // Check expiration
     if (new Date() > record.expiresAt) {
-      return false;
+      return null;
     }
 
-    return true;
+    return record;
   }
 
   /**
-   * Exchanges authorization code for tokens, persisting refresh token to Neon PostgreSQL.
+   * Exchanges authorization code for tokens and persists encrypted refresh/access
+   * tokens to Neon PostgreSQL using AES-256-GCM authenticated envelope encryption.
+   * Supports multi-tenant isolation by binding token to specific agency or global default.
    */
-  public static async exchangeCodeForTokens(code: string): Promise<GmailTokenResponse> {
+  public static async exchangeCodeForTokens(
+    code: string,
+    options?: { agencyId?: string | null; userId?: string | null }
+  ): Promise<GmailTokenResponse> {
     const postData = new URLSearchParams({
       code,
       client_id: env.GOOGLE_CLIENT_ID,
@@ -107,30 +190,50 @@ export class GmailService {
       throw new Error('Google OAuth token exchange failed: No access_token in response');
     }
 
-    // Persist refresh token to Neon DB
     const refreshToken = response.refresh_token || env.GMAIL_REFRESH_TOKEN;
     if (refreshToken) {
       const expiryDate = response.expires_in
         ? new Date(Date.now() + response.expires_in * 1000)
         : new Date(Date.now() + 3600 * 1000);
 
+      // Multi-tenant keying: dedicated sender per agency or 'default' platform global sender
+      const tokenId = options?.agencyId ? `agency_${options.agencyId}` : 'default';
+
+      // Resolve sender email for the agency or default concierge
+      let senderEmail = env.GMAIL_SENDER_EMAIL;
+      if (options?.agencyId) {
+        const agency = await prisma.agency.findUnique({
+          where: { id: options.agencyId },
+          select: { contactEmail: true },
+        }).catch(() => null);
+        if (agency?.contactEmail) {
+          senderEmail = agency.contactEmail;
+        }
+      }
+
+      // Encrypt tokens at rest using AES-256-GCM envelope
+      const encryptedRefreshToken = encryptToken(refreshToken);
+      const encryptedAccessToken = encryptToken(response.access_token);
+
       await prisma.gmailOAuthToken.upsert({
-        where: { id: 'default' },
+        where: { id: tokenId },
         update: {
-          refreshToken,
-          accessToken: response.access_token,
+          refreshToken: encryptedRefreshToken,
+          accessToken: encryptedAccessToken,
           expiryDate,
-          senderEmail: env.GMAIL_SENDER_EMAIL,
+          senderEmail,
           scope: response.scope || GMAIL_SCOPE,
+          agencyId: options?.agencyId || null,
           updatedAt: new Date(),
         },
         create: {
-          id: 'default',
-          refreshToken,
-          accessToken: response.access_token,
+          id: tokenId,
+          refreshToken: encryptedRefreshToken,
+          accessToken: encryptedAccessToken,
           expiryDate,
-          senderEmail: env.GMAIL_SENDER_EMAIL,
+          senderEmail,
           scope: response.scope || GMAIL_SCOPE,
+          agencyId: options?.agencyId || null,
         },
       });
     }
@@ -139,20 +242,38 @@ export class GmailService {
   }
 
   /**
-   * Retrieves a valid access token. Re-uses non-expired token or refreshes via refresh_token.
+   * Retrieves a valid access token. Decrypts AES-256-GCM token from Neon PostgreSQL.
+   * Automatically refreshes via refresh_token when expired.
+   * Multi-tenant resolution: checks for dedicated agency sender first, then falls back to platform concierge.
    */
-  public static async getValidAccessToken(): Promise<string> {
-    // 1. Check Neon PostgreSQL for existing token record
-    let tokenRecord = await prisma.gmailOAuthToken.findUnique({
-      where: { id: 'default' },
-    });
+  public static async getValidAccessToken(agencyId?: string): Promise<string> {
+    let tokenRecord = null;
 
-    // Fallback: If not in DB yet but GMAIL_REFRESH_TOKEN exists in env, initialize record
+    // 1. Check for dedicated agency sender token
+    if (agencyId) {
+      tokenRecord = await prisma.gmailOAuthToken.findFirst({
+        where: {
+          OR: [
+            { id: `agency_${agencyId}` },
+            { agencyId },
+          ],
+        },
+      });
+    }
+
+    // 2. Fall back to global platform concierge sender token
+    if (!tokenRecord) {
+      tokenRecord = await prisma.gmailOAuthToken.findUnique({
+        where: { id: 'default' },
+      });
+    }
+
+    // 3. Fallback: If not in DB yet but GMAIL_REFRESH_TOKEN exists in env, initialize encrypted record
     if (!tokenRecord && env.GMAIL_REFRESH_TOKEN) {
       tokenRecord = await prisma.gmailOAuthToken.create({
         data: {
           id: 'default',
-          refreshToken: env.GMAIL_REFRESH_TOKEN,
+          refreshToken: encryptToken(env.GMAIL_REFRESH_TOKEN),
           senderEmail: env.GMAIL_SENDER_EMAIL,
           scope: GMAIL_SCOPE,
         },
@@ -165,21 +286,24 @@ export class GmailService {
       );
     }
 
-    // 2. Check if access token is cached and not expired (with 2-minute safety window)
+    // 4. Decrypt refresh token
+    const plainRefreshToken = decryptToken(tokenRecord.refreshToken);
+
+    // 5. Check if cached access token is non-expired (with 2-minute safety window)
     const safetyWindowMs = 2 * 60 * 1000;
     if (
       tokenRecord.accessToken &&
       tokenRecord.expiryDate &&
       tokenRecord.expiryDate.getTime() - safetyWindowMs > Date.now()
     ) {
-      return tokenRecord.accessToken;
+      return decryptToken(tokenRecord.accessToken);
     }
 
-    // 3. Refresh the access token using refresh_token
+    // 6. Refresh the access token using decrypted refresh token
     const postData = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      refresh_token: tokenRecord.refreshToken,
+      refresh_token: plainRefreshToken,
       grant_type: 'refresh_token',
     }).toString();
 
@@ -195,13 +319,13 @@ export class GmailService {
       ? new Date(Date.now() + refreshResponse.expires_in * 1000)
       : new Date(Date.now() + 3600 * 1000);
 
-    // Update Neon DB cache
+    // 7. Update Neon DB cache with encrypted tokens
     await prisma.gmailOAuthToken.update({
-      where: { id: 'default' },
+      where: { id: tokenRecord.id },
       data: {
-        accessToken: refreshResponse.access_token,
+        accessToken: encryptToken(refreshResponse.access_token),
         expiryDate: newExpiry,
-        ...(refreshResponse.refresh_token ? { refreshToken: refreshResponse.refresh_token } : {}),
+        ...(refreshResponse.refresh_token ? { refreshToken: encryptToken(refreshResponse.refresh_token) } : {}),
       },
     });
 
@@ -210,9 +334,10 @@ export class GmailService {
 
   /**
    * Constructs an RFC 2822 MIME message and sends via Gmail API messages.send.
+   * Automatically resolves dedicated agency sender or global concierge sender.
    */
   public static async sendEmail(params: SendGmailEmailParams): Promise<GmailSendResult> {
-    const accessToken = await this.getValidAccessToken();
+    const accessToken = await this.getValidAccessToken(params.agencyId);
     const senderEmail = params.from || env.GMAIL_SENDER_EMAIL;
 
     // 1. Build RFC 2822 MIME message
@@ -290,12 +415,32 @@ export class GmailService {
   }
 
   /**
-   * Inspects current status without leaking credentials or tokens.
+   * Inspects current status without leaking credentials, tokens, or encryption keys.
+   * Reports multi-tenant sender details if agencyId is supplied.
    */
-  public static async getStatus(): Promise<EmailStatusData> {
-    const tokenRecord = await prisma.gmailOAuthToken.findUnique({
-      where: { id: 'default' },
-    });
+  public static async getStatus(agencyId?: string): Promise<EmailStatusData> {
+    let tokenRecord = null;
+    let isAgencyDedicated = false;
+
+    if (agencyId) {
+      tokenRecord = await prisma.gmailOAuthToken.findFirst({
+        where: {
+          OR: [
+            { id: `agency_${agencyId}` },
+            { agencyId },
+          ],
+        },
+      });
+      if (tokenRecord) {
+        isAgencyDedicated = true;
+      }
+    }
+
+    if (!tokenRecord) {
+      tokenRecord = await prisma.gmailOAuthToken.findUnique({
+        where: { id: 'default' },
+      });
+    }
 
     const hasDbToken = Boolean(tokenRecord?.refreshToken);
     const hasEnvToken = Boolean(env.GMAIL_REFRESH_TOKEN);
@@ -311,8 +456,17 @@ export class GmailService {
       ? 'RESEND'
       : 'SANDBOX_FALLBACK';
 
+    const tokenEncrypted = tokenRecord?.refreshToken ? isEncrypted(tokenRecord.refreshToken) : false;
+    const encryptionKeyConfigured = Boolean(
+      process.env.GMAIL_TOKEN_ENCRYPTION_KEY ||
+      process.env.GMAIL_TOKEN_ENCRYPTION_KEY_V1 ||
+      env.GMAIL_TOKEN_ENCRYPTION_KEY
+    );
+
     return {
       connected,
+      isAgencyDedicated,
+      agencyId: isAgencyDedicated ? agencyId || null : null,
       senderEmail: tokenRecord?.senderEmail || env.GMAIL_SENDER_EMAIL,
       scope: tokenRecord?.scope || GMAIL_SCOPE,
       redirectUri: env.GOOGLE_REDIRECT_URI,
@@ -320,6 +474,8 @@ export class GmailService {
       tokenExpiresAt: tokenRecord?.expiryDate ? tokenRecord.expiryDate.toISOString() : null,
       clientIdConfigured: Boolean(env.GOOGLE_CLIENT_ID),
       clientSecretConfigured: Boolean(env.GOOGLE_CLIENT_SECRET),
+      encryptionKeyConfigured,
+      tokenEncrypted,
       activeTransport,
     };
   }

@@ -12,6 +12,8 @@ export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/api/auth/login',
     REGISTER: '/api/auth/register',
+    FORGOT_PASSWORD: '/api/auth/forgot-password',
+    RESET_PASSWORD: '/api/auth/reset-password',
     ME: '/api/auth/me',
     LOGOUT: '/api/auth/logout',
     PORTAL_LINK: '/api/auth/portal-link',

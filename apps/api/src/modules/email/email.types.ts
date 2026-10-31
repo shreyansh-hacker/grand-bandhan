@@ -36,5 +36,9 @@ export interface EmailStatusData {
   tokenExpiresAt: string | null;
   clientIdConfigured: boolean;
   clientSecretConfigured: boolean;
+  encryptionKeyConfigured?: boolean;
+  tokenEncrypted?: boolean;
+  isAgencyDedicated?: boolean;
+  agencyId?: string | null;
   activeTransport: 'GMAIL_API' | 'RESEND' | 'SANDBOX_FALLBACK';
 }

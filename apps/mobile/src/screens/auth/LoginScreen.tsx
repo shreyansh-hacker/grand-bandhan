@@ -33,7 +33,7 @@ const DEMO_ROLES = [
   { role: 'CLIENT', label: 'Royal Couple', email: 'client@grandbandhan.com', pass: 'GrandBandhan@2025' },
 ];
 
-export const LoginScreen: React.FC = () => {
+export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const { login, isLoading, error, clearError } = useAuthStore();
   const [selectedDemoRole, setSelectedDemoRole] = useState<string | null>(null);
 
@@ -126,6 +126,14 @@ export const LoginScreen: React.FC = () => {
             )}
           />
 
+          <TouchableOpacity
+            style={styles.forgotPasswordContainer}
+            onPress={() => navigation?.navigate('ForgotPassword')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
           <ImperialButton
             title="Authenticate & Enter"
             onPress={handleSubmit(onSubmit)}
@@ -133,10 +141,21 @@ export const LoginScreen: React.FC = () => {
             size="lg"
             style={styles.loginButton}
           />
+
+          <View style={styles.registerPrompt}>
+            <Text style={styles.registerPromptText}>New to Grand Bandhan? </Text>
+            <TouchableOpacity
+              onPress={() => navigation?.navigate('Register')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.registerLink}>Register Account</Text>
+            </TouchableOpacity>
+          </View>
         </ImperialCard>
 
         {/* Development Quick Role Switcher */}
-        <View style={styles.demoSection}>
+        {__DEV__ && (
+          <View style={styles.demoSection}>
           <Text style={styles.demoSectionTitle}>DEMO ROLE SELECTOR</Text>
           <Text style={styles.demoSectionSubtitle}>
             Tap a role to populate verified backend credentials:
@@ -166,6 +185,7 @@ export const LoginScreen: React.FC = () => {
             })}
           </View>
         </View>
+        )}
 
         {/* Backend & Neon Security Info */}
         <View style={styles.securityInfo}>
@@ -257,8 +277,34 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
   },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  forgotPasswordText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.goldDark,
+    fontWeight: typography.fontWeight.semibold,
+  },
   loginButton: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  registerPrompt: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  registerPromptText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+  registerLink: {
+    fontSize: typography.fontSize.sm,
+    color: colors.imperialNavy,
+    fontWeight: typography.fontWeight.bold,
+    textDecorationLine: 'underline',
   },
   demoSection: {
     backgroundColor: '#FAF5EA',
