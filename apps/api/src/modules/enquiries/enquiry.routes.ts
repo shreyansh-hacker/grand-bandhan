@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import {
+  createPublicEnquiry,
   createEnquiry,
   listEnquiries,
   getEnquiryById,
+  getEnquiryByReference,
+  assignPlanner,
   updateEnquiryStatus,
-  convertEnquiryToWedding,
 } from './enquiry.controller';
 import { authenticate } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
@@ -12,13 +14,25 @@ import { UserRole } from '@grand-bandhan/shared';
 
 const router = Router();
 
-// Public creation for web leads
-router.post('/', createEnquiry);
+// Public routes
+router.post('/public', createPublicEnquiry);
+router.get('/reference/:referenceNumber', getEnquiryByReference);
 
-// Protected routes for agency team
-router.get('/', authenticate, requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER), listEnquiries);
+// Authenticated agency operations
+router.post('/', authenticate, createEnquiry);
+router.get('/', authenticate, listEnquiries);
 router.get('/:id', authenticate, getEnquiryById);
-router.patch('/:id/status', authenticate, requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER), updateEnquiryStatus);
-router.post('/:id/convert', authenticate, requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER), convertEnquiryToWedding);
+router.post(
+  '/:id/assign',
+  authenticate,
+  requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
+  assignPlanner
+);
+router.patch(
+  '/:id/status',
+  authenticate,
+  requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
+  updateEnquiryStatus
+);
 
 export default router;

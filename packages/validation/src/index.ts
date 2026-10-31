@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import {
   UserRole,
+  AgencyStatus,
+  AccountStatus,
+  ProposalStatus,
+  EmailDeliveryStatus,
   EnquirySource,
   PlanningForSide,
   EnquiryStatus,
@@ -29,6 +33,87 @@ export const registerSchema = z.object({
   role: z.nativeEnum(UserRole).default(UserRole.CLIENT),
   phone: z.string().optional(),
   agencyName: z.string().optional(),
+});
+
+export const registerAgencySchema = z
+  .object({
+    agencyName: z.string().min(2, 'Agency name must be at least 2 characters'),
+    ownerName: z.string().min(2, 'Owner / contact name must be at least 2 characters'),
+    email: z.string().email('Valid business email is required'),
+    phone: z.string().min(10, 'Valid contact phone number is required'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'Please confirm your password'),
+    address: z.string().min(3, 'Business address is required'),
+    city: z.string().min(2, 'City is required'),
+    state: z.string().min(2, 'State is required'),
+    country: z.string().default('India'),
+    website: z.string().optional().or(z.literal('')),
+    gstin: z.string().optional().or(z.literal('')),
+    businessDescription: z.string().optional().or(z.literal('')),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
+
+export const agencyStatusUpdateSchema = z.object({
+  status: z.nativeEnum(AgencyStatus),
+  rejectionReason: z.string().optional(),
+});
+
+export const updateProfileSchema = z.object({
+  name: z.string().min(2).optional(),
+  phone: z.string().optional(),
+  department: z.string().optional(),
+  specialization: z.string().optional(),
+  avatarUrl: z.string().optional(),
+});
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(6, 'Current password is required'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'Confirm new password'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New passwords don't match",
+    path: ['confirmPassword'],
+  });
+
+export const publicEnquirySchema = z.object({
+  customerName: z.string().min(2, 'Your name is required'),
+  partnerName: z.string().optional(),
+  email: z.string().email('Valid email address is required'),
+  phone: z.string().min(10, 'Valid phone number is required'),
+  preferredContactMethod: z.enum(['EMAIL', 'PHONE', 'WHATSAPP']).default('EMAIL'),
+  weddingDate: z.string().optional().nullable(),
+  isDateFlexible: z.boolean().default(false),
+  location: z.string().min(2, 'Wedding city or destination is required'),
+  guestCount: z.coerce.number().min(1).default(250),
+  minBudget: z.coerce.number().min(0).default(1500000),
+  maxBudget: z.coerce.number().min(0).default(3500000),
+  packageType: z.nativeEnum(WeddingPackageType).optional(),
+  planningFor: z.nativeEnum(PlanningForSide).default(PlanningForSide.NOT_SPECIFIED),
+  eventsRequired: z.array(z.string()).default([]),
+  servicesRequired: z.array(z.string()).default([]),
+  notes: z.string().optional(),
+  source: z.nativeEnum(EnquirySource).default(EnquirySource.WEBSITE),
+});
+
+export const createProposalSchema = z.object({
+  enquiryId: z.string().uuid('Valid enquiry ID is required'),
+  packageType: z.nativeEnum(WeddingPackageType).default(WeddingPackageType.FULL_SERVICE),
+  proposedServices: z.any().optional(),
+  estimatedBudget: z.coerce.number().min(0, 'Estimated budget must be positive'),
+  planningScope: z.string().optional(),
+  termsContent: z.string().optional(),
+  paymentMilestones: z.any().optional(),
+  validUntil: z.string().min(1, 'Proposal validity date is required'),
+});
+
+export const respondProposalSchema = z.object({
+  status: z.enum(['ACCEPTED', 'REJECTED', 'REVISION_REQUESTED']),
+  customerNotes: z.string().optional(),
 });
 
 // Enquiry Validation

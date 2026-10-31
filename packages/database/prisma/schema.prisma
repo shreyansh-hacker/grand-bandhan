@@ -19,6 +19,36 @@ enum UserRole {
   CLIENT
 }
 
+enum AgencyStatus {
+  PENDING_VERIFICATION
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_APPROVAL
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+enum EmailDeliveryStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
 enum EnquirySource {
   WEBSITE
   WHATSAPP
@@ -37,9 +67,15 @@ enum EnquiryStatus {
   NEW
   CONTACTED
   CONSULTATION_SCHEDULED
+  QUALIFIED
+  PROPOSAL_IN_PROGRESS
   PROPOSAL_SENT
+  NEGOTIATION
+  APPROVED
+  BOOKING_PENDING
   CONVERTED
   LOST
+  ON_HOLD
 }
 
 enum AgreementStatus {
@@ -170,21 +206,34 @@ enum SettlementStatus {
 }
 
 model Agency {
-  id           String            @id @default(uuid())
-  name         String
-  slug         String            @unique
-  logoUrl      String?
-  contactEmail String
-  contactPhone String?
-  address      String?
-  settings     Json?
-  users        User[]
-  weddings     Wedding[]
-  enquiries    CustomerEnquiry[]
-  vendors      Vendor[]
-  auditLogs    AuditLog[]
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id                  String            @id @default(uuid())
+  name                String
+  slug                String            @unique
+  logoUrl             String?
+  contactEmail        String
+  contactPhone        String?
+  ownerName           String?
+  address             String?
+  city                String?
+  state               String?
+  country             String?           @default("India")
+  website             String?
+  gstin               String?
+  businessDescription String?
+  rejectionReason     String?
+  status              AgencyStatus      @default(APPROVED)
+  approvedAt          DateTime?
+  suspendedAt         DateTime?
+  settings            Json?
+  users               User[]
+  weddings            Wedding[]
+  enquiries           CustomerEnquiry[]
+  proposals           WeddingProposal[]
+  vendors             Vendor[]
+  auditLogs           AuditLog[]
+  emailLogs           EmailLog[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }
 
 model User {
@@ -198,10 +247,16 @@ model User {
   phone                String?
   avatarUrl            String?
   isActive             Boolean               @default(true)
+  accountStatus        AccountStatus         @default(ACTIVE)
+  department           String?
+  specialization       String?
+  lastLoginAt          DateTime?
+  emailVerified        Boolean               @default(false)
   tokenVersion         Int                   @default(1)
   refreshTokens        RefreshToken[]
   assignedWeddings     Wedding[]             @relation("PlannerWeddings")
   clientWeddings       Wedding[]             @relation("ClientWeddings")
+  assignedEnquiries    CustomerEnquiry[]     @relation("AssignedPlannerEnquiries")
   weddingStaffRoles    WeddingStaff[]
   assignedTasks        Task[]                @relation("UserTasks")
   responsibleEvents    EventTimeline[]       @relation("ResponsibleStaff")
@@ -209,6 +264,7 @@ model User {
   authoredFeedbacks    Feedback[]            @relation("FeedbackAuthor")
   auditLogs            AuditLog[]
   uploadedFiles        StoredFile[]
+  notificationPreference NotificationPreference?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 }
@@ -224,26 +280,36 @@ model RefreshToken {
 }
 
 model CustomerEnquiry {
-  id                 String          @id @default(uuid())
-  agencyId           String
-  agency             Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  customerName       String
-  email              String
-  phone              String
-  weddingDate        DateTime?
-  location           String
-  guestCount         Int             @default(200)
-  theme              String?
-  minBudget          Float           @default(500000)
-  maxBudget          Float           @default(2500000)
-  source             EnquirySource   @default(WEBSITE)
-  planningFor        PlanningForSide @default(NOT_SPECIFIED)
-  status             EnquiryStatus   @default(NEW)
-  followUpDate       DateTime?
-  notes              String?
-  convertedWeddingId String?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id                     String            @id @default(uuid())
+  agencyId               String
+  agency                 Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  referenceNumber        String?           @unique
+  customerName           String
+  partnerName            String?
+  email                  String
+  phone                  String
+  preferredContactMethod String?           @default("EMAIL")
+  weddingDate            DateTime?
+  isDateFlexible         Boolean           @default(false)
+  location               String
+  guestCount             Int               @default(200)
+  theme                  String?
+  minBudget              Float             @default(500000)
+  maxBudget              Float             @default(2500000)
+  packageType            WeddingPackageType?
+  eventsRequired         String[]          @default([])
+  servicesRequired       String[]          @default([])
+  source                 EnquirySource     @default(WEBSITE)
+  planningFor            PlanningForSide   @default(NOT_SPECIFIED)
+  status                 EnquiryStatus     @default(NEW)
+  assignedPlannerId      String?
+  assignedPlanner        User?             @relation("AssignedPlannerEnquiries", fields: [assignedPlannerId], references: [id])
+  followUpDate           DateTime?
+  notes                  String?
+  convertedWeddingId     String?
+  proposals              WeddingProposal[]
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 }
 
 model DigitalAgreement {
@@ -557,4 +623,59 @@ model StoredFile {
   updatedAt   DateTime @updatedAt
 
   @@index([entityType, entityId])
+}
+
+model WeddingProposal {
+  id                String             @id @default(uuid())
+  enquiryId         String
+  enquiry           CustomerEnquiry    @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  agencyId          String
+  agency            Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  proposalNumber    String             @unique
+  packageType       WeddingPackageType @default(FULL_SERVICE)
+  proposedServices  Json?
+  estimatedBudget   Float
+  planningScope     String?
+  termsContent      String?
+  paymentMilestones Json?
+  validUntil        DateTime
+  status            ProposalStatus     @default(DRAFT)
+  customerNotes     String?
+  acceptedAt        DateTime?
+  rejectedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model EmailLog {
+  id                String              @id @default(uuid())
+  agencyId          String?
+  agency            Agency?             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  recipientEmail    String
+  recipientName     String?
+  recipientRole     String?
+  eventType         String
+  subject           String
+  templateName      String
+  status            EmailDeliveryStatus @default(SENT)
+  providerMessageId String?
+  errorMessage      String?
+  retryCount        Int                 @default(0)
+  relatedEntityType String?
+  relatedEntityId   String?
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+}
+
+model NotificationPreference {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionalEmails Boolean  @default(true)
+  weddingUpdates      Boolean  @default(true)
+  paymentAlerts       Boolean  @default(true)
+  taskAlerts          Boolean  @default(true)
+  marketingEmails     Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

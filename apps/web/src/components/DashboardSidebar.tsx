@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   CreditCard,
   Building,
+  UserCircle,
   LogOut,
   ChevronRight,
   Sparkles,
@@ -28,6 +29,7 @@ const NAVIGATION_ITEMS = [
   { label: 'Service Verification', href: '/dashboard/verification', icon: ShieldCheck },
   { label: 'Payments & Settlement', href: '/dashboard/payments', icon: CreditCard },
   { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Building },
+  { label: 'Profile & Settings', href: '/dashboard/profile', icon: UserCircle },
 ];
 
 export default function DashboardSidebar() {

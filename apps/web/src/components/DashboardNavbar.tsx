@@ -45,7 +45,11 @@ export default function DashboardNavbar() {
         </Link>
 
         {/* User Role Pill */}
-        <div className="flex items-center gap-2.5 bg-navy-50 border border-navy-200 px-3 py-1.5 rounded-xl">
+        <Link
+          href="/dashboard/profile"
+          className="flex items-center gap-2.5 bg-navy-50 border border-navy-200 px-3 py-1.5 rounded-xl hover:border-gold/60 hover:bg-gold/5 transition-all"
+          title="Account Settings & Profile"
+        >
           <div className="w-7 h-7 rounded-full bg-gold-gradient text-navy-950 flex items-center justify-center font-bold text-xs">
             {user?.name ? user.name[0].toUpperCase() : 'U'}
           </div>
@@ -57,7 +61,7 @@ export default function DashboardNavbar() {
               {user?.role || 'AGENCY_ADMIN'}
             </span>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

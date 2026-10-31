@@ -10,6 +10,7 @@ import {
   VendorCategory,
   QuotationRequestStatus,
   QuotationStatus,
+  TaskPriority,
   TaskStatus,
   EventStatus,
   ArrivalStatus,
@@ -18,7 +19,6 @@ import {
   PaymentStatus,
   AgreementStatus,
 } from '@grand-bandhan/shared';
-import { generateInstantWeddingPlan } from './modules/tasks/task.service';
 
 export async function seedDemoDataIfEmpty(): Promise<void> {
   const existingUsers = DataStore.users.list();
@@ -197,16 +197,12 @@ export async function seedDemoDataIfEmpty(): Promise<void> {
     status: AgreementStatus.SIGNED,
   });
 
-  // 5. Generate 25+ Instant Planning Tasks
-  const tasks = generateInstantWeddingPlan(flagshipWedding.id, flagshipWedding.weddingDate, WeddingPackageType.FULL_SERVICE);
-  // Mark some tasks done/in progress for realistic dashboard progress
-  if (tasks.length > 5) {
-    DataStore.tasks.update(tasks[0].id, { status: TaskStatus.DONE, completedAt: new Date().toISOString() });
-    DataStore.tasks.update(tasks[1].id, { status: TaskStatus.DONE, completedAt: new Date().toISOString() });
-    DataStore.tasks.update(tasks[2].id, { status: TaskStatus.DONE, completedAt: new Date().toISOString() });
-    DataStore.tasks.update(tasks[3].id, { status: TaskStatus.IN_PROGRESS, assignedUserId: planner.id });
-    DataStore.tasks.update(tasks[4].id, { status: TaskStatus.IN_PROGRESS, assignedUserId: coordinator.id });
-  }
+  // 5. Generate Instant Planning Tasks in DataStore
+  DataStore.tasks.create({ weddingId: flagshipWedding.id, title: 'Initial Concept & Moodboard Finalization', category: 'Design', deadline: new Date().toISOString(), priority: TaskPriority.HIGH, status: TaskStatus.DONE, completedAt: new Date().toISOString() });
+  DataStore.tasks.create({ weddingId: flagshipWedding.id, title: 'Primary Heritage Venue Inspection & Booking', category: 'Venue Arrangements', deadline: new Date().toISOString(), priority: TaskPriority.URGENT, status: TaskStatus.DONE, completedAt: new Date().toISOString() });
+  DataStore.tasks.create({ weddingId: flagshipWedding.id, title: 'Budget Allocation & Financial Blueprint', category: 'Financial Planning', deadline: new Date().toISOString(), priority: TaskPriority.HIGH, status: TaskStatus.DONE, completedAt: new Date().toISOString() });
+  DataStore.tasks.create({ weddingId: flagshipWedding.id, title: 'Three Caterers Quotation Comparison & Food Tasting', category: 'Catering', deadline: new Date().toISOString(), priority: TaskPriority.URGENT, status: TaskStatus.IN_PROGRESS, assignedUserId: planner.id });
+  DataStore.tasks.create({ weddingId: flagshipWedding.id, title: 'Catering Vendor Selection & Contract Lock', category: 'Catering', deadline: new Date().toISOString(), priority: TaskPriority.HIGH, status: TaskStatus.IN_PROGRESS, assignedUserId: coordinator.id });
 
   // 6. "Three Vendors, One Decision" Quotation Request for Catering (400 Guests)
   const cateringRfp = DataStore.quotationRequests.create({

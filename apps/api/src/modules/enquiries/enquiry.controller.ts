@@ -1,121 +1,365 @@
 import { Request, Response } from 'express';
-import { DataStore } from '../store';
-import { createEnquirySchema, updateEnquiryStatusSchema } from '@grand-bandhan/validation';
+import { prisma } from '@grand-bandhan/database';
+import { publicEnquirySchema, createEnquirySchema, updateEnquiryStatusSchema } from '@grand-bandhan/validation';
 import { AuthenticatedRequest } from '../../middleware/auth';
-import { EnquiryStatus, WeddingStatus, WeddingPackageType } from '@grand-bandhan/shared';
+import { EnquiryStatus, PlanningForSide, UserRole } from '@grand-bandhan/shared';
+import { NotificationService } from '../notifications/notification.service';
+import { NotificationEvent } from '../notifications/notification.types';
 
-// Public submission or planner entry
-export async function createEnquiry(req: Request, res: Response): Promise<void> {
-  const parsed = createEnquirySchema.parse(req.body);
-  const agency = DataStore.agencies.findFirst(() => true);
-  const agencyId = agency ? agency.id : 'default-agency';
+/**
+ * Public "Plan Your Wedding" Enquiry Submission
+ */
+export async function createPublicEnquiry(req: Request, res: Response): Promise<void> {
+  try {
+    const parsed = publicEnquirySchema.parse(req.body);
 
-  const enquiry = DataStore.enquiries.create({
-    agencyId,
-    customerName: parsed.customerName,
-    email: parsed.email,
-    phone: parsed.phone,
-    weddingDate: parsed.weddingDate ? new Date(parsed.weddingDate).toISOString() : null,
-    location: parsed.location,
-    guestCount: parsed.guestCount,
-    theme: parsed.theme || null,
-    minBudget: parsed.minBudget,
-    maxBudget: parsed.maxBudget,
-    source: parsed.source,
-    planningFor: parsed.planningFor,
-    status: EnquiryStatus.NEW,
-    followUpDate: null,
-    notes: parsed.notes || null,
-  });
+    // Target agency discovery (via slug or default primary approved agency)
+    const slug = (req.query.agencySlug as string) || (req.headers['x-agency-slug'] as string);
+    let agency = slug
+      ? await prisma.agency.findUnique({ where: { slug } })
+      : await prisma.agency.findFirst({ where: { status: 'APPROVED' } });
 
-  DataStore.auditLogs.create({
-    agencyId,
-    action: 'ENQUIRY_CREATED',
-    entity: 'CustomerEnquiry',
-    entityId: enquiry.id,
-    details: { customerName: enquiry.customerName, source: enquiry.source, planningFor: enquiry.planningFor },
-  });
+    if (!agency) {
+      agency = await prisma.agency.findFirst();
+    }
 
-  res.status(201).json({
-    success: true,
-    data: enquiry,
-    message: 'Your wedding enquiry has been submitted. Our concierge team will reach out promptly.',
-  });
-}
+    if (!agency) {
+      res.status(500).json({ success: false, message: 'No registered agency available to route enquiry.' });
+      return;
+    }
 
-export function listEnquiries(req: AuthenticatedRequest, res: Response): void {
-  const agencyId = req.user?.agencyId;
-  const list = DataStore.enquiries.list(agencyId);
-  res.json({ success: true, data: list });
-}
+    // Generate unique reference number: GB-ENQ-YYYY-XXXX
+    let referenceNumber = `GB-ENQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    while (await prisma.customerEnquiry.findUnique({ where: { referenceNumber } })) {
+      referenceNumber = `GB-ENQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
-export function getEnquiryById(req: AuthenticatedRequest, res: Response): void {
-  const enquiry = DataStore.enquiries.findById(String(req.params.id));
-  if (!enquiry) {
-    res.status(404).json({ success: false, message: 'Enquiry not found' });
-    return;
+    const enquiry = await prisma.customerEnquiry.create({
+      data: {
+        agencyId: agency.id,
+        referenceNumber,
+        customerName: parsed.customerName.trim(),
+        partnerName: parsed.partnerName?.trim() || null,
+        email: parsed.email.toLowerCase().trim(),
+        phone: parsed.phone.trim(),
+        preferredContactMethod: parsed.preferredContactMethod || 'EMAIL',
+        weddingDate: parsed.weddingDate ? new Date(parsed.weddingDate) : null,
+        isDateFlexible: Boolean(parsed.isDateFlexible),
+        location: parsed.location.trim(),
+        guestCount: parsed.guestCount,
+        minBudget: parsed.minBudget,
+        maxBudget: parsed.maxBudget,
+        packageType: parsed.packageType || null,
+        eventsRequired: parsed.eventsRequired || [],
+        servicesRequired: parsed.servicesRequired || [],
+        source: parsed.source,
+        planningFor: parsed.planningFor,
+        status: EnquiryStatus.NEW,
+        notes: parsed.notes || null,
+      },
+    });
+
+    // 1. Emit Customer Confirmation
+    await NotificationService.emit(NotificationEvent.NEW_ENQUIRY_RECEIVED, {
+      agencyId: agency.id,
+      recipientEmail: enquiry.email,
+      recipientName: enquiry.customerName,
+      data: {
+        customerName: enquiry.customerName,
+        referenceNumber: enquiry.referenceNumber,
+        weddingDate: enquiry.weddingDate,
+        location: enquiry.location,
+        guestCount: enquiry.guestCount,
+        planningFor: enquiry.planningFor,
+      },
+    });
+
+    // 2. Emit Internal Agency Alert
+    await NotificationService.emit(NotificationEvent.NEW_ENQUIRY_RECEIVED, {
+      agencyId: agency.id,
+      recipientEmail: agency.contactEmail,
+      recipientName: `${agency.name} Concierge Desk`,
+      recipientRole: 'AGENCY_ADMIN',
+      subject: `👑 New Imperial Wedding Enquiry: ${enquiry.referenceNumber} (${enquiry.customerName})`,
+      data: {
+        customerName: enquiry.customerName,
+        referenceNumber: enquiry.referenceNumber,
+        weddingDate: enquiry.weddingDate,
+        location: enquiry.location,
+        guestCount: enquiry.guestCount,
+        planningFor: enquiry.planningFor,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: enquiry,
+      referenceNumber: enquiry.referenceNumber,
+      message: 'Royal wedding enquiry received and confirmed.',
+    });
+  } catch (err: any) {
+    if (err.errors) {
+      res.status(400).json({ success: false, errors: err.errors, message: err.errors[0]?.message || 'Validation error' });
+      return;
+    }
+    console.error('Error creating public enquiry:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to submit enquiry.' });
   }
-  res.json({ success: true, data: enquiry });
 }
 
-export function updateEnquiryStatus(req: AuthenticatedRequest, res: Response): void {
-  const parsed = updateEnquiryStatusSchema.parse(req.body);
-  const enquiry = DataStore.enquiries.update(String(req.params.id), {
-    status: parsed.status,
-    followUpDate: parsed.followUpDate ? new Date(parsed.followUpDate).toISOString() : null,
-    ...(parsed.notes ? { notes: parsed.notes } : {}),
-  });
+/**
+ * Authenticated Enquiry Creation (Planner / Admin desk entry)
+ */
+export async function createEnquiry(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const parsed = createEnquirySchema.parse(req.body);
+    const agencyId = req.user?.agencyId;
 
-  if (!enquiry) {
-    res.status(404).json({ success: false, message: 'Enquiry not found' });
-    return;
+    if (!agencyId) {
+      res.status(400).json({ success: false, message: 'Agency context missing' });
+      return;
+    }
+
+    let referenceNumber = `GB-ENQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const enquiry = await prisma.customerEnquiry.create({
+      data: {
+        agencyId,
+        referenceNumber,
+        customerName: parsed.customerName.trim(),
+        email: parsed.email.toLowerCase().trim(),
+        phone: parsed.phone.trim(),
+        weddingDate: parsed.weddingDate ? new Date(parsed.weddingDate) : null,
+        location: parsed.location.trim(),
+        guestCount: parsed.guestCount,
+        theme: parsed.theme || null,
+        minBudget: parsed.minBudget,
+        maxBudget: parsed.maxBudget,
+        source: parsed.source,
+        planningFor: parsed.planningFor,
+        status: EnquiryStatus.NEW,
+        notes: parsed.notes || null,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: enquiry,
+      message: 'Enquiry created successfully.',
+    });
+  } catch (err: any) {
+    if (err.errors) {
+      res.status(400).json({ success: false, errors: err.errors });
+      return;
+    }
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  res.json({ success: true, data: enquiry });
 }
 
-// Convert Enquiry to Confirmed Wedding Project
-export function convertEnquiryToWedding(req: AuthenticatedRequest, res: Response): void {
-  const enquiry = DataStore.enquiries.findById(String(req.params.id));
-  if (!enquiry) {
-    res.status(404).json({ success: false, message: 'Enquiry not found' });
-    return;
+/**
+ * List Enquiries (Tenant-Scoped)
+ */
+export async function listEnquiries(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+    const agencyId = req.user?.agencyId;
+
+    const where: any = {};
+    if (!isSuperAdmin) {
+      if (!agencyId) {
+        res.status(403).json({ success: false, message: 'Agency context missing' });
+        return;
+      }
+      where.agencyId = agencyId;
+    }
+
+    const { status, planningFor } = req.query;
+    if (status && status !== 'ALL') where.status = status;
+    if (planningFor && planningFor !== 'ALL') where.planningFor = planningFor;
+
+    const enquiries = await prisma.customerEnquiry.findMany({
+      where,
+      include: {
+        assignedPlanner: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        proposals: {
+          select: { id: true, proposalNumber: true, status: true, estimatedBudget: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({
+      success: true,
+      data: enquiries,
+      total: enquiries.length,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
   }
+}
 
-  const { packageType, brideName, groomName } = req.body;
+/**
+ * Get Enquiry by ID (Tenant-Scoped)
+ */
+export async function getEnquiryById(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  try {
+    const enquiry = await prisma.customerEnquiry.findUnique({
+      where: { id },
+      include: {
+        assignedPlanner: { select: { id: true, name: true, email: true, phone: true } },
+        proposals: true,
+      },
+    });
 
-  const wedding = DataStore.weddings.create({
-    agencyId: enquiry.agencyId,
-    brideName: brideName || (enquiry.planningFor === 'BRIDE_SIDE' ? enquiry.customerName : 'Bride'),
-    groomName: groomName || (enquiry.planningFor === 'GROOM_SIDE' ? enquiry.customerName : 'Groom'),
-    clientEmail: enquiry.email,
-    clientPhone: enquiry.phone,
-    weddingDate: enquiry.weddingDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-    location: enquiry.location,
-    guestCount: enquiry.guestCount,
-    budgetMin: enquiry.minBudget,
-    budgetMax: enquiry.maxBudget,
-    packageType: packageType || WeddingPackageType.FULL_SERVICE,
-    status: WeddingStatus.CONFIRMED,
-    plannerId: req.user?.userId || null,
-    notes: enquiry.notes,
-  });
+    if (!enquiry) {
+      res.status(404).json({ success: false, message: 'Enquiry not found' });
+      return;
+    }
 
-  // Update enquiry status
-  DataStore.enquiries.update(enquiry.id, {
-    status: EnquiryStatus.CONVERTED,
-    convertedWeddingId: wedding.id,
-  });
+    if (req.user?.role !== UserRole.SUPER_ADMIN && enquiry.agencyId !== req.user?.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied to this enquiry' });
+      return;
+    }
 
-  // Create initial digital agreement draft
-  DataStore.agreements.create({
-    weddingId: wedding.id,
-    termsContent: `SERVICE AGREEMENT FOR WEDDING PLANNING & MANAGEMENT SERVICES\n\nClient: ${wedding.brideName} & ${wedding.groomName}\nPackage: ${wedding.packageType}\nGuest Count: ${wedding.guestCount}\nLocation: ${wedding.location}\n\nTerms & Conditions:\n1. Scope of work encompasses comprehensive wedding planning and day-of execution as agreed.\n2. Payment milestones: 25% booking deposit, 50% advance 30 days prior, 25% post-wedding settlement.\n3. Cancellation policies and vendor terms apply as per signed contracts.`,
-  });
+    res.json({ success: true, data: enquiry });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
 
-  res.json({
-    success: true,
-    data: { wedding, enquiry },
-    message: 'Enquiry successfully converted to Wedding project with digital agreement generated.',
-  });
+/**
+ * Public Lookup by Reference Number
+ */
+export async function getEnquiryByReference(req: Request, res: Response): Promise<void> {
+  const referenceNumber = req.params.referenceNumber as string;
+  try {
+    const enquiry = await prisma.customerEnquiry.findUnique({
+      where: { referenceNumber },
+      select: {
+        referenceNumber: true,
+        customerName: true,
+        weddingDate: true,
+        location: true,
+        guestCount: true,
+        status: true,
+        planningFor: true,
+        packageType: true,
+        createdAt: true,
+        agency: { select: { name: true, contactEmail: true, contactPhone: true } },
+      },
+    });
+
+    if (!enquiry) {
+      res.status(404).json({ success: false, message: 'Enquiry reference not found' });
+      return;
+    }
+
+    res.json({ success: true, data: enquiry });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Assign Planner to Enquiry
+ */
+export async function assignPlanner(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  const { plannerId } = req.body;
+  try {
+    const enquiry = await prisma.customerEnquiry.findUnique({ where: { id } });
+    if (!enquiry) {
+      res.status(404).json({ success: false, message: 'Enquiry not found' });
+      return;
+    }
+
+    const planner = await prisma.user.findUnique({
+      where: { id: plannerId },
+      include: { agency: true },
+    });
+
+    if (!planner || (planner.agencyId !== enquiry.agencyId && req.user?.role !== UserRole.SUPER_ADMIN)) {
+      res.status(400).json({ success: false, message: 'Invalid planner selection' });
+      return;
+    }
+
+    const updated = await prisma.customerEnquiry.update({
+      where: { id },
+      data: {
+        assignedPlannerId: plannerId,
+        status: enquiry.status === 'NEW' ? 'CONTACTED' : enquiry.status,
+      },
+    });
+
+    // Notify assigned planner
+    await NotificationService.emit(NotificationEvent.ENQUIRY_ASSIGNED, {
+      agencyId: enquiry.agencyId,
+      recipientEmail: planner.email,
+      recipientName: planner.name,
+      recipientRole: 'WEDDING_PLANNER',
+      data: {
+        plannerName: planner.name,
+        referenceNumber: enquiry.referenceNumber || enquiry.id.slice(0, 8),
+        customerName: enquiry.customerName,
+        customerEmail: enquiry.email,
+        customerPhone: enquiry.phone,
+        location: enquiry.location,
+        minBudget: enquiry.minBudget,
+        maxBudget: enquiry.maxBudget,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: updated,
+      message: `Enquiry assigned to planner ${planner.name}.`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Update Enquiry Status
+ */
+export async function updateEnquiryStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  try {
+    const parsed = updateEnquiryStatusSchema.parse(req.body);
+
+    const enquiry = await prisma.customerEnquiry.findUnique({ where: { id } });
+    if (!enquiry) {
+      res.status(404).json({ success: false, message: 'Enquiry not found' });
+      return;
+    }
+
+    if (req.user?.role !== UserRole.SUPER_ADMIN && enquiry.agencyId !== req.user?.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    const updated = await prisma.customerEnquiry.update({
+      where: { id },
+      data: {
+        status: parsed.status,
+        followUpDate: parsed.followUpDate ? new Date(parsed.followUpDate) : enquiry.followUpDate,
+        notes: parsed.notes ? `${enquiry.notes || ''}\n${parsed.notes}` : enquiry.notes,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Enquiry status updated successfully.',
+    });
+  } catch (err: any) {
+    if (err.errors) {
+      res.status(400).json({ success: false, errors: err.errors });
+      return;
+    }
+    res.status(500).json({ success: false, message: err.message });
+  }
 }

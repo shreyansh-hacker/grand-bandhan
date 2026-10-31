@@ -6,6 +6,8 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   message?: string;
+  status?: string;
+  referenceNumber?: string;
   errors?: Array<{ path: string; message: string }>;
 }
 

@@ -24,6 +24,10 @@ import paymentRoutes from './modules/payments/payment.routes';
 import settlementRoutes from './modules/settlements/settlement.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
 import storageRoutes from './modules/storage/storage.routes';
+import agencyRoutes from './modules/agencies/agency.routes';
+import profileRoutes from './modules/profile/profile.routes';
+import proposalRoutes from './modules/proposals/proposal.routes';
+import notificationRoutes from './modules/notifications/notification.routes';
 
 const app = express();
 const server = http.createServer(app);
@@ -136,6 +140,10 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/settlements', settlementRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/storage', storageRoutes);
+app.use('/api/agencies', agencyRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/proposals', proposalRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
