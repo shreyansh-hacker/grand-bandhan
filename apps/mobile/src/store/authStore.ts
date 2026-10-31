@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           });
         }
       } catch (err: any) {
-        console.warn('Could not restore Keystore session:', err);
+        console.warn('Keystore session restore note:', err?.message || err);
         set({
           user: null,
           role: null,
