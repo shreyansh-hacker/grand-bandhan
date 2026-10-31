@@ -38,7 +38,7 @@ export function FadeInStagger({
       animate="visible"
       className={className}
     >
-      {children}
+      {children as any}
     </motion.div>
   );
 }
@@ -52,7 +52,7 @@ export function FadeInItem({
 }) {
   return (
     <motion.div variants={fadeInUp} className={className}>
-      {children}
+      {children as any}
     </motion.div>
   );
 }

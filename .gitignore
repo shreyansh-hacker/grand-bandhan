@@ -39,3 +39,4 @@ local-store.json
 .neon
 packages/database/src/generated/
 *.node
+*.tsbuildinfo
