@@ -10,7 +10,7 @@
     "build": "pnpm --filter @grand-bandhan/shared run build && pnpm --filter @grand-bandhan/validation run build && pnpm --filter @grand-bandhan/database run prisma:generate && pnpm --filter @grand-bandhan/database run build && pnpm --filter @grand-bandhan/ui run build && pnpm --filter @grand-bandhan/api run build && pnpm --filter @grand-bandhan/web run build",
     "build:api": "pnpm --filter @grand-bandhan/shared run build && pnpm --filter @grand-bandhan/validation run build && pnpm --filter @grand-bandhan/database run prisma:generate && pnpm --filter @grand-bandhan/database run build && pnpm --filter @grand-bandhan/api run build",
     "start:api": "node apps/api/dist/server.js",
-    "build:web": "pnpm --filter @grand-bandhan/shared run build && pnpm --filter @grand-bandhan/validation run build && pnpm --filter @grand-bandhan/ui run build && pnpm --filter @grand-bandhan/web run build && node -e \"require('fs').cpSync('apps/web/.next', '.next', { recursive: true })\"",
+    "build:web": "pnpm --filter @grand-bandhan/shared run build && pnpm --filter @grand-bandhan/validation run build && pnpm --filter @grand-bandhan/ui run build && pnpm --filter @grand-bandhan/web run build",
     "test:e2e": "tsx scripts/test-e2e.ts",
     "typecheck": "pnpm -r run typecheck",
     "clean": "pnpm -r run clean"
