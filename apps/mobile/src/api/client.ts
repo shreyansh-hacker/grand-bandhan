@@ -39,7 +39,8 @@ export function registerSessionExpiryHandler(listener: SessionExpiryListener) {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<{ message?: string; error?: string }>) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
       console.warn('API returned 401 Unauthorized - session expired');
       await clearAuthSession();
       if (onSessionExpiredListener) {

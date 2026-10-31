@@ -25,12 +25,12 @@ type LoginFormData = z.infer<typeof loginFormSchema>;
 
 // Seeded demo accounts for quick role-switching in development
 const DEMO_ROLES = [
-  { role: 'SUPER_ADMIN', label: 'Super Admin', email: 'admin@grandbandhan.com', pass: 'Admin@123' },
-  { role: 'AGENCY_ADMIN', label: 'Agency Principal', email: 'agency@grandbandhan.com', pass: 'Agency@123' },
-  { role: 'WEDDING_PLANNER', label: 'Wedding Planner', email: 'planner@grandbandhan.com', pass: 'Planner@123' },
-  { role: 'COORDINATOR', label: 'Coordinator', email: 'coordinator@grandbandhan.com', pass: 'Coord@123' },
+  { role: 'SUPER_ADMIN', label: 'Super Admin', email: 'admin@grandbandhan.com', pass: 'GrandBandhan@2025' },
+  { role: 'AGENCY_ADMIN', label: 'Agency Principal', email: 'agency@grandbandhan.com', pass: 'GrandBandhan@2025' },
+  { role: 'WEDDING_PLANNER', label: 'Wedding Planner', email: 'planner@grandbandhan.com', pass: 'GrandBandhan@2025' },
+  { role: 'COORDINATOR', label: 'Coordinator', email: 'coordinator@grandbandhan.com', pass: 'GrandBandhan@2025' },
   { role: 'VENDOR', label: 'Vendor', email: 'vendor@sharma-catering.com', pass: 'Vendor@123' },
-  { role: 'CLIENT', label: 'Royal Couple', email: 'aarav.ananya@royalwedding.com', pass: 'Client@123' },
+  { role: 'CLIENT', label: 'Royal Couple', email: 'client@grandbandhan.com', pass: 'GrandBandhan@2025' },
 ];
 
 export const LoginScreen: React.FC = () => {
