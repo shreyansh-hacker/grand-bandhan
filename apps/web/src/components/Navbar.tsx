@@ -1,18 +1,77 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Crown, Sparkles, User, Calendar, Menu, X, ArrowRight } from 'lucide-react';
+import { motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import EnquiryModal from './EnquiryModal';
+
+const SCROLL_THRESHOLD = 5; // Minimum scroll delta to trigger hide/show (prevents flickering)
+const TOP_ZONE = 80; // Always show navbar when scrollY < this value
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  const lastScrollY = useRef(0);
+  const { scrollY } = useScroll();
+
+  // Detect prefers-reduced-motion
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  // Scroll direction detection via Framer Motion's useMotionValueEvent
+  useMotionValueEvent(scrollY, 'change', (currentY) => {
+    const previousY = lastScrollY.current;
+    const delta = currentY - previousY;
+
+    // Always show when near the top
+    if (currentY < TOP_ZONE) {
+      setIsHidden(false);
+      lastScrollY.current = currentY;
+      return;
+    }
+
+    // Don't hide while mobile menu is open
+    if (isMenuOpen) {
+      lastScrollY.current = currentY;
+      return;
+    }
+
+    // Only trigger on meaningful scroll movement (prevents flickering)
+    if (Math.abs(delta) < SCROLL_THRESHOLD) return;
+
+    if (delta > 0) {
+      // Scrolling DOWN → hide
+      setIsHidden(true);
+    } else {
+      // Scrolling UP → show
+      setIsHidden(false);
+    }
+
+    lastScrollY.current = currentY;
+  });
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-navy-900/95 backdrop-blur-md border-b border-gold/30 text-white shadow-navy-deep">
+      <motion.header
+        initial={{ y: 0 }}
+        animate={{ y: isHidden ? '-120%' : '0%' }}
+        transition={
+          prefersReducedMotion
+            ? { duration: 0 }
+            : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+        }
+        className="sticky top-0 z-50 bg-navy-900/95 backdrop-blur-md border-b border-gold/30 text-white shadow-navy-deep will-change-transform"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
@@ -126,7 +185,7 @@ export default function Navbar() {
             </div>
           </div>
         )}
-      </header>
+      </motion.header>
 
       {/* Interactive Enquiry Modal */}
       <EnquiryModal isOpen={isEnquiryModalOpen} onClose={() => setIsEnquiryModalOpen(false)} />
