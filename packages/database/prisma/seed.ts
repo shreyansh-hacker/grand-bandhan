@@ -17,7 +17,7 @@ import {
   ServiceVerificationStatus,
   PaymentStatus,
   AgreementStatus,
-} from '@prisma/client';
+} from '../src/generated/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();

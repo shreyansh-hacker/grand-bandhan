@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Calculator, Crown, Sparkles, Check, ArrowRight } from 'lucide-react';
 import { WeddingPackageType } from '@grand-bandhan/shared';
 
+const formatINR = (val: number) => new Intl.NumberFormat('en-IN').format(val);
+
 export default function BudgetCalculator() {
   const [packageType, setPackageType] = useState<WeddingPackageType>(WeddingPackageType.FULL_SERVICE);
   const [guestCount, setGuestCount] = useState<number>(350);
@@ -178,8 +180,8 @@ export default function BudgetCalculator() {
               <span className="text-xs font-semibold uppercase tracking-widest text-gold">
                 Forecasted Budget Blueprint
               </span>
-              <div className="font-serif text-3xl sm:text-4xl font-bold text-gold-gradient mt-1">
-                INR {grandTotal.toLocaleString()}
+              <div suppressHydrationWarning className="font-serif text-3xl sm:text-4xl font-bold text-gold-gradient mt-1">
+                INR {formatINR(grandTotal)}
               </div>
               <p className="text-xs text-cream-300 mt-1">
                 Includes statutory contingency buffer & vendor audit controls.
@@ -189,32 +191,32 @@ export default function BudgetCalculator() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between items-center py-1.5 border-b border-navy-800">
                 <span className="text-cream-300">Catering ({guestCount} @ ₹{plateTier})</span>
-                <span className="font-semibold text-gold">₹{cateringTotal.toLocaleString()}</span>
+                <span suppressHydrationWarning className="font-semibold text-gold">₹{formatINR(cateringTotal)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1.5 border-b border-navy-800">
                 <span className="text-cream-300">Decor & Architectural Mandap</span>
-                <span className="font-semibold text-gold">₹{decorEstimate.toLocaleString()}</span>
+                <span suppressHydrationWarning className="font-semibold text-gold">₹{formatINR(decorEstimate)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1.5 border-b border-navy-800">
                 <span className="text-cream-300">DJ, Sound, LED & Artists</span>
-                <span className="font-semibold text-gold">₹{entertainmentAndDJ.toLocaleString()}</span>
+                <span suppressHydrationWarning className="font-semibold text-gold">₹{formatINR(entertainmentAndDJ)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1.5 border-b border-navy-800">
                 <span className="text-cream-300">Cinematic Photography & Drones</span>
-                <span className="font-semibold text-gold">₹{photoCinema.toLocaleString()}</span>
+                <span suppressHydrationWarning className="font-semibold text-gold">₹{formatINR(photoCinema)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1.5 border-b border-navy-800">
                 <span className="text-cream-300">Grand Bandhan Operations Fee</span>
-                <span className="font-semibold text-gold">₹{coordinationFee.toLocaleString()}</span>
+                <span suppressHydrationWarning className="font-semibold text-gold">₹{formatINR(coordinationFee)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1.5 border-b border-navy-800">
                 <span className="text-cream-300">Contingency & Overage Buffer (8%)</span>
-                <span className="font-semibold text-gold-light">₹{contingencyBuffer.toLocaleString()}</span>
+                <span suppressHydrationWarning className="font-semibold text-gold-light">₹{formatINR(contingencyBuffer)}</span>
               </div>
             </div>
 

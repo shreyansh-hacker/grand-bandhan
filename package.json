@@ -4,6 +4,7 @@
   "private": true,
   "description": "Grand Bandhan - Premium Wedding Planning & Operations Management Platform",
   "scripts": {
+    "db": "tsx scripts/embedded-db.ts",
     "dev": "pnpm --parallel run dev",
     "dev:api": "pnpm --filter @grand-bandhan/api run dev",
     "dev:web": "pnpm --filter @grand-bandhan/web run dev",
@@ -25,6 +26,8 @@
     ]
   },
   "devDependencies": {
+    "@embedded-postgres/windows-x64": "18.6.0-beta.19",
+    "embedded-postgres": "18.6.0-beta.19",
     "next": "^15.3.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",

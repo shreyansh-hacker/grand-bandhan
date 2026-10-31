@@ -35,6 +35,7 @@ Thumbs.db
 dev.db
 dev.db-journal
 *.sqlite
+.pgdata
 local-store.json
 .neon
 packages/database/src/generated/
