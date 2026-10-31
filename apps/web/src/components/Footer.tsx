@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Crown, Heart, Mail, Phone, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
+import { Crown, Heart, Mail, Phone, MapPin, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -65,24 +65,19 @@ export default function Footer() {
           <div>
             <h4 className="font-serif text-lg font-semibold text-gold mb-4">Royal Destinations</h4>
             <ul className="space-y-2.5 text-sm text-cream-300">
-              <li className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-gold" />
+              <li>
                 <span>Udaipur – Lake & Island Palaces</span>
               </li>
-              <li className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-gold" />
+              <li>
                 <span>Jaipur – Royal Forts & Havelis</span>
               </li>
-              <li className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-gold" />
+              <li>
                 <span>Jodhpur – Sun City Grand Citadels</span>
               </li>
-              <li className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-gold" />
+              <li>
                 <span>Hyderabad – Nizam Pearl Estates</span>
               </li>
-              <li className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-gold" />
+              <li>
                 <span>Goa – Coastal Heritage Mansions</span>
               </li>
             </ul>
