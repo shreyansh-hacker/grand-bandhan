@@ -77,9 +77,27 @@ export async function saveSettlement(req: AuthenticatedRequest, res: Response): 
     const extraVendorCharges = parsed.extraVendorHours * parsed.extraVendorHourRate;
     const unexpectedExpenses = parsed.unexpectedExpenses || 0;
 
+    /**
+     * GRAND BANDHAN SETTLEMENT RECONCILIATION POLICY & FORMULA:
+     * -------------------------------------------------------------
+     * 1. Extra Plate Charges = (Extra Plates || Extra Guests) * Rate per Plate.
+     * 2. Extra Vendor Charges = Overtime Hours * Overtime Rate (100% reimbursed to vendor).
+     * 3. Unexpected Expenses (Emergency Procurement Surcharge / Agency Markup):
+     *    - Client is billed 100% of unexpected emergency expenses incurred during live execution.
+     *    - Vendors/suppliers receive 50% as direct materials & emergency labor reimbursement.
+     *    - The remaining 50% is retained by the Agency as an Emergency Procurement Surcharge &
+     *      Risk Contingency Markup (compensating the agency for real-time vendor sourcing, logistics
+     *      coordination, expedited delivery risk, and quality assurance during live wedding operations).
+     *
+     * Net Financial Formulae:
+     * - Client Total Due = Contracted Total (budgetMin) + clientAdditionalCharges
+     * - Total Vendor Payable = Initial Agreed Vendor Total + extraVendorCharges + (unexpectedExpenses * 0.5)
+     * - Net Agency Profit = Total Client Bill - Total Vendor Cost
+     *                     = (Contracted Budget - Initial Vendor Cost) + extraPlateCharges + (unexpectedExpenses * 0.5)
+     */
     const clientAdditionalCharges = extraPlateCharges + extraVendorCharges + unexpectedExpenses;
     const totalFinalClientBill = wedding.budgetMin + clientAdditionalCharges;
-    const totalFinalVendorCost = totalVendorAgreed + extraVendorCharges + unexpectedExpenses * 0.5;
+    const totalFinalVendorCost = totalVendorAgreed + extraVendorCharges + (unexpectedExpenses * 0.5);
     const finalAgencyProfit = totalFinalClientBill - totalFinalVendorCost;
 
     const settlement = await prisma.$transaction(async (tx) => {

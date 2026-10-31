@@ -113,18 +113,23 @@ export class ProductionSchedulerService {
 
   /**
    * Atomically claims a scheduled reminder record in Neon DB.
-   * Performs an efficient pre-check to eliminate routine P2002 constraint error noise in logs,
-   * while preserving database-level uniqueness as the ultimate concurrency safeguard across instances.
+   * Multi-instance safe across distributed Render worker instances:
+   * 1. Checks if already successfully SENT -> skips duplicate.
+   * 2. Checks if actively PROCESSING by another alive worker (< 5 min) -> skips.
+   * 3. Recovers stale PROCESSING (> 5 min) or FAILED reminders -> atomically reclaims via updateMany.
+   * 4. Inserts new PROCESSING record -> DB unique constraint handles exact-race collisions.
    */
-  private static async claimReminder(
+  public static async claimReminder(
     reminderType: string,
     entityType: string,
     entityId: string,
     agencyId?: string | null,
     metadata?: any
   ): Promise<boolean> {
+    const STALE_CRASH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+    const staleThreshold = new Date(Date.now() - STALE_CRASH_THRESHOLD_MS);
+
     try {
-      // 1. Efficient pre-check to eliminate routine constraint collision logs
       const existing = await prisma.scheduledReminder.findUnique({
         where: {
           reminderType_entityType_entityId: {
@@ -133,14 +138,39 @@ export class ProductionSchedulerService {
             entityId,
           },
         },
-        select: { id: true, status: true },
+        select: { id: true, status: true, updatedAt: true },
       });
 
       if (existing) {
-        return false;
+        // If already delivered, never resend
+        if (existing.status === 'SENT') {
+          return false;
+        }
+
+        // Active processing by another alive worker within 5 minutes
+        if (existing.status === 'PROCESSING' && existing.updatedAt > staleThreshold) {
+          return false;
+        }
+
+        // Safe Crash Recovery: Reclaim stale PROCESSING (> 5 mins) or FAILED reminder atomically
+        const reclaimed = await prisma.scheduledReminder.updateMany({
+          where: {
+            id: existing.id,
+            OR: [
+              { status: 'FAILED' },
+              { status: 'PROCESSING', updatedAt: { lte: staleThreshold } },
+            ],
+          },
+          data: {
+            status: 'PROCESSING',
+            updatedAt: new Date(),
+          },
+        });
+
+        return reclaimed.count > 0;
       }
 
-      // 2. Atomic insert: DB unique constraint serves as final concurrency safeguard
+      // Atomic insert: DB unique constraint serves as final concurrency safeguard across multiple instances
       const scheduled = await prisma.scheduledReminder.create({
         data: {
           agencyId: agencyId || null,
@@ -154,7 +184,7 @@ export class ProductionSchedulerService {
       });
       return !!scheduled;
     } catch (err: any) {
-      // Unique constraint violation P2002 means reminder was already claimed concurrently
+      // Unique constraint violation P2002 means another instance claimed it at the exact same millisecond
       if (err.code === 'P2002') {
         return false;
       }
@@ -163,11 +193,46 @@ export class ProductionSchedulerService {
     }
   }
 
-  private static async markReminderSent(reminderType: string, entityType: string, entityId: string): Promise<void> {
+  public static async markReminderSent(reminderType: string, entityType: string, entityId: string): Promise<void> {
     await prisma.scheduledReminder.updateMany({
       where: { reminderType, entityType, entityId },
-      data: { status: 'SENT', sentAt: new Date() },
+      data: { status: 'SENT', sentAt: new Date(), updatedAt: new Date() },
     }).catch(() => {});
+  }
+
+  public static async markReminderFailed(reminderType: string, entityType: string, entityId: string, errorMsg?: string): Promise<void> {
+    await prisma.scheduledReminder.updateMany({
+      where: { reminderType, entityType, entityId },
+      data: {
+        status: 'FAILED',
+        updatedAt: new Date(),
+        metadata: { error: errorMsg || 'Unknown dispatch failure', failedAt: new Date().toISOString() },
+      },
+    }).catch(() => {});
+  }
+
+  /**
+   * Helper that executes reminder dispatch with atomic claim, safe error trapping, and retry status
+   */
+  public static async executeClaimedReminder(
+    reminderType: string,
+    entityType: string,
+    entityId: string,
+    agencyId: string | null | undefined,
+    task: () => Promise<void>
+  ): Promise<boolean> {
+    const claimed = await this.claimReminder(reminderType, entityType, entityId, agencyId);
+    if (!claimed) return false;
+
+    try {
+      await task();
+      await this.markReminderSent(reminderType, entityType, entityId);
+      return true;
+    } catch (err: any) {
+      console.warn(`[Scheduler] Reminder dispatch failed for ${reminderType}:${entityId}:`, err.message);
+      await this.markReminderFailed(reminderType, entityType, entityId, err.message);
+      return false;
+    }
   }
 
   /**
