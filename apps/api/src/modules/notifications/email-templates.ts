@@ -200,10 +200,10 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
             <div class="detail-row"><span class="detail-label">Review Status:</span><span class="detail-value" style="color: #C53030;">Additional Information Needed</span></div>
             <div class="detail-row"><span class="detail-label">Reason:</span><span class="detail-value">${escapeHtml(data.rejectionReason || 'Business verification details incomplete')}</span></div>
           </div>
-          <p>Please contact our onboarding concierge at <a href="mailto:concierge@grandbandhan.com">concierge@grandbandhan.com</a> with the requested documentation.</p>
+          <p>Please contact our onboarding concierge at <a href="mailto:shreyanshsharma049@gmail.com">shreyanshsharma049@gmail.com</a> with the requested documentation.</p>
           `
         ),
-        text: `Grand Bandhan Onboarding Update for ${data.agencyName}: Additional Information Needed. Reason: ${data.rejectionReason || 'Verification incomplete'}. Contact concierge@grandbandhan.com`,
+        text: `Grand Bandhan Onboarding Update for ${data.agencyName}: Additional Information Needed. Reason: ${data.rejectionReason || 'Verification incomplete'}. Contact shreyanshsharma049@gmail.com`,
       };
 
     case NotificationEvent.AGENCY_SUSPENDED:
@@ -294,7 +294,7 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
             ${data.notes ? `<div class="detail-row"><span class="detail-label">Notes:</span><span class="detail-value">${escapeHtml(data.notes)}</span></div>` : ''}
           </div>
           `,
-          { label: 'View Enquiry Details', url: `${appUrl}/dashboard/enquiries` }
+          { label: 'Track Enquiry Status', url: data.referenceNumber ? `${appUrl}/enquiry/${data.referenceNumber}` : `${appUrl}/dashboard/enquiries` }
         ),
         text: `Enquiry ${data.referenceNumber} status updated to ${data.newStatus}. Notes: ${data.notes || 'None'}. View: ${appUrl}/dashboard/enquiries`,
       };
@@ -726,6 +726,78 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
           { label: 'View Settlement Summary', url: `${appUrl}/vendor/settlements` }
         ),
         text: `Settlement Disbursed: ₹${(data.amount || 0).toLocaleString('en-IN')} for ${data.vendorName} on wedding ${data.weddingCode}. Ref: ${data.transactionRef}. View: ${appUrl}/vendor/settlements`,
+      };
+
+    case NotificationEvent.VENDOR_APPLICATION_RECEIVED: {
+      const isSuperAdminNotice = data.isSuperAdminNotice || data.recipientRole === 'SUPER_ADMIN';
+      if (isSuperAdminNotice) {
+        return {
+          subject: data.subject || `👑 New Vendor Partner Application: ${data.vendorName || data.name} (${data.category})`,
+          html: baseTemplate(
+            'Vendor Application Submitted',
+            `
+            <div class="badge">VENDOR NETWORK APPLICATION</div>
+            <h2 class="heading">New Vendor Partner Pending Review</h2>
+            <p>Dear <strong>Super Admin Shreyansh Sharma</strong>,</p>
+            <p>A new wedding vendor has applied to join the Grand Bandhan Royal Vendor Ecosystem and awaits your approval.</p>
+            <div class="card">
+              <div class="detail-row"><span class="detail-label">Business Name:</span><span class="detail-value">${escapeHtml(data.vendorName || data.name)}</span></div>
+              <div class="detail-row"><span class="detail-label">Category:</span><span class="detail-value">${escapeHtml(data.category)}</span></div>
+              <div class="detail-row"><span class="detail-label">Contact Person:</span><span class="detail-value">${escapeHtml(data.contactPerson || data.name)}</span></div>
+              <div class="detail-row"><span class="detail-label">Email:</span><span class="detail-value font-mono">${escapeHtml(data.email)}</span></div>
+              <div class="detail-row"><span class="detail-label">Phone:</span><span class="detail-value">${escapeHtml(data.phone)}</span></div>
+              ${data.address ? `<div class="detail-row"><span class="detail-label">City/Base:</span><span class="detail-value">${escapeHtml(data.address)}</span></div>` : ''}
+              ${data.basePrice ? `<div class="detail-row"><span class="detail-label">Starting Price:</span><span class="detail-value">₹${Number(data.basePrice).toLocaleString('en-IN')}</span></div>` : ''}
+            </div>
+            <p>Please review their credentials and approve them to enable RFPs and bidding.</p>
+            `,
+            { label: 'Review in Vendor Directory', url: `${appUrl}/dashboard/vendors` }
+          ),
+          text: `New Vendor Application: ${data.vendorName} (${data.category}). Contact: ${data.contactPerson} (${data.phone}, ${data.email}). Review: ${appUrl}/dashboard/vendors`,
+        };
+      }
+      return {
+        subject: `👑 Grand Bandhan: Vendor Partnership Application Received (${data.vendorName || data.name})`,
+        html: baseTemplate(
+          'Application Received',
+          `
+          <div class="badge success">APPLICATION RECEIVED</div>
+          <h2 class="heading">Thank You for Inquiring with Grand Bandhan</h2>
+          <p>Dear <strong>${escapeHtml(data.contactPerson || data.name)}</strong>,</p>
+          <p>We have successfully received your partnership application for <strong>${escapeHtml(data.vendorName || data.name)}</strong> in the <strong>${escapeHtml(data.category)}</strong> category.</p>
+          <div class="card">
+            <div class="detail-row"><span class="detail-label">Brand / Business:</span><span class="detail-value">${escapeHtml(data.vendorName || data.name)}</span></div>
+            <div class="detail-row"><span class="detail-label">Category:</span><span class="detail-value">${escapeHtml(data.category)}</span></div>
+            <div class="detail-row"><span class="detail-label">Registry Status:</span><span class="detail-value" style="color: #B7791F;">Pending Verification</span></div>
+          </div>
+          <p>Our vendor curation committee and Super Admin are reviewing your portfolio. Once approved, you will receive an official confirmation and will begin receiving luxury palace wedding RFPs.</p>
+          `,
+          { label: 'Visit Grand Bandhan', url: `${appUrl}` }
+        ),
+        text: `Vendor Application Received for ${data.vendorName || data.name} (${data.category}). Our team is reviewing your profile. Visit: ${appUrl}`,
+      };
+    }
+
+    case NotificationEvent.VENDOR_APPROVED:
+      return {
+        subject: `🎉 Welcome to Grand Bandhan: Your Vendor Partnership is Approved! (${data.vendorName || data.name})`,
+        html: baseTemplate(
+          'Vendor Approved',
+          `
+          <div class="badge success">VERIFIED ROYAL PARTNER</div>
+          <h2 class="heading">Congratulations! Your Partnership is Approved</h2>
+          <p>Dear <strong>${escapeHtml(data.contactPerson || data.name)}</strong>,</p>
+          <p>We are thrilled to welcome <strong>${escapeHtml(data.vendorName || data.name)}</strong> into the Grand Bandhan Royal Vendor Ecosystem.</p>
+          <div class="card">
+            <div class="detail-row"><span class="detail-label">Partner Name:</span><span class="detail-value">${escapeHtml(data.vendorName || data.name)}</span></div>
+            <div class="detail-row"><span class="detail-label">Category:</span><span class="detail-value">${escapeHtml(data.category)}</span></div>
+            <div class="detail-row"><span class="detail-label">Status:</span><span class="detail-value" style="color: #276749;">Verified &amp; Active Partner</span></div>
+          </div>
+          <p>You are now eligible to receive 3-quote RFP requests, submit live competitive bids, and coordinate palace wedding execution across Rajasthan and India.</p>
+          `,
+          { label: 'Access Vendor Portal', url: `${appUrl}/login` }
+        ),
+        text: `Congratulations! ${data.vendorName || data.name} is approved as a Grand Bandhan partner. Sign in: ${appUrl}/login`,
       };
 
     case NotificationEvent.PROFILE_UPDATED:

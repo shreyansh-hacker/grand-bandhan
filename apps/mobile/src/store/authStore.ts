@@ -7,6 +7,8 @@ import {
 } from '../utils/storage';
 import { authService, LoginRequest, RegisterRequest } from '../api/services/auth.service';
 import { registerSessionExpiryHandler } from '../api/client';
+import { scheduleSyncService } from '../services/scheduleSync';
+import { offlineCacheService } from '../services/offlineCache';
 
 interface AuthState {
   user: User | null;
@@ -74,6 +76,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
           } catch (err) {
             console.warn('Background profile refresh failed:', err);
           }
+          scheduleSyncService.syncSchedules().catch((e) =>
+            console.warn('[ScheduleSync] Auto-sync on restore error:', e.message)
+          );
         } else {
           set({
             user: null,
@@ -118,6 +123,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isLoading: false,
           error: null,
         });
+
+        // Trigger automatic backend schedule synchronization with local AlarmManager
+        scheduleSyncService.syncSchedules().catch((e) =>
+          console.warn('[ScheduleSync] Auto-sync on login error:', e.message)
+        );
       } catch (err: any) {
         set({
           isLoading: false,
@@ -164,6 +174,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
         console.warn('Logout network call error:', err);
       } finally {
         await clearAuthSession();
+        await scheduleSyncService.clearSyncState().catch(() => {});
+        offlineCacheService.clearAll();
         set({
           user: null,
           role: null,

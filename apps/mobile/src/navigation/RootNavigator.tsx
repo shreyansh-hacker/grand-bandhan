@@ -13,6 +13,8 @@ import { PlannerNavigator } from './PlannerNavigator';
 import { CoordinatorNavigator } from './CoordinatorNavigator';
 import { VendorNavigator } from './VendorNavigator';
 import { ClientNavigator } from './ClientNavigator';
+import { NotificationInboxScreen } from '../screens/common/NotificationInboxScreen';
+import { CommandCenterScreen } from '../screens/admin/CommandCenterScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -28,18 +30,24 @@ export const RootNavigator: React.FC = () => {
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </Stack.Group>
-      ) : role === UserRole.SUPER_ADMIN ? (
-        <Stack.Screen name="SuperAdminRoot" component={AdminNavigator} />
-      ) : role === UserRole.AGENCY_ADMIN ? (
-        <Stack.Screen name="AgencyAdminRoot" component={AgencyNavigator} />
-      ) : role === UserRole.COORDINATOR ? (
-        <Stack.Screen name="CoordinatorRoot" component={CoordinatorNavigator} />
-      ) : role === UserRole.VENDOR ? (
-        <Stack.Screen name="VendorRoot" component={VendorNavigator} />
-      ) : role === UserRole.CLIENT ? (
-        <Stack.Screen name="ClientRoot" component={ClientNavigator} />
       ) : (
-        <Stack.Screen name="WeddingPlannerRoot" component={PlannerNavigator} />
+        <Stack.Group>
+          {role === UserRole.SUPER_ADMIN ? (
+            <Stack.Screen name="SuperAdminRoot" component={AdminNavigator} />
+          ) : role === UserRole.AGENCY_ADMIN ? (
+            <Stack.Screen name="AgencyAdminRoot" component={AgencyNavigator} />
+          ) : role === UserRole.COORDINATOR ? (
+            <Stack.Screen name="CoordinatorRoot" component={CoordinatorNavigator} />
+          ) : role === UserRole.VENDOR ? (
+            <Stack.Screen name="VendorRoot" component={VendorNavigator} />
+          ) : role === UserRole.CLIENT ? (
+            <Stack.Screen name="ClientRoot" component={ClientNavigator} />
+          ) : (
+            <Stack.Screen name="WeddingPlannerRoot" component={PlannerNavigator} />
+          )}
+          <Stack.Screen name="NotificationInbox" component={NotificationInboxScreen} />
+          <Stack.Screen name="CommandCenter" component={CommandCenterScreen} />
+        </Stack.Group>
       )}
     </Stack.Navigator>
   );

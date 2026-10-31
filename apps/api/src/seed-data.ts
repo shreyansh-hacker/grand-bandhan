@@ -8,12 +8,6 @@ import { UserRole, AgencyStatus, AccountStatus } from '@grand-bandhan/shared';
  */
 export async function seedDemoDataIfEmpty(): Promise<void> {
   try {
-    const userCount = await prisma.user.count();
-    if (userCount > 0) {
-      return; // Neon PostgreSQL already populated
-    }
-
-    console.log('Seeding Neon PostgreSQL with Grand Bandhan Initial Data...');
     let agency = await prisma.agency.findFirst({ where: { slug: 'grand-bandhan-imperial' } });
     if (!agency) {
       agency = await prisma.agency.create({
@@ -21,7 +15,7 @@ export async function seedDemoDataIfEmpty(): Promise<void> {
           name: 'Grand Bandhan Imperial Weddings',
           slug: 'grand-bandhan-imperial',
           logoUrl: '/images/brand/logo-gold.svg',
-          contactEmail: 'concierge@grandbandhan.com',
+          contactEmail: 'shreyanshsharma049@gmail.com',
           contactPhone: '+91 98200 12345',
           address: 'The Imperial Pavilion, Umaid Heritage Road, Udaipur, Rajasthan',
           city: 'Udaipur',
@@ -32,16 +26,16 @@ export async function seedDemoDataIfEmpty(): Promise<void> {
       });
     }
 
-    const defaultPasswordHash = await hashPassword('GrandBandhan@2025');
+    const defaultPasswordHash = await hashPassword('Password@123');
 
-    // Create Super Admin if not existing
-    const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@grandbandhan.com' } });
-    if (!existingAdmin) {
+    // 1. Super Admin: Shreyansh Sharma
+    const existingSuperAdmin = await prisma.user.findUnique({ where: { email: 'shreyanshsharma049@gmail.com' } });
+    if (!existingSuperAdmin) {
       await prisma.user.create({
         data: {
           agencyId: agency.id,
-          name: 'Vikramaditya Rathore',
-          email: 'admin@grandbandhan.com',
+          name: 'Shreyansh Sharma',
+          email: 'shreyanshsharma049@gmail.com',
           passwordHash: defaultPasswordHash,
           role: UserRole.SUPER_ADMIN,
           phone: '+91 98200 00001',
@@ -49,7 +43,43 @@ export async function seedDemoDataIfEmpty(): Promise<void> {
           isActive: true,
         },
       });
-      console.log('Created default Super Admin in Neon PostgreSQL: admin@grandbandhan.com');
+      console.log('Seeded Super Admin: shreyanshsharma049@gmail.com');
+    }
+
+    // 2. Agency Admin: Yash Rathore
+    const existingYashRathore = await prisma.user.findUnique({ where: { email: 'yashrathore2574@gmail.com' } });
+    if (!existingYashRathore) {
+      await prisma.user.create({
+        data: {
+          agencyId: agency.id,
+          name: 'Yash Rathore',
+          email: 'yashrathore2574@gmail.com',
+          passwordHash: defaultPasswordHash,
+          role: UserRole.AGENCY_ADMIN,
+          phone: '+91 98200 12345',
+          accountStatus: AccountStatus.ACTIVE,
+          isActive: true,
+        },
+      });
+      console.log('Seeded Agency Admin: yashrathore2574@gmail.com');
+    }
+
+    // 3. Lead Planner: Yash Audichya
+    const existingYashAudi = await prisma.user.findUnique({ where: { email: 'yashaudichya001@gmail.com' } });
+    if (!existingYashAudi) {
+      await prisma.user.create({
+        data: {
+          agencyId: agency.id,
+          name: 'Yash Audichya',
+          email: 'yashaudichya001@gmail.com',
+          passwordHash: defaultPasswordHash,
+          role: UserRole.WEDDING_PLANNER,
+          phone: '+91 98200 54321',
+          accountStatus: AccountStatus.ACTIVE,
+          isActive: true,
+        },
+      });
+      console.log('Seeded Wedding Planner: yashaudichya001@gmail.com');
     }
   } catch (err: any) {
     console.warn('[Seed] Initial seed check note:', err.message);

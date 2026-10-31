@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getExecutiveAnalytics } from './analytics.controller';
+import { getExecutiveAnalytics, getCommandCenterAnalytics } from './analytics.controller';
 import { authenticate } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
 import { UserRole } from '@grand-bandhan/shared';
@@ -18,6 +18,14 @@ router.get(
   authenticate,
   requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
   getExecutiveAnalytics
+);
+
+// Phase 5: Admin Command Center Operational Overview
+router.get(
+  '/command-center',
+  authenticate,
+  requireRole(UserRole.SUPER_ADMIN, UserRole.AGENCY_ADMIN, UserRole.WEDDING_PLANNER),
+  getCommandCenterAnalytics
 );
 
 export default router;

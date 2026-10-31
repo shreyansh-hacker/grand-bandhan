@@ -17,10 +17,12 @@ import {
   LogOut,
   ChevronRight,
   Sparkles,
+  Bell,
 } from 'lucide-react';
 
 const NAVIGATION_ITEMS = [
   { label: 'Executive Overview', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Notification Inbox', href: '/dashboard/notifications', icon: Bell },
   { label: 'Enquiries & CRM', href: '/dashboard/enquiries', icon: Users, badge: 'Bride/Groom' },
   { label: 'Weddings Directory', href: '/dashboard/weddings', icon: Crown },
   { label: '3-Vendor Quotations', href: '/dashboard/quotations', icon: FileSpreadsheet, badge: 'Core' },

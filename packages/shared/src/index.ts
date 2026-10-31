@@ -401,4 +401,57 @@ export const SOCKET_EVENTS = {
   SERVICE_VERIFICATION_UPDATED: 'service:verification_updated',
   TASK_STATUS_UPDATED: 'task:status_updated',
   PAYMENT_RECORDED: 'payment:recorded',
+  NOTIFICATION_RECEIVED: 'notification:received',
 } as const;
+
+export enum NotificationCategory {
+  SERVICE_VERIFICATION = 'SERVICE_VERIFICATION',
+  VENDOR_DELAY = 'VENDOR_DELAY',
+  PAYMENT_DUE = 'PAYMENT_DUE',
+  WEDDING_TIMELINE = 'WEDDING_TIMELINE',
+  TASK_DEADLINE = 'TASK_DEADLINE',
+  COMPLAINT = 'COMPLAINT',
+  ESCALATION = 'ESCALATION',
+  GENERAL = 'GENERAL',
+}
+
+export interface AppNotificationItem {
+  id: string;
+  agencyId?: string | null;
+  userId: string;
+  category: NotificationCategory | string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  readAt?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+  deepLinkUri?: string | null;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SynchronizedScheduleItem {
+  id: string;
+  entityType: 'SERVICE_VERIFICATION' | 'TIMELINE_EVENT' | 'TASK_DEADLINE' | 'PAYMENT_DUE' | 'REMINDER';
+  entityId: string;
+  weddingId?: string;
+  weddingCode?: string;
+  title: string;
+  message: string;
+  scheduledFor: string;
+  timestampMs: number;
+  channelId: 'gb_verifications' | 'gb_milestones' | 'gb_payments' | 'gb_general';
+  deepLinkUri?: string;
+  dataJson?: string;
+  actionRequired: boolean;
+  status: string;
+  updatedAt: string;
+}
+
+export interface ScheduleSyncResponse {
+  serverTime: string;
+  schedules: SynchronizedScheduleItem[];
+  canceledIds: string[];
+}

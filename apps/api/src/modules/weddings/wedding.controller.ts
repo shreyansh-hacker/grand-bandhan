@@ -237,7 +237,7 @@ export async function createWedding(req: AuthenticatedRequest, res: Response): P
 }
 
 export async function convertEnquiryToWedding(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const enquiryId = (req.body?.enquiryId || req.params?.enquiryId) as string;
+  const enquiryId = (req.body?.enquiryId || req.params?.enquiryId || req.params?.id) as string;
   try {
     const enquiry = await prisma.customerEnquiry.findUnique({
       where: { id: enquiryId },

@@ -44,6 +44,15 @@ export default function DashboardNavbar() {
           <ExternalLink className="w-3.5 h-3.5" />
         </Link>
 
+        {/* Notification Bell */}
+        <Link
+          href="/dashboard/notifications"
+          className="relative p-2 rounded-xl text-navy-700 hover:text-gold hover:bg-gold/10 transition-colors"
+          title="Notification Inbox"
+        >
+          <Bell className="w-5 h-5" />
+        </Link>
+
         {/* User Role Pill */}
         <Link
           href="/dashboard/profile"
