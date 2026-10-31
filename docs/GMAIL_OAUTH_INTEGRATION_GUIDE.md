@@ -1,66 +1,135 @@
-# Grand Bandhan — Gmail API OAuth 2.0 Integration & Setup Guide
+# Grand Bandhan — Gmail API OAuth 2.0 Hardening & Integration Guide
 
-## 1. Overview & Architectural Specifications
+## 1. Overview & Security Architecture
 
-The Grand Bandhan backend integrates directly with the **Google Gmail API** using **OAuth 2.0** with offline access. This allows the platform to dispatch real, high-deliverability luxury wedding communications (such as bespoke client proposals, enquiry notifications, vendor RFPs, and milestone payment receipts) from the verified concierge address.
+The Grand Bandhan platform integrates directly with the **Google Gmail API** using **OAuth 2.0** with offline access and AES-256-GCM authenticated encryption at rest. This infrastructure allows the platform to dispatch real, high-deliverability luxury wedding communications (such as bespoke client proposals, enquiry confirmations, vendor RFPs, and milestone payment receipts) from verified email addresses.
 
-### Security & Scope Policy
-- **Authorized Scope:** Strictly limited to a single minimal-privilege scope:
-  `https://www.googleapis.com/auth/gmail.send`
-- **Access Mode:** `offline` with `prompt=consent` to obtain a persistent `refresh_token`.
-- **CSRF Protection:** Cryptographic 64-hex-character state nonce persisted in Neon PostgreSQL (`OAuthState`) with a 15-minute expiration window and single-use consumption.
-- **Persistence:** Stored in Neon PostgreSQL (`GmailOAuthToken`). Zero storage in local JSON files or ephemeral disk caches.
-- **Credential Sanitization:** Client secret, access tokens, and refresh tokens are strictly hidden from API responses, client payloads, and public logs.
+### Core Security & Hardening Policies
+
+1. **Zero Access Tokens in URLs (OWASP A07 Compliance):**
+   - Access tokens (JWTs) are **strictly prohibited** from URL query parameters (`?token=...`).
+   - Authentication is strictly accepted only via the `Authorization: Bearer <token>` HTTP header or secure HTTP-only cookies (`accessToken`).
+   - Browser navigation for cross-origin SPAs uses a **short-lived (60s), single-use authorization handoff ticket** (`POST /api/email/oauth/handoff` ➔ `/api/email/oauth/start?ticket=...`).
+
+2. **Authorized Scope:**
+   - Strictly limited to a single minimal-privilege scope:
+     `https://www.googleapis.com/auth/gmail.send`
+   - Access mode: `offline` with `prompt=consent` to obtain a persistent `refresh_token`.
+
+3. **CSRF Protection & Context Binding:**
+   - Cryptographically random 64-character hex state nonce persisted in Neon PostgreSQL (`OAuthState`).
+   - Expired after 15 minutes, single-use consumed upon callback to prevent replay attacks.
+   - State nonce is bound to the initiating administrator (`userId`) and agency (`agencyId`).
+   - During callback, the server verifies that the initiating admin account is active and that the associated agency is not suspended.
+
+4. **AES-256-GCM Authenticated Envelope Encryption at Rest:**
+   - Refresh tokens and access tokens are encrypted before being written to Neon PostgreSQL.
+   - Envelope format: `enc:<version>:<iv_hex>:<auth_tag_hex>:<ciphertext_hex>`.
+   - Protects confidentiality and guarantees ciphertext integrity (tamper detection).
+   - Encryption key is stored exclusively in Render environment variables (`GMAIL_TOKEN_ENCRYPTION_KEY`).
+
+5. **Multi-Tenant Hybrid Sender Architecture:**
+   - **Global Platform Concierge Sender (`id: 'default'`):** Platform-level fallback account (e.g. `concierge@grandbandhan.com` or `shreyanshsharma049@gmail.com`) used across platform operations.
+   - **Dedicated Agency Sender (`id: 'agency_<agencyId>'`):** Each verified wedding agency can connect their own dedicated Google account for branded communications.
+   - Automatic fallback: When sending emails, the engine checks for the agency's dedicated sender first, gracefully falling back to the platform concierge sender.
+
+6. **Credential Sanitization & Zero Leakage:**
+   - Client secrets, access tokens, refresh tokens, and encryption keys are never written to logs, never returned in API payloads, and never embedded in HTML responses.
 
 ---
 
 ## 2. Required Render Environment Variables
 
-To activate Gmail API email dispatch on your Render backend (`https://grand-bandhan.onrender.com`), configure these environment variables in the Render Dashboard (**Dashboard ➔ Service ➔ Environment Variables**):
+Configure these variables in the Render Dashboard (**Dashboard ➔ Service ➔ Environment Variables**):
 
-| Variable Name | Required Value | Description |
+| Variable Name | Required / Optional | Description |
 | :--- | :--- | :--- |
-| **`GOOGLE_CLIENT_ID`** | `781792527808-0ccmt0hbs9qmqvcudsklnnm660shg8fq.apps.googleusercontent.com` | Google Cloud Console OAuth 2.0 Client ID. |
-| **`GOOGLE_CLIENT_SECRET`** | `(Your Google Cloud Client Secret from Console)` | Google Cloud Console OAuth 2.0 Client Secret (Configure in Render Dashboard environment variables; never commit secret strings to Git). |
-| **`GOOGLE_REDIRECT_URI`** | `https://grand-bandhan.onrender.com/api/email/oauth2/callback` | Authorized redirect URI configured in Google Cloud Console. |
-| **`GMAIL_SENDER_EMAIL`** | `shreyanshsharma049@gmail.com` | The Google account authorized to send emails. |
-| **`GMAIL_REFRESH_TOKEN`** | *(Optional)* | Initial refresh token if pre-generated, or automatically stored in Neon DB upon completing OAuth flow. |
+| **`GOOGLE_CLIENT_ID`** | **Required** | Google Cloud Console OAuth 2.0 Client ID. |
+| **`GOOGLE_CLIENT_SECRET`** | **Required** | Google Cloud Console OAuth 2.0 Client Secret (kept private in Render env). |
+| **`GOOGLE_REDIRECT_URI`** | **Required** | Authorized redirect URI configured in Google Cloud Console (`https://grand-bandhan.onrender.com/api/email/oauth2/callback`). |
+| **`GMAIL_SENDER_EMAIL`** | **Required** | Default sender address (e.g., `shreyanshsharma049@gmail.com`). |
+| **`GMAIL_TOKEN_ENCRYPTION_KEY`** | **Required (Prod)** | 256-bit (64-character hex or string) key used for AES-256-GCM token encryption at rest. |
+| **`GMAIL_REFRESH_TOKEN`** | *Optional* | Pre-generated refresh token fallback if OAuth flow has not been triggered yet. |
+| **`GMAIL_TOKEN_KEY_VERSION`** | *Optional* | Active key version for key rotation (`v1` by default, set to `v2` during rotation). |
+| **`GMAIL_TOKEN_ENCRYPTION_KEY_V2`**| *Optional* | Secondary key for zero-downtime key rotation. |
 
 ---
 
-## 3. API Endpoints Reference
+## 3. Key Rotation Procedure (Zero-Downtime)
 
-### 3.1. Initiate OAuth 2.0 Flow
-- **Route:** `GET /api/email/oauth/start`
+Grand Bandhan supports cryptographic key rotation without database migration or service interruption:
+
+1. **Generate a new 256-bit key:**
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+2. **Add to Render Environment Variables:**
+   - Set `GMAIL_TOKEN_ENCRYPTION_KEY_V2=<new_hex_key>`.
+   - Set `GMAIL_TOKEN_KEY_VERSION=v2`.
+   - Keep existing `GMAIL_TOKEN_ENCRYPTION_KEY` active.
+3. **Automatic Upgrade:**
+   - Existing tokens encrypted under `v1` continue to decrypt seamlessly using the version tag `enc:v1:...`.
+   - All newly generated or refreshed tokens will automatically be encrypted using `v2` (`enc:v2:...`).
+4. **Retire Old Key:**
+   - Once all tokens are refreshed or re-encrypted, remove `GMAIL_TOKEN_ENCRYPTION_KEY`.
+
+---
+
+## 4. API Endpoints Reference
+
+### 4.1. Generate Single-Use OAuth Handoff Ticket
+- **Route:** `POST /api/email/oauth/handoff`
 - **Access:** Authenticated (`SUPER_ADMIN` or `AGENCY_ADMIN`).
-- **Supports:** Bearer Header, `accessToken` cookie, or `?token=<JWT>` query parameter.
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Single-use OAuth authorization handoff ticket generated.",
+    "data": {
+      "ticket": "8c5e62df94...",
+      "expiresAt": "2026-10-31T23:56:00.000Z",
+      "startUrl": "/api/email/oauth/start?ticket=8c5e62df94..."
+    }
+  }
+  ```
+
+### 4.2. Initiate OAuth 2.0 Flow
+- **Route:** `GET /api/email/oauth/start`
+- **Access:** Active Admin session (Cookie / Bearer) OR valid single-use ticket in `?ticket=...`.
+- **Note:** Never accepts `?token=<JWT>`. Unauthenticated requests without a ticket receive `401 Unauthorized`.
 - **Behavior:**
-  - Generates CSRF state nonce and saves to Neon `OAuthState` table.
-  - In a browser: Redirects (HTTP 302) directly to Google's consent screen.
+  - Consumes the single-use ticket immediately.
+  - Generates CSRF state nonce bound to the initiating admin and agency in Neon `OAuthState`.
+  - In a browser: Redirects (HTTP 302) to Google's consent screen.
   - In an API client (`Accept: application/json`): Returns `{ success: true, data: { url, state, scope } }`.
 
-### 3.2. Google OAuth Callback
+### 4.3. Google OAuth Callback
 - **Route:** `GET /api/email/oauth2/callback`
-- **Access:** Public (Called by Google redirect with `?code=...&state=...`).
+- **Access:** Public (Redirect endpoint called by Google).
 - **Behavior:**
-  - Validates `state` against Neon `OAuthState` and consumes the nonce immediately to prevent replay / CSRF.
-  - Exchanges `code` with `https://oauth2.googleapis.com/token` for tokens.
-  - Persists `refresh_token` and cached `access_token` into Neon `GmailOAuthToken`.
-  - Displays a branded Grand Bandhan Imperial Gold/Navy confirmation screen in the browser.
+  - Validates `state` against Neon `OAuthState` and deletes it immediately to eliminate replay windows.
+  - Checks that the initiating administrator is active and that the bound agency is not suspended.
+  - Exchanges `code` for tokens and encrypts the tokens with AES-256-GCM before saving to `GmailOAuthToken`.
+  - Renders the branded Imperial confirmation screen.
 
-### 3.3. Email Status Check
+### 4.4. Email Connection Status
 - **Route:** `GET /api/email/status`
 - **Access:** Authenticated (`SUPER_ADMIN` or `AGENCY_ADMIN`).
+- **Agency Isolation:** Agency Admins receive status scoped to their agency; Super Admins can query globally or by `?agencyId=...`.
 - **Response:**
   ```json
   {
     "success": true,
     "data": {
       "connected": true,
+      "isAgencyDedicated": false,
+      "agencyId": null,
       "senderEmail": "shreyanshsharma049@gmail.com",
       "scope": "https://www.googleapis.com/auth/gmail.send",
       "redirectUri": "https://grand-bandhan.onrender.com/api/email/oauth2/callback",
       "tokenSource": "database",
+      "tokenEncrypted": true,
+      "encryptionKeyConfigured": true,
       "tokenExpiresAt": "2026-10-31T23:55:00.000Z",
       "clientIdConfigured": true,
       "clientSecretConfigured": true,
@@ -68,83 +137,74 @@ To activate Gmail API email dispatch on your Render backend (`https://grand-band
     }
   }
   ```
-  *(Note: Credentials and secret tokens are strictly sanitized).*
 
-### 3.4. Send Test Email
+### 4.5. Send Test Email
 - **Route:** `POST /api/email/test`
 - **Access:** Authenticated (`SUPER_ADMIN` or `AGENCY_ADMIN`).
-- **Request Body (Optional):**
+- **Agency Isolation:** Agency Admins can only dispatch test emails bound to their authenticated agency.
+- **Request Body:**
   ```json
   {
     "to": "shreyanshsharma049@gmail.com",
-    "subject": "👑 Grand Bandhan — Gmail API Verification Test",
+    "subject": "👑 Grand Bandhan — Gmail API Hardening Verification",
     "message": "Testing automated wedding operations dispatch from Grand Bandhan."
   }
   ```
-- **Behavior:** Constructs an RFC 2822 MIME message, base64url encodes it, dispatches via `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`, and logs the dispatch to Neon `EmailLog`.
 
 ---
 
-## 4. Exact Step-by-Step Instructions to Connect Gmail and Send a Test Email
+## 5. Step-by-Step Production Connection Procedure
 
-Follow these instructions to connect your Gmail account to the live Render deployment:
-
-### Step 1: Obtain a Super Admin Access Token
-Log in via the Command Portal or make a POST request:
+### Step 1: Obtain Admin Session Token
+Log in to acquire your bearer token:
 ```bash
 curl -X POST https://grand-bandhan.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@grandbandhan.com","password":"GrandBandhan@2025"}'
 ```
-Copy the `accessToken` from the response.
 
-### Step 2: Open the OAuth Flow in Your Web Browser
-Paste this URL into your browser (replacing `<YOUR_ACCESS_TOKEN>` with the token from Step 1):
-```text
-https://grand-bandhan.onrender.com/api/email/oauth/start?token=<YOUR_ACCESS_TOKEN>
+### Step 2: Request a Single-Use Handoff Ticket
+```bash
+curl -X POST https://grand-bandhan.onrender.com/api/email/oauth/handoff \
+  -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
+  -H "Accept: application/json"
 ```
-*Note: If you are already logged in to the Grand Bandhan portal in the same browser, your HTTP-only cookie is automatically passed, so you can simply visit `https://grand-bandhan.onrender.com/api/email/oauth/start`.*
+The response returns:
+```json
+{
+  "data": {
+    "startUrl": "/api/email/oauth/start?ticket=a1b2c3..."
+  }
+}
+```
 
-### Step 3: Grant Permission on Google Consent Screen
+### Step 3: Open Start URL in Web Browser
+Navigate to:
+```text
+https://grand-bandhan.onrender.com/api/email/oauth/start?ticket=<TICKET>
+```
+The server validates and deletes the ticket, then redirects you directly to Google's consent screen.
+
+### Step 4: Grant Consent on Google Consent Screen
 1. Sign in with **`shreyanshsharma049@gmail.com`**.
 2. Review the requested permission:
    - **"Send email on your behalf"** (`https://www.googleapis.com/auth/gmail.send`).
 3. Click **Continue** / **Allow**.
 
-### Step 4: Automatic Authorization & Persistent Storage
+### Step 5: Encrypted Token Persistence
 1. Google redirects back to `https://grand-bandhan.onrender.com/api/email/oauth2/callback`.
-2. The server consumes the CSRF state nonce, exchanges the authorization code with Google for tokens, and writes the `refresh_token` to **Neon PostgreSQL**.
-3. You will see the **👑 Gmail API Connected Successfully** screen with status confirmation.
+2. The server consumes the CSRF state nonce, checks user & agency status, encrypts the refresh token using AES-256-GCM, and persists it into **Neon PostgreSQL**.
+3. You will see the **👑 Gmail API Connected Successfully** screen.
 
-### Step 5: Verify Connection Status
-Verify the connection using curl or Postman:
-```bash
-curl -X GET https://grand-bandhan.onrender.com/api/email/status \
-  -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>"
-```
-Expected output:
-```json
-{
-  "success": true,
-  "data": {
-    "connected": true,
-    "senderEmail": "shreyanshsharma049@gmail.com",
-    "scope": "https://www.googleapis.com/auth/gmail.send",
-    "activeTransport": "GMAIL_API"
-  }
-}
-```
-
-### Step 6: Dispatch a Test Email
-Send an official test email through Gmail API:
+### Step 6: Dispatch Verification Test Email
 ```bash
 curl -X POST https://grand-bandhan.onrender.com/api/email/test \
   -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
     "to": "shreyanshsharma049@gmail.com",
-    "subject": "👑 Grand Bandhan — Live Gmail API Verification Test",
-    "message": "Congratulations! The Gmail API OAuth 2.0 integration is fully operational on Render."
+    "subject": "👑 Grand Bandhan — Security Hardening Test",
+    "message": "Gmail API OAuth 2.0 security hardening verified successfully."
   }'
 ```
-You will immediately receive the branded Imperial Gold/Navy test email in your inbox at `shreyanshsharma049@gmail.com`!
+You will receive the branded Imperial Gold/Navy test email directly in your inbox.

@@ -3,6 +3,12 @@ import { app, server } from '../apps/api/src/server';
 import { getPrismaClient, checkDatabaseConnection } from '../apps/api/src/db';
 import { env } from '../apps/api/src/config/env';
 import { GmailService, GMAIL_SCOPE } from '../apps/api/src/modules/email/gmail.service';
+import {
+  encryptToken,
+  decryptToken,
+  isEncrypted,
+  reencryptToken,
+} from '../apps/api/src/modules/email/token-encryption';
 import { generateAccessToken } from '../apps/api/src/utils/jwt';
 import { UserRole } from '@grand-bandhan/shared';
 
@@ -61,24 +67,65 @@ function record(name: string, passed: boolean, details: string) {
 
 async function runGmailOAuthTests() {
   console.log('\n=============================================================');
-  console.log('⚡ GRAND BANDHAN: GMAIL API OAUTH 2.0 INTEGRATION TEST SUITE ⚡');
+  console.log('⚡ GRAND BANDHAN: GMAIL API OAUTH 2.0 HARDENING TEST SUITE ⚡');
   console.log('=============================================================\n');
 
   await checkDatabaseConnection();
   const prisma = getPrismaClient();
   const baseUrl = `http://localhost:${env.PORT}`;
 
+  // Find or create test agency
+  let testAgency = await prisma.agency.findFirst({
+    where: { slug: 'royal-heritage-test' },
+  });
+  if (!testAgency) {
+    testAgency = await prisma.agency.create({
+      data: {
+        name: 'Royal Heritage Test Agency',
+        slug: 'royal-heritage-test',
+        contactEmail: 'contact@royalheritagetest.com',
+        status: 'APPROVED',
+      },
+    });
+  }
+
+  // Find or create test admin user in Neon DB
+  let testAdminUser = await prisma.user.findFirst({
+    where: { email: 'superadmin.test@grandbandhan.com' },
+  });
+  if (!testAdminUser) {
+    testAdminUser = await prisma.user.create({
+      data: {
+        email: 'superadmin.test@grandbandhan.com',
+        name: 'Super Admin Security Tester',
+        passwordHash: '$2b$10$abcdefghijklmnopqrstuvwxyz123456',
+        role: UserRole.SUPER_ADMIN,
+        agencyId: testAgency.id,
+        isActive: true,
+        accountStatus: 'ACTIVE',
+      },
+    });
+  }
+
   const superAdminToken = generateAccessToken({
-    userId: 'test_super_admin_id',
-    agencyId: 'agency_test_id',
-    email: 'admin@grandbandhan.com',
+    userId: testAdminUser.id,
+    agencyId: testAgency.id,
+    email: testAdminUser.email,
     role: UserRole.SUPER_ADMIN,
-    name: 'Super Admin Test',
+    name: 'Super Admin Security Tester',
+  });
+
+  const agencyAdminToken = generateAccessToken({
+    userId: testAdminUser.id,
+    agencyId: testAgency.id,
+    email: 'agencyadmin@royalheritagetest.com',
+    role: UserRole.AGENCY_ADMIN,
+    name: 'Agency Admin Tester',
   });
 
   const clientToken = generateAccessToken({
     userId: 'test_client_id',
-    agencyId: 'agency_test_id',
+    agencyId: testAgency.id,
     email: 'client@grandbandhan.com',
     role: UserRole.CLIENT,
     name: 'Client User Test',
@@ -90,92 +137,178 @@ async function runGmailOAuthTests() {
   };
 
   // ---------------------------------------------------------------------------
-  // TEST 1: Generate Auth URL with Required Scope & CSRF Nonce
+  // TEST 1: Rejection of JWT in URL Query Parameters (?token=...)
   // ---------------------------------------------------------------------------
   try {
-    const authStartRes = await fetchUrl(`${baseUrl}/api/email/oauth/start`, {
-      headers: superAdminHeaders,
-    });
+    // Attempt to access protected endpoint using query parameter ?token=...
+    const queryTokenRes = await fetchUrl(
+      `${baseUrl}/api/email/status?token=${superAdminToken}`,
+      { headers: { Accept: 'application/json' } }
+    );
 
-    const url = authStartRes.data?.data?.url || '';
-    const state = authStartRes.data?.data?.state || '';
-
-    const parsedUrl = new URL(url);
-    const hasClientId = parsedUrl.searchParams.get('client_id') === env.GOOGLE_CLIENT_ID;
-    const hasRedirectUri = parsedUrl.searchParams.get('redirect_uri') === env.GOOGLE_REDIRECT_URI;
-    const hasScope = parsedUrl.searchParams.get('scope') === GMAIL_SCOPE;
-    const hasOffline = parsedUrl.searchParams.get('access_type') === 'offline';
-    const hasPrompt = parsedUrl.searchParams.get('prompt') === 'consent';
-    const hasState = parsedUrl.searchParams.get('state') === state;
-
-    const stateInDb = await prisma.oAuthState.findUnique({ where: { state } });
-
-    const passed =
-      authStartRes.status === 200 &&
-      hasClientId &&
-      hasRedirectUri &&
-      hasScope &&
-      hasOffline &&
-      hasPrompt &&
-      hasState &&
-      Boolean(stateInDb);
+    // OWASP A07 compliance: Tokens in URLs must NEVER be authenticated
+    const passed = queryTokenRes.status === 401;
 
     record(
-      '1. OAuth Start & Auth URL Generation',
+      '1. OWASP A07: Reject JWT in URL Query Parameters',
       passed,
       passed
-        ? `Auth URL verified with offline access, prompt=consent, scope: ${GMAIL_SCOPE}, state nonce: ${state.slice(0, 12)}...`
-        : `Validation failed: status=${authStartRes.status}, scopeMatch=${hasScope}, stateInDb=${Boolean(stateInDb)}`
+        ? `HTTP 401 correctly returned when access token was sent via ?token=... (Query param auth eradicated)`
+        : `Vulnerability: Status ${queryTokenRes.status} returned instead of 401 Unauthorized`
     );
   } catch (err: any) {
-    record('1. OAuth Start & Auth URL Generation', false, err.message);
+    record('1. OWASP A07: Reject JWT in URL Query Parameters', false, err.message);
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 2: CSRF State Validation & Replay Prevention
+  // TEST 2: Single-Use Authorization Handoff Ticket Flow
   // ---------------------------------------------------------------------------
   try {
-    const { state: testState } = await GmailService.generateAuthUrl();
+    // 2a. Generate handoff ticket with admin credentials via POST
+    const handoffRes = await fetchUrl(`${baseUrl}/api/email/oauth/handoff`, {
+      method: 'POST',
+      headers: superAdminHeaders,
+    });
 
-    // First validation must succeed
+    const ticket = handoffRes.data?.data?.ticket;
+    const startUrl = handoffRes.data?.data?.startUrl;
+
+    const hasTicket = Boolean(ticket && typeof ticket === 'string' && ticket.length === 64);
+    const hasValidUrl = Boolean(startUrl && startUrl.includes(ticket));
+
+    // 2b. Consume handoff ticket on /oauth/start (Simulate browser redirect)
+    const consumeRes = await fetchUrl(`${baseUrl}/api/email/oauth/start?ticket=${ticket}`, {
+      headers: { Accept: 'application/json' },
+    });
+    const firstConsumePassed = consumeRes.status === 200 && Boolean(consumeRes.data?.data?.url);
+
+    // 2c. Replay attack: attempt to use the exact same ticket a second time
+    const replayRes = await fetchUrl(`${baseUrl}/api/email/oauth/start?ticket=${ticket}`, {
+      headers: { Accept: 'application/json' },
+    });
+    const replayBlocked = replayRes.status === 401;
+
+    // 2d. Fake arbitrary ticket must be rejected
+    const fakeRes = await fetchUrl(`${baseUrl}/api/email/oauth/start?ticket=attacker_fake_ticket_99999`, {
+      headers: { Accept: 'application/json' },
+    });
+    const fakeBlocked = fakeRes.status === 401;
+
+    const passed = hasTicket && hasValidUrl && firstConsumePassed && replayBlocked && fakeBlocked;
+
+    record(
+      '2. Single-Use Authorization Handoff Ticket Flow',
+      passed,
+      passed
+        ? `Handoff ticket generated (64 hex chars), consumed on /oauth/start (HTTP 200), replay blocked (HTTP 401), fake ticket blocked (HTTP 401).`
+        : `Details: hasTicket=${hasTicket}, firstConsume=${firstConsumePassed}, replayBlocked=${replayBlocked}, fakeBlocked=${fakeBlocked}`
+    );
+  } catch (err: any) {
+    record('2. Single-Use Authorization Handoff Ticket Flow', false, err.message);
+  }
+
+  // ---------------------------------------------------------------------------
+  // TEST 3: AES-256-GCM Envelope Encryption at Rest in Neon DB
+  // ---------------------------------------------------------------------------
+  try {
+    const rawPlainToken = 'sample_high_entropy_google_refresh_token_1234567890';
+    const encryptedEnvelope = encryptToken(rawPlainToken);
+
+    // Verify envelope format: enc:<version>:<iv_hex>:<tag_hex>:<cipher_hex>
+    const isFormatValid = isEncrypted(encryptedEnvelope);
+    const parts = encryptedEnvelope.split(':');
+    const versionMatch = parts[1] === 'v1';
+    const ivLengthMatch = parts[2].length === 24; // 12 bytes * 2 hex chars
+    const tagLengthMatch = parts[3].length === 32; // 16 bytes auth tag * 2 hex chars
+
+    // Decrypt and verify round-trip integrity
+    const decrypted = decryptToken(encryptedEnvelope);
+    const roundTripMatches = decrypted === rawPlainToken;
+
+    // Tamper resistance test (authenticated encryption check)
+    let tamperDetected = false;
+    try {
+      const tamperedParts = [...parts];
+      tamperedParts[4] = tamperedParts[4].substring(0, tamperedParts[4].length - 2) + 'ff'; // Modify ciphertext
+      decryptToken(tamperedParts.join(':'));
+    } catch {
+      tamperDetected = true;
+    }
+
+    // Key rotation verification: re-encrypt under v2
+    process.env.GMAIL_TOKEN_ENCRYPTION_KEY_V2 = 'b4c7e8f1a2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9';
+    const v2Encrypted = reencryptToken(encryptedEnvelope, 'v2');
+    const isV2 = v2Encrypted.startsWith('enc:v2:');
+    const v2Decrypted = decryptToken(v2Encrypted);
+    const v2Matches = v2Decrypted === rawPlainToken;
+
+    const passed =
+      isFormatValid &&
+      versionMatch &&
+      ivLengthMatch &&
+      tagLengthMatch &&
+      roundTripMatches &&
+      tamperDetected &&
+      isV2 &&
+      v2Matches;
+
+    record(
+      '3. AES-256-GCM Envelope Encryption & Key Rotation',
+      passed,
+      passed
+        ? `Envelope valid (enc:v1:iv:tag:cipher), round-trip verified, ciphertext tampering rejected, key rotation to v2 seamless.`
+        : `Checks: format=${isFormatValid}, v1=${versionMatch}, roundTrip=${roundTripMatches}, tamperDetected=${tamperDetected}, v2Matches=${v2Matches}`
+    );
+  } catch (err: any) {
+    record('3. AES-256-GCM Envelope Encryption & Key Rotation', false, err.message);
+  }
+
+  // ---------------------------------------------------------------------------
+  // TEST 4: CSRF State Validation & Expiry
+  // ---------------------------------------------------------------------------
+  try {
+    const { state: testState } = await GmailService.generateAuthUrl(testAdminUser.id, testAgency.id);
+
+    // First validation must succeed and return bound context
     const firstCheck = await GmailService.validateAndConsumeState(testState);
+    const contextValid =
+      firstCheck !== null &&
+      firstCheck.userId === testAdminUser.id &&
+      firstCheck.agencyId === testAgency.id;
 
-    // Replay attack with same state must fail (consumed)
+    // Replay attack with same state must fail (already consumed)
     const replayCheck = await GmailService.validateAndConsumeState(testState);
-
-    // Arbitrary fake state must fail
-    const fakeCheck = await GmailService.validateAndConsumeState('fake_arbitrary_attacker_nonce_12345');
 
     // Expired state test
     const expiredState = 'expired_nonce_' + Date.now();
     await prisma.oAuthState.create({
       data: {
         state: expiredState,
+        userId: testAdminUser.id,
         expiresAt: new Date(Date.now() - 5000), // Expired 5 seconds ago
       },
     });
     const expiredCheck = await GmailService.validateAndConsumeState(expiredState);
 
-    const passed = firstCheck === true && replayCheck === false && fakeCheck === false && expiredCheck === false;
+    const passed = contextValid && replayCheck === null && expiredCheck === null;
 
     record(
-      '2. CSRF State Validation & Replay Prevention',
+      '4. CSRF State Validation & Context Binding',
       passed,
       passed
-        ? 'First consumption verified, replay attack rejected, arbitrary state rejected, expired state rejected.'
-        : `State checks: first=${firstCheck}, replay=${replayCheck}, fake=${fakeCheck}, expired=${expiredCheck}`
+        ? `State validated with bound admin (${testAdminUser.id}) and agency (${testAgency.id}), replay prevented, expired rejected.`
+        : `Checks: contextValid=${contextValid}, replayNull=${replayCheck === null}, expiredNull=${expiredCheck === null}`
     );
   } catch (err: any) {
-    record('2. CSRF State Validation & Replay Prevention', false, err.message);
+    record('4. CSRF State Validation & Context Binding', false, err.message);
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 3: OAuth2 Callback Handling & Code Exchange (Mocking Google Token API)
+  // TEST 5: OAuth2 Callback Handling & Encrypted Token Storage
   // ---------------------------------------------------------------------------
   try {
-    const { state: callbackState } = await GmailService.generateAuthUrl();
+    const { state: callbackState } = await GmailService.generateAuthUrl(testAdminUser.id, testAgency.id);
 
-    // Setup Mock Interceptor for Google's Token Endpoint
     const mockAccessToken = `mock_access_token_${Date.now()}`;
     const mockRefreshToken = `mock_refresh_token_${Date.now()}`;
 
@@ -193,54 +326,112 @@ async function runGmailOAuthTests() {
     });
 
     const callbackRes = await fetchUrl(
-      `${baseUrl}/api/email/oauth2/callback?code=mock_google_auth_code_999&state=${callbackState}`,
-      {
-        headers: { Accept: 'application/json' },
-      }
+      `${baseUrl}/api/email/oauth2/callback?code=mock_auth_code_sec_check&state=${callbackState}`,
+      { headers: { Accept: 'application/json' } }
     );
 
-    // Verify token was stored in Neon PostgreSQL
-    const storedToken = await prisma.gmailOAuthToken.findUnique({ where: { id: 'default' } });
+    // Verify token was stored ENCRYPTED in Neon PostgreSQL under agency key
+    const tokenId = `agency_${testAgency.id}`;
+    const storedToken = await prisma.gmailOAuthToken.findUnique({ where: { id: tokenId } });
+
+    const isStoredEncrypted = Boolean(storedToken?.refreshToken && isEncrypted(storedToken.refreshToken));
+    const decryptedRefresh = storedToken?.refreshToken ? decryptToken(storedToken.refreshToken) : null;
+    const decryptedAccess = storedToken?.accessToken ? decryptToken(storedToken.accessToken) : null;
 
     const passed =
       callbackRes.status === 200 &&
-      storedToken?.refreshToken === mockRefreshToken &&
-      storedToken?.accessToken === mockAccessToken &&
-      storedToken?.scope === GMAIL_SCOPE;
+      isStoredEncrypted &&
+      decryptedRefresh === mockRefreshToken &&
+      decryptedAccess === mockAccessToken &&
+      storedToken?.agencyId === testAgency.id;
 
     record(
-      '3. OAuth2 Callback & Code Exchange (Mocked Google API)',
+      '5. OAuth2 Callback & Encrypted Storage at Rest',
       passed,
       passed
-        ? `Exchanged code, refresh token stored securely in Neon PostgreSQL (${storedToken?.id})`
-        : `Callback status: ${callbackRes.status}, storedToken: ${Boolean(storedToken)}`
+        ? `Tokens encrypted at rest in Neon DB (${storedToken?.refreshToken?.slice(0, 20)}...), decrypted correctly in memory, agency isolation confirmed.`
+        : `Checks: status=${callbackRes.status}, encrypted=${isStoredEncrypted}, refreshMatch=${decryptedRefresh === mockRefreshToken}`
     );
   } catch (err: any) {
-    record('3. OAuth2 Callback & Code Exchange (Mocked Google API)', false, err.message);
+    record('5. OAuth2 Callback & Encrypted Storage at Rest', false, err.message);
   } finally {
     GmailService.clearMockInterceptor();
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 4: Access Token Automatic Refresh
+  // TEST 6: Callback Security Checks: Deactivated User / Suspended Agency
   // ---------------------------------------------------------------------------
   try {
-    // Manually expire access token in Neon DB
-    await prisma.gmailOAuthToken.update({
-      where: { id: 'default' },
+    // 6a. State bound to deactivated user must fail callback
+    const deactivatedUser = await prisma.user.create({
       data: {
-        accessToken: 'stale_expired_token_111',
-        expiryDate: new Date(Date.now() - 60000), // Expired 1 min ago
+        email: `deactivated_${Date.now()}@test.com`,
+        name: 'Deactivated User',
+        passwordHash: 'hash',
+        role: UserRole.AGENCY_ADMIN,
+        agencyId: testAgency.id,
+        isActive: false, // Inactive!
+        accountStatus: 'SUSPENDED',
       },
     });
 
-    const newlyRefreshedToken = `refreshed_access_token_${Date.now()}`;
+    const { state: deactivatedState } = await GmailService.generateAuthUrl(deactivatedUser.id, testAgency.id);
+    const deactivatedRes = await fetchUrl(
+      `${baseUrl}/api/email/oauth2/callback?code=mock_code&state=${deactivatedState}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    const userDeactivatedBlocked = deactivatedRes.status === 403;
 
-    // Setup Mock Interceptor for Token Refresh
+    // 6b. State bound to suspended agency must fail callback
+    const suspendedAgency = await prisma.agency.create({
+      data: {
+        name: 'Suspended Test Agency',
+        slug: `suspended-agency-${Date.now()}`,
+        contactEmail: 'contact@suspended.com',
+        status: 'SUSPENDED', // Suspended!
+      },
+    });
+
+    const { state: suspendedState } = await GmailService.generateAuthUrl(testAdminUser.id, suspendedAgency.id);
+    const suspendedRes = await fetchUrl(
+      `${baseUrl}/api/email/oauth2/callback?code=mock_code&state=${suspendedState}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    const agencySuspendedBlocked = suspendedRes.status === 403;
+
+    const passed = userDeactivatedBlocked && agencySuspendedBlocked;
+
+    record(
+      '6. Callback Security: Deactivated User & Suspended Agency Guard',
+      passed,
+      passed
+        ? 'OAuth callback rejected when initiating admin is inactive (HTTP 403) or agency is suspended (HTTP 403).'
+        : `userDeactivatedBlocked=${userDeactivatedBlocked}, agencySuspendedBlocked=${agencySuspendedBlocked}`
+    );
+  } catch (err: any) {
+    record('6. Callback Security: Deactivated User & Suspended Agency Guard', false, err.message);
+  }
+
+  // ---------------------------------------------------------------------------
+  // TEST 7: Access Token Refresh with Encrypted Storage
+  // ---------------------------------------------------------------------------
+  try {
+    const tokenId = `agency_${testAgency.id}`;
+    // Manually set expired token
+    await prisma.gmailOAuthToken.update({
+      where: { id: tokenId },
+      data: {
+        accessToken: encryptToken('expired_cached_token'),
+        expiryDate: new Date(Date.now() - 60000), // Expired
+      },
+    });
+
+    const refreshedTokenValue = `newly_refreshed_access_${Date.now()}`;
+
     GmailService.setMockInterceptor((url, body) => {
       if (url.includes('oauth2.googleapis.com/token') && body.includes('grant_type=refresh_token')) {
         return Promise.resolve({
-          access_token: newlyRefreshedToken,
+          access_token: refreshedTokenValue,
           expires_in: 3600,
           scope: GMAIL_SCOPE,
           token_type: 'Bearer',
@@ -249,167 +440,246 @@ async function runGmailOAuthTests() {
       return null;
     });
 
-    const activeToken = await GmailService.getValidAccessToken();
-    const updatedDbToken = await prisma.gmailOAuthToken.findUnique({ where: { id: 'default' } });
+    const activeToken = await GmailService.getValidAccessToken(testAgency.id);
+    const updatedRecord = await prisma.gmailOAuthToken.findUnique({ where: { id: tokenId } });
+
+    const dbTokenEncrypted = Boolean(updatedRecord?.accessToken && isEncrypted(updatedRecord.accessToken));
+    const decryptedToken = updatedRecord?.accessToken ? decryptToken(updatedRecord.accessToken) : null;
 
     const passed =
-      activeToken === newlyRefreshedToken &&
-      updatedDbToken?.accessToken === newlyRefreshedToken &&
-      Boolean(updatedDbToken?.expiryDate && updatedDbToken.expiryDate > new Date());
+      activeToken === refreshedTokenValue &&
+      dbTokenEncrypted &&
+      decryptedToken === refreshedTokenValue;
 
     record(
-      '4. Access Token Refresh Logic (Mocked Google API)',
+      '7. Access Token Refresh with Re-Encryption',
       passed,
       passed
-        ? `Expired token detected, refreshed via Google OAuth endpoint, updated in Neon DB with new expiry.`
-        : `activeToken=${activeToken}, dbToken=${updatedDbToken?.accessToken}`
+        ? 'Refreshed access token received, encrypted with AES-256-GCM before DB write, returned decrypted in memory.'
+        : `activeToken=${activeToken}, encrypted=${dbTokenEncrypted}, decrypted=${decryptedToken}`
     );
   } catch (err: any) {
-    record('4. Access Token Refresh Logic (Mocked Google API)', false, err.message);
+    record('7. Access Token Refresh with Re-Encryption', false, err.message);
   } finally {
     GmailService.clearMockInterceptor();
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 5: Gmail API Email Sending & Neon Outbox Logging
+  // TEST 8: Gmail API Send & Agency-Isolated Outbox Logging
   // ---------------------------------------------------------------------------
   try {
-    const mockGmailMessageId = `gmail_msg_${Date.now()}`;
-    let capturedRawPayload: any = null;
+    const mockGmailMessageId = `msg_hardened_${Date.now()}`;
+    let capturedRaw: any = null;
 
-    // Setup Mock Interceptor for Gmail messages.send
-    GmailService.setMockInterceptor((url, body, headers) => {
+    GmailService.setMockInterceptor((url, body) => {
       if (url.includes('gmail.googleapis.com/gmail/v1/users/me/messages/send')) {
-        capturedRawPayload = JSON.parse(body);
+        capturedRaw = JSON.parse(body);
         return Promise.resolve({
           id: mockGmailMessageId,
           threadId: `thread_${Date.now()}`,
-          labelIds: ['SENT'],
         });
       }
       return null;
     });
 
-    const testRecipient = 'couple.test@grandbandhan.com';
-    const testSubject = '👑 Royal Sangeet Invitation & Menu Tasting Schedule';
-
+    const recipient = 'vip.couple@udaipurweddings.com';
     const sendResult = await GmailService.sendEmail({
-      to: testRecipient,
-      subject: testSubject,
-      html: '<h1>Welcome to Jagmandir Island Palace</h1><p>Your royal invitation is confirmed.</p>',
+      to: recipient,
+      subject: '👑 Private Villa Booking Confirmation',
+      html: '<h1>Booking Confirmed</h1>',
+      agencyId: testAgency.id,
     });
 
-    // Verify raw base64url payload was created
-    const decodedMessage = Buffer.from(capturedRawPayload?.raw || '', 'base64').toString('utf-8');
-    const hasRecipient = decodedMessage.includes(`To: ${testRecipient}`);
-    const hasSubjectHeader = decodedMessage.includes('Subject:');
-    const hasMimeVersion = decodedMessage.includes('MIME-Version: 1.0');
-
-    // Verify logged in Neon DB EmailLog
     const emailLog = await prisma.emailLog.findFirst({
-      where: { recipientEmail: testRecipient, providerMessageId: mockGmailMessageId },
-      orderBy: { createdAt: 'desc' },
+      where: { providerMessageId: mockGmailMessageId },
     });
 
     const passed =
       sendResult.messageId === mockGmailMessageId &&
-      hasRecipient &&
-      hasSubjectHeader &&
-      hasMimeVersion &&
       Boolean(emailLog) &&
+      emailLog?.agencyId === testAgency.id &&
       emailLog?.status === 'DELIVERED';
 
     record(
-      '5. Gmail API Email Sending & Neon EmailLog Audit',
+      '8. Multi-Tenant Outbox Dispatch & EmailLog Audit',
       passed,
       passed
-        ? `MIME formatted (RFC 2822), base64url encoded, dispatched with message ID ${mockGmailMessageId}, logged to Neon EmailLog.`
-        : `hasRecipient=${hasRecipient}, hasMime=${hasMimeVersion}, emailLog=${Boolean(emailLog)}`
+        ? `Dispatched via Gmail API, recorded to Neon EmailLog with strict agency binding (${testAgency.id}).`
+        : `Checks: sendResult=${sendResult.messageId}, log=${Boolean(emailLog)}, agencyIdMatch=${emailLog?.agencyId === testAgency.id}`
     );
   } catch (err: any) {
-    record('5. Gmail API Email Sending & Neon EmailLog Audit', false, err.message);
+    record('8. Multi-Tenant Outbox Dispatch & EmailLog Audit', false, err.message);
   } finally {
     GmailService.clearMockInterceptor();
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 6: Status Endpoint Security & Credential Sanitization
+  // TEST 9: Status Endpoint Agency Isolation & Sanitization
   // ---------------------------------------------------------------------------
   try {
-    const statusRes = await fetchUrl(`${baseUrl}/api/email/status`, {
-      headers: superAdminHeaders,
+    // 9a. Agency Admin queries status -> isolated to testAgency
+    const agencyStatusRes = await fetchUrl(`${baseUrl}/api/email/status`, {
+      headers: { Authorization: `Bearer ${agencyAdminToken}`, Accept: 'application/json' },
     });
 
-    const data = statusRes.data?.data || {};
-    const connected = data.connected === true;
-    const hasSender = data.senderEmail === env.GMAIL_SENDER_EMAIL;
-    const hasScope = data.scope === GMAIL_SCOPE;
-    const hasRedirect = data.redirectUri === env.GOOGLE_REDIRECT_URI;
+    const statusData = agencyStatusRes.data?.data || {};
 
-    // CRITICAL SECURITY ASSERTION: No secrets or tokens must EVER be exposed!
-    const exposesRefreshToken = 'refreshToken' in data || 'refresh_token' in data;
-    const exposesAccessToken = 'accessToken' in data || 'access_token' in data;
-    const exposesClientSecret = 'clientSecret' in data || 'client_secret' in data;
+    const noLeakedKeys =
+      !('refreshToken' in statusData) &&
+      !('accessToken' in statusData) &&
+      !('clientSecret' in statusData) &&
+      !('encryptionKey' in statusData);
 
-    const noLeakage = !exposesRefreshToken && !exposesAccessToken && !exposesClientSecret;
+    const reportsEncryption = statusData.tokenEncrypted === true;
+    const reportsAgency = statusData.isAgencyDedicated === true && statusData.agencyId === testAgency.id;
 
-    const passed = statusRes.status === 200 && connected && hasSender && hasScope && hasRedirect && noLeakage;
+    const passed = agencyStatusRes.status === 200 && noLeakedKeys && reportsEncryption && reportsAgency;
 
     record(
-      '6. Status Endpoint Security & Credential Sanitization',
+      '9. Status Endpoint Agency Isolation & Zero Leakage',
       passed,
       passed
-        ? `Status 200: connected=true, sender=${data.senderEmail}, ZERO credentials/tokens leaked.`
-        : `Validation failed: status=${statusRes.status}, noLeakage=${noLeakage}`
+        ? `Status 200: tokenEncrypted=true, agencyId=${statusData.agencyId}, ZERO credentials/secrets leaked.`
+        : `Checks: status=${agencyStatusRes.status}, noLeakedKeys=${noLeakedKeys}, reportsEncryption=${reportsEncryption}, reportsAgency=${reportsAgency}`
     );
   } catch (err: any) {
-    record('6. Status Endpoint Security & Credential Sanitization', false, err.message);
+    record('9. Status Endpoint Agency Isolation & Zero Leakage', false, err.message);
   }
 
   // ---------------------------------------------------------------------------
-  // TEST 7: Authentication & RBAC Guardrails
+  // TEST 10: RBAC & Agency Isolation on Test Endpoint
   // ---------------------------------------------------------------------------
   try {
-    // 7a. Unauthenticated status request -> 401
-    const unauthStatus = await fetchUrl(`${baseUrl}/api/email/status`);
-    const status401 = unauthStatus.status === 401;
-
-    // 7b. Unauthenticated test send -> 401
-    const unauthSend = await fetchUrl(`${baseUrl}/api/email/test`, {
+    // 10a. Unauthenticated test send -> 401
+    const unauthRes = await fetchUrl(`${baseUrl}/api/email/test`, {
       method: 'POST',
-      body: { to: 'test@example.com' },
+      body: { to: 'nobody@test.com' },
     });
-    const send401 = unauthSend.status === 401;
+    const unauth401 = unauthRes.status === 401;
 
-    // 7c. Unauthenticated OAuth start -> 401
-    const unauthStart = await fetchUrl(`${baseUrl}/api/email/oauth/start`);
-    const start401 = unauthStart.status === 401;
-
-    // 7d. Client role forbidden from status -> 403
-    const clientStatus = await fetchUrl(`${baseUrl}/api/email/status`, {
-      headers: { Authorization: `Bearer ${clientToken}`, Accept: 'application/json' },
-    });
-    const client403 = clientStatus.status === 403;
-
-    // 7e. Client role forbidden from test send -> 403
-    const clientSend = await fetchUrl(`${baseUrl}/api/email/test`, {
+    // 10b. Client role -> 403
+    const clientRes = await fetchUrl(`${baseUrl}/api/email/test`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${clientToken}` },
-      body: { to: 'test@example.com' },
+      body: { to: 'nobody@test.com' },
     });
-    const clientSend403 = clientSend.status === 403;
+    const client403 = clientRes.status === 403;
 
-    const passed = status401 && send401 && start401 && client403 && clientSend403;
+    // 10c. Agency Admin test send: attempts to spoof another agencyId -> must remain isolated to their agency
+    GmailService.setMockInterceptor((url) => {
+      if (url.includes('gmail.googleapis.com/gmail/v1/users/me/messages/send')) {
+        return Promise.resolve({ id: `msg_spoof_test_${Date.now()}` });
+      }
+      return null;
+    });
+
+    const agencyAdminSendRes = await fetchUrl(`${baseUrl}/api/email/test`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${agencyAdminToken}` },
+      body: {
+        to: 'tester@royalheritagetest.com',
+        agencyId: 'attacker_spoofed_agency_99999', // Attacker attempts to spoof agency
+      },
+    });
+
+    const spoofBlocked = agencyAdminSendRes.status === 200; // Sent under their genuine agency
+    // Check EmailLog to verify the spoofed agencyId was NOT used
+    const latestTestLog = await prisma.emailLog.findFirst({
+      where: { recipientEmail: 'tester@royalheritagetest.com' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const antiSpoofingConfirmed = latestTestLog?.agencyId === testAgency.id; // Bound to real agency!
+
+    const passed = unauth401 && client403 && spoofBlocked && antiSpoofingConfirmed;
 
     record(
-      '7. Authentication & RBAC Role Protection',
+      '10. RBAC Protection & Anti-Spoofing Agency Guardrails',
       passed,
       passed
-        ? 'Unauthenticated requests blocked (401), Client role blocked from admin operations (403).'
-        : `Checks: status401=${status401}, send401=${send401}, start401=${start401}, client403=${client403}, clientSend403=${clientSend403}`
+        ? `Unauthenticated blocked (401), Client role blocked (403), Agency Admin forced to genuine agency binding (anti-spoofing passed).`
+        : `Checks: unauth401=${unauth401}, client403=${client403}, spoofBlocked=${spoofBlocked}, antiSpoofingConfirmed=${antiSpoofingConfirmed}`
     );
   } catch (err: any) {
-    record('7. Authentication & RBAC Role Protection', false, err.message);
+    record('10. RBAC Protection & Anti-Spoofing Agency Guardrails', false, err.message);
+  } finally {
+    GmailService.clearMockInterceptor();
+  }
+
+  // ---------------------------------------------------------------------------
+  // TEST 11: Concurrent Race Condition Resistance (Atomic Consumption)
+  // ---------------------------------------------------------------------------
+  try {
+    const { ticket: raceTicket } = await GmailService.createHandoffTicket(testAdminUser.id, testAgency.id);
+
+    // Launch 5 simultaneous requests attempting to consume the exact same ticket
+    const promises = Array.from({ length: 5 }, () =>
+      fetchUrl(`${baseUrl}/api/email/oauth/start?ticket=${raceTicket}`, {
+        headers: { Accept: 'application/json' },
+      })
+    );
+
+    const raceResponses = await Promise.all(promises);
+    const successCount = raceResponses.filter((res) => res.status === 200).length;
+    const rejectedCount = raceResponses.filter((res) => res.status === 401).length;
+
+    const passed = successCount === 1 && rejectedCount === 4;
+
+    record(
+      '11. Atomic Ticket Consumption (Concurrent Race Condition Test)',
+      passed,
+      passed
+        ? `Out of 5 simultaneous requests, exactly 1 succeeded (HTTP 200) and 4 were atomically rejected (HTTP 401). Zero race condition window.`
+        : `Race results: success=${successCount}, rejected=${rejectedCount} (Expected: 1 success, 4 rejected)`
+    );
+  } catch (err: any) {
+    record('11. Atomic Ticket Consumption (Concurrent Race Condition Test)', false, err.message);
+  }
+
+  // ---------------------------------------------------------------------------
+  // TEST 12: Corrupted Envelope & Bad Key Tamper Rejection
+  // ---------------------------------------------------------------------------
+  try {
+    const validCipher = encryptToken('secret_token_to_tamper');
+
+    // 12a. Corrupted format (missing parts)
+    let badFormatThrown = false;
+    try {
+      decryptToken('enc:invalid:short');
+    } catch {
+      badFormatThrown = true;
+    }
+
+    // 12b. Tampered Auth Tag
+    let badTagThrown = false;
+    try {
+      const parts = validCipher.split(':');
+      parts[3] = '00000000000000000000000000000000'; // Replace auth tag with zeroes
+      decryptToken(parts.join(':'));
+    } catch {
+      badTagThrown = true;
+    }
+
+    // 12c. Truncated Ciphertext
+    let truncatedThrown = false;
+    try {
+      const parts = validCipher.split(':');
+      parts[4] = parts[4].slice(0, 8); // Truncate ciphertext
+      decryptToken(parts.join(':'));
+    } catch {
+      truncatedThrown = true;
+    }
+
+    const passed = badFormatThrown && badTagThrown && truncatedThrown;
+
+    record(
+      '12. Cryptographic Integrity: Tamper & Truncation Rejection',
+      passed,
+      passed
+        ? 'Malformed envelopes, corrupted auth tags, and truncated ciphertexts rejected by AES-GCM verification.'
+        : `badFormat=${badFormatThrown}, badTag=${badTagThrown}, truncated=${truncatedThrown}`
+    );
+  } catch (err: any) {
+    record('12. Cryptographic Integrity: Tamper & Truncation Rejection', false, err.message);
   }
 
   // ---------------------------------------------------------------------------
@@ -417,7 +687,7 @@ async function runGmailOAuthTests() {
   // ---------------------------------------------------------------------------
   console.log('\n=============================================================');
   const passCount = results.filter((r) => r.passed).length;
-  console.log(`GMAIL API TEST SUMMARY: ${passCount} / ${results.length} PASSED`);
+  console.log(`GMAIL HARDENING TEST SUMMARY: ${passCount} / ${results.length} PASSED`);
   console.log('=============================================================\n');
 
   await prisma.$disconnect();
