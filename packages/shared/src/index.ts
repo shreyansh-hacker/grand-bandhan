@@ -179,6 +179,179 @@ export interface AuthResponse {
   accessToken: string;
 }
 
+export interface User {
+  id: string;
+  agencyId: string;
+  email: string;
+  name: string;
+  phone?: string | null;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface Enquiry {
+  id: string;
+  agencyId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  weddingDate?: string | Date | null;
+  weddingLocation?: string | null;
+  guestCount?: number | null;
+  weddingTheme?: string | null;
+  minBudget?: number | null;
+  maxBudget?: number | null;
+  source: EnquirySource;
+  planningFor: PlanningForSide;
+  status: EnquiryStatus;
+  followUpDate?: string | Date | null;
+  notes?: string | null;
+  assignedToId?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface Wedding {
+  id: string;
+  agencyId: string;
+  title: string;
+  brideName: string;
+  groomName: string;
+  startDate: string | Date;
+  endDate?: string | Date | null;
+  location: string;
+  guestCount: number;
+  minBudget?: number | null;
+  maxBudget?: number | null;
+  packageType: WeddingPackageType;
+  status: WeddingStatus;
+  leadPlannerId?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface Vendor {
+  id: string;
+  agencyId: string;
+  name: string;
+  category: VendorCategory;
+  contactPerson?: string | null;
+  email: string;
+  phone: string;
+  address?: string | null;
+  city?: string | null;
+  website?: string | null;
+  rating?: number | null;
+  status: string;
+  createdAt: string | Date;
+}
+
+export interface Quotation {
+  id: string;
+  quotationRequestId: string;
+  vendorId: string;
+  vendor?: Vendor;
+  amount: number;
+  breakdown?: any;
+  deliverables?: any;
+  terms?: string | null;
+  status: QuotationStatus;
+  submittedAt: string | Date;
+}
+
+export interface Task {
+  id: string;
+  weddingId: string;
+  title: string;
+  category: string;
+  leadTimeDays: number;
+  dueDate: string | Date;
+  priority: TaskPriority;
+  status: TaskStatus;
+  assignedToId?: string | null;
+  notes?: string | null;
+  createdAt: string | Date;
+}
+
+export interface WeddingEvent {
+  id: string;
+  weddingId: string;
+  name: string;
+  location: string;
+  startTime: string | Date;
+  endTime: string | Date;
+  status: EventStatus;
+  notes?: string | null;
+}
+
+export interface VendorArrival {
+  id: string;
+  eventId: string;
+  vendorId: string;
+  vendor?: Vendor;
+  expectedArrivalTime: string | Date;
+  actualArrivalTime?: string | Date | null;
+  status: ArrivalStatus;
+  delayMinutes?: number | null;
+  notes?: string | null;
+}
+
+export interface ServiceVerification {
+  id: string;
+  weddingId: string;
+  eventId: string;
+  vendorId: string;
+  vendor?: Vendor;
+  serviceName: string;
+  scheduledConfirmationTime: string | Date;
+  status: ServiceVerificationStatus;
+  verifiedByRole?: string | null;
+  issueNote?: string | null;
+  vendorResponse?: string | null;
+  resolvedAt?: string | Date | null;
+  auditHistory?: any[];
+}
+
+export interface Payment {
+  id: string;
+  weddingId: string;
+  type: PaymentType;
+  milestone: PaymentMilestone;
+  amount: number;
+  dueDate: string | Date;
+  paidDate?: string | Date | null;
+  status: PaymentStatus;
+  vendorId?: string | null;
+  vendor?: Vendor;
+  notes?: string | null;
+}
+
+export interface Settlement {
+  id: string;
+  weddingId: string;
+  vendorId: string;
+  vendor?: Vendor;
+  agreedAmount: number;
+  paidAmount: number;
+  penaltyDeductions: number;
+  finalPayout: number;
+  status: SettlementStatus;
+}
+
+export interface StoredFile {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploaderId?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+  isPublic: boolean;
+  createdAt: string | Date;
+}
+
 // Socket Events
 export const SOCKET_EVENTS = {
   CONNECT: 'connect',

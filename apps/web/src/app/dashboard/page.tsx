@@ -17,6 +17,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { motion } from 'framer-motion';
 
 export default function DashboardOverviewPage() {
   const [data, setData] = useState<any>(null);
@@ -58,9 +59,19 @@ export default function DashboardOverviewPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8"
+    >
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-navy-gradient text-white p-6 sm:p-8 rounded-2xl border border-gold/40 shadow-navy-deep">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-navy-gradient text-white p-6 sm:p-8 rounded-2xl border border-gold/40 shadow-navy-deep"
+      >
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-gold text-xs font-semibold uppercase tracking-wider">
             <Crown className="w-4 h-4" />
@@ -91,7 +102,7 @@ export default function DashboardOverviewPage() {
             <span>Live Timeline Radar</span>
           </Link>
         </div>
-      </div>
+      </motion.div>
 
       {/* Top Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -319,6 +330,6 @@ export default function DashboardOverviewPage() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

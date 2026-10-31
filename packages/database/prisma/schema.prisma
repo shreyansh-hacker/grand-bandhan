@@ -1,0 +1,559 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  AGENCY_ADMIN
+  WEDDING_PLANNER
+  COORDINATOR
+  VENDOR
+  CLIENT
+}
+
+enum EnquirySource {
+  WEBSITE
+  WHATSAPP
+  INSTAGRAM
+  PHONE
+  MANUAL
+}
+
+enum PlanningForSide {
+  BRIDE_SIDE
+  GROOM_SIDE
+  NOT_SPECIFIED
+}
+
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  CONSULTATION_SCHEDULED
+  PROPOSAL_SENT
+  CONVERTED
+  LOST
+}
+
+enum AgreementStatus {
+  DRAFT
+  SENT
+  VIEWED
+  SIGNED
+  EXPIRED
+}
+
+enum WeddingPackageType {
+  FULL_SERVICE
+  PARTIAL_DAY_OF
+}
+
+enum WeddingStatus {
+  ENQUIRY
+  PROPOSAL
+  CONFIRMED
+  IN_PLANNING
+  EXECUTION
+  COMPLETED
+  SETTLED
+  CANCELLED
+}
+
+enum VendorCategory {
+  CATERING
+  DECORATION
+  DJ_MUSIC
+  PHOTOGRAPHY
+  MAKEUP_ARTIST
+  FLORIST
+  VENUE
+  TRANSPORTATION
+  CHOREOGRAPHY
+  MEHENDI_ARTIST
+  OTHER
+}
+
+enum QuotationRequestStatus {
+  DRAFT
+  INVITED
+  COMPARING
+  AWARDED
+  CLOSED
+}
+
+enum QuotationStatus {
+  SUBMITTED
+  SELECTED
+  REJECTED
+  CLOSED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TO_PLAN
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
+enum EventStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+  CANCELLED
+}
+
+enum ArrivalStatus {
+  PENDING
+  ARRIVED_ON_TIME
+  DELAYED
+  NO_SHOW
+}
+
+enum ServiceVerificationStatus {
+  AWAITING_CONFIRMATION
+  CONFIRMED
+  ISSUE_REPORTED
+  VENDOR_RESPONDED
+  UNDER_RESOLUTION
+  RESOLVED
+  DISPUTED
+}
+
+enum VerificationResponse {
+  COMPLETED
+  INCOMPLETE
+  NOT_DELIVERED
+  ISSUE_REPORTED
+}
+
+enum PaymentType {
+  CLIENT_MILESTONE
+  VENDOR_PAYMENT
+  ADDITIONAL_EXPENSE
+}
+
+enum PaymentMilestone {
+  BOOKING_DEPOSIT
+  ADVANCE_PAYMENT
+  STAGE_PAYMENT
+  FINAL_PAYMENT
+  OVERAGE_EXPENSE
+  VENDOR_DISBURSEMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+enum SettlementStatus {
+  PENDING
+  REVIEW
+  SETTLED
+}
+
+model Agency {
+  id           String            @id @default(uuid())
+  name         String
+  slug         String            @unique
+  logoUrl      String?
+  contactEmail String
+  contactPhone String?
+  address      String?
+  settings     Json?
+  users        User[]
+  weddings     Wedding[]
+  enquiries    CustomerEnquiry[]
+  vendors      Vendor[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model User {
+  id                   String                @id @default(uuid())
+  agencyId             String
+  agency               Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  email                String                @unique
+  passwordHash         String
+  role                 UserRole              @default(CLIENT)
+  name                 String
+  phone                String?
+  avatarUrl            String?
+  isActive             Boolean               @default(true)
+  tokenVersion         Int                   @default(1)
+  refreshTokens        RefreshToken[]
+  assignedWeddings     Wedding[]             @relation("PlannerWeddings")
+  clientWeddings       Wedding[]             @relation("ClientWeddings")
+  weddingStaffRoles    WeddingStaff[]
+  assignedTasks        Task[]                @relation("UserTasks")
+  responsibleEvents    EventTimeline[]       @relation("ResponsibleStaff")
+  verifiedServices     ServiceVerification[] @relation("ServiceVerifier")
+  authoredFeedbacks    Feedback[]            @relation("FeedbackAuthor")
+  auditLogs            AuditLog[]
+  uploadedFiles        StoredFile[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model CustomerEnquiry {
+  id                 String          @id @default(uuid())
+  agencyId           String
+  agency             Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  customerName       String
+  email              String
+  phone              String
+  weddingDate        DateTime?
+  location           String
+  guestCount         Int             @default(200)
+  theme              String?
+  minBudget          Float           @default(500000)
+  maxBudget          Float           @default(2500000)
+  source             EnquirySource   @default(WEBSITE)
+  planningFor        PlanningForSide @default(NOT_SPECIFIED)
+  status             EnquiryStatus   @default(NEW)
+  followUpDate       DateTime?
+  notes              String?
+  convertedWeddingId String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+model DigitalAgreement {
+  id               String          @id @default(uuid())
+  weddingId        String          @unique
+  wedding          Wedding         @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  agreementNumber  String          @unique
+  termsContent     String
+  signedByName     String?
+  signatureDataUrl String?
+  signatureFileId  String?
+  clientIp         String?
+  userAgent        String?
+  signedAt         DateTime?
+  status           AgreementStatus @default(DRAFT)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Wedding {
+  id                   String                @id @default(uuid())
+  agencyId             String
+  agency               Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  weddingCode          String                @unique
+  brideName            String
+  groomName            String
+  clientEmail          String
+  clientPhone          String
+  weddingDate          DateTime
+  endDate              DateTime?
+  location             String
+  guestCount           Int                   @default(350)
+  budgetMin            Float                 @default(1500000)
+  budgetMax            Float                 @default(3500000)
+  packageType          WeddingPackageType    @default(FULL_SERVICE)
+  status               WeddingStatus         @default(CONFIRMED)
+  plannerId            String?
+  planner              User?                 @relation("PlannerWeddings", fields: [plannerId], references: [id])
+  clientId             String?
+  client               User?                 @relation("ClientWeddings", fields: [clientId], references: [id])
+  notes                String?
+  agreement            DigitalAgreement?
+  staffAssignments     WeddingStaff[]
+  quotationRequests    QuotationRequest[]
+  weddingVendors       WeddingVendor[]
+  tasks                Task[]
+  events               EventTimeline[]
+  serviceVerifications ServiceVerification[]
+  payments             Payment[]
+  settlement           Settlement?
+  feedbacks            Feedback[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+}
+
+model WeddingStaff {
+  id              String   @id @default(uuid())
+  weddingId       String
+  wedding         Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleDescription String?
+  assignedAt      DateTime @default(now())
+
+  @@unique([weddingId, userId])
+}
+
+model Vendor {
+  id                 String                @id @default(uuid())
+  agencyId           String
+  agency             Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name               String
+  category           VendorCategory
+  contactPerson      String
+  email              String
+  phone              String
+  address            String?
+  pricingModel       String?
+  basePrice          Float                 @default(0)
+  rating             Float                 @default(4.8)
+  isApproved         Boolean               @default(true)
+  portfolioUrls      String[]              @default([])
+  quotations         VendorQuotation[]
+  weddingVendors     WeddingVendor[]
+  tasks              Task[]
+  arrivals           EventVendorArrival[]
+  verifications      ServiceVerification[]
+  payments           Payment[]
+  feedbacks          Feedback[]            @relation("VendorFeedbacks")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+}
+
+model QuotationRequest {
+  id             String                 @id @default(uuid())
+  weddingId      String
+  wedding        Wedding                @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  category       VendorCategory
+  title          String
+  guestCount     Int?
+  targetBudget   Float?
+  specifications String
+  status         QuotationRequestStatus @default(INVITED)
+  quotations     VendorQuotation[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+}
+
+model VendorQuotation {
+  id                  String           @id @default(uuid())
+  quotationRequestId  String
+  quotationRequest    QuotationRequest @relation(fields: [quotationRequestId], references: [id], onDelete: Cascade)
+  vendorId            String
+  vendor              Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  baseAmount          Float
+  pricePerPlate       Float?
+  extraHourRate       Float?
+  additionalCosts     Float            @default(0)
+  menuDetails         String?
+  includedItems       String[]         @default([])
+  notes               String?
+  quotationPdfUrl     String?
+  isAgencyRecommended Boolean          @default(false)
+  status              QuotationStatus  @default(SUBMITTED)
+  submittedAt         DateTime         @default(now())
+  selectedAt          DateTime?
+  awardedWedding      WeddingVendor?
+}
+
+model WeddingVendor {
+  id            String           @id @default(uuid())
+  weddingId     String
+  wedding       Wedding          @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  vendorId      String
+  vendor        Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  quotationId   String?          @unique
+  quotation     VendorQuotation? @relation(fields: [quotationId], references: [id])
+  agreedAmount  Float
+  contractStatus String          @default("CONFIRMED")
+  notes         String?
+  createdAt     DateTime         @default(now())
+
+  @@unique([weddingId, vendorId])
+}
+
+model Task {
+  id              String       @id @default(uuid())
+  weddingId       String
+  wedding         Wedding      @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  category        String       @default("General")
+  deadline        DateTime
+  priority        TaskPriority @default(MEDIUM)
+  status          TaskStatus   @default(TO_PLAN)
+  assignedUserId  String?
+  assignedUser    User?        @relation("UserTasks", fields: [assignedUserId], references: [id])
+  vendorId        String?
+  vendor          Vendor?      @relation(fields: [vendorId], references: [id])
+  eventId         String?
+  event           EventTimeline? @relation(fields: [eventId], references: [id])
+  isAutoGenerated Boolean      @default(false)
+  leadTimeDays    Int?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model EventTimeline {
+  id                String                @id @default(uuid())
+  weddingId         String
+  wedding           Wedding               @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  title             String
+  startTime         DateTime
+  endTime           DateTime
+  location          String
+  responsibleUserId String?
+  responsibleStaff  User?                 @relation("ResponsibleStaff", fields: [responsibleUserId], references: [id])
+  status            EventStatus           @default(SCHEDULED)
+  notes             String?
+  orderIndex        Int                   @default(0)
+  arrivals          EventVendorArrival[]
+  tasks             Task[]
+  verifications     ServiceVerification[]
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+}
+
+model EventVendorArrival {
+  id                String         @id @default(uuid())
+  eventTimelineId   String
+  eventTimeline     EventTimeline  @relation(fields: [eventTimelineId], references: [id], onDelete: Cascade)
+  vendorId          String
+  vendor            Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  expectedTime      DateTime
+  arrivalStatus     ArrivalStatus  @default(PENDING)
+  actualArrivalTime DateTime?
+  delayMinutes      Int            @default(0)
+  notes             String?
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([eventTimelineId, vendorId])
+}
+
+model ServiceVerification {
+  id                        String                    @id @default(uuid())
+  weddingId                 String
+  wedding                   Wedding                   @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  eventTimelineId           String?
+  eventTimeline             EventTimeline?            @relation(fields: [eventTimelineId], references: [id])
+  vendorId                  String
+  vendor                    Vendor                    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  serviceName               String
+  scheduledConfirmationTime DateTime
+  status                    ServiceVerificationStatus @default(AWAITING_CONFIRMATION)
+  confirmedByUserId         String?
+  confirmedByUser           User?                     @relation("ServiceVerifier", fields: [confirmedByUserId], references: [id])
+  response                  VerificationResponse?
+  issueNotes                String?
+  evidencePhotos            String[]                  @default([])
+  vendorResponseNotes       String?
+  auditHistory              Json?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+}
+
+model Payment {
+  id            String           @id @default(uuid())
+  weddingId     String
+  wedding       Wedding          @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  type          PaymentType      @default(CLIENT_MILESTONE)
+  milestoneName PaymentMilestone @default(STAGE_PAYMENT)
+  amount        Float
+  paidAmount    Float            @default(0)
+  dueDate       DateTime
+  paidDate      DateTime?
+  status        PaymentStatus    @default(PENDING)
+  vendorId      String?
+  vendor        Vendor?          @relation(fields: [vendorId], references: [id])
+  paymentMethod String?
+  transactionRef String?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Settlement {
+  id                      String           @id @default(uuid())
+  weddingId               String           @unique
+  wedding                 Wedding          @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  agreedTotal             Float
+  extraGuestCount         Int              @default(0)
+  extraPlatesCount        Int              @default(0)
+  extraPlateCharges       Float            @default(0)
+  extraVendorHours        Float            @default(0)
+  extraVendorCharges      Float            @default(0)
+  unexpectedExpenses      Float            @default(0)
+  clientAdditionalCharges Float            @default(0)
+  vendorRemainingDue      Float            @default(0)
+  finalAgencyProfit       Float            @default(0)
+  settledAt               DateTime?
+  status                  SettlementStatus @default(PENDING)
+  notes                   String?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+}
+
+model Feedback {
+  id             String    @id @default(uuid())
+  weddingId      String
+  wedding        Wedding   @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User      @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  targetVendorId String?
+  targetVendor   Vendor?   @relation("VendorFeedbacks", fields: [targetVendorId], references: [id])
+  role           UserRole
+  rating         Int       @default(5)
+  comments       String
+  category       String?
+  issueEscalated Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+// Neon Database-backed Binary File Storage (PostgreSQL BYTEA)
+model StoredFile {
+  id          String   @id @default(uuid())
+  fileName    String
+  mimeType    String
+  fileSize    Int
+  data        Bytes    // Maps to PostgreSQL BYTEA binary column
+  uploaderId  String?
+  uploader    User?    @relation(fields: [uploaderId], references: [id])
+  entityType  String?  // DIGITAL_AGREEMENT, SERVICE_VERIFICATION, VENDOR_DOCUMENT, etc.
+  entityId    String?  // Reference identifier
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([entityType, entityId])
+}

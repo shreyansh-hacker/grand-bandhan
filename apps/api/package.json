@@ -15,6 +15,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@grand-bandhan/database": "workspace:*",
     "@grand-bandhan/shared": "workspace:*",
     "@grand-bandhan/validation": "workspace:*",
     "@prisma/client": "^6.4.1",

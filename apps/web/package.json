@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@grand-bandhan/shared": "workspace:*",
+    "@grand-bandhan/ui": "workspace:*",
     "@grand-bandhan/validation": "workspace:*",
     "@hookform/resolvers": "^3.10.0",
     "clsx": "^2.1.1",

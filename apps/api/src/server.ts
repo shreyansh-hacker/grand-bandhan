@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { initSocketIO } from './socket';
-import { checkDatabaseConnection } from './db';
+import { checkDatabaseConnection, isUsingPostgres } from './db';
 import { seedDemoDataIfEmpty } from './seed-data';
 
 // Import route modules
@@ -23,6 +23,7 @@ import verificationRoutes from './modules/verifications/verification.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import settlementRoutes from './modules/settlements/settlement.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
+import storageRoutes from './modules/storage/storage.routes';
 
 const app = express();
 const server = http.createServer(app);
@@ -63,22 +64,62 @@ const apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
-// Health check endpoints
-app.get('/health', (req, res) => {
+// Health check endpoints with Neon database status
+app.get('/health', async (req, res) => {
+  const dbConnected = isUsingPostgres();
   res.json({
     status: 'healthy',
     service: 'Grand Bandhan API',
+    neon: {
+      connected: dbConnected,
+      branch: env.NEON_BRANCH || 'production',
+      driver: 'prisma-client (postgresql)',
+    },
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const dbConnected = isUsingPostgres();
   res.json({
     status: 'healthy',
     service: 'Grand Bandhan API',
+    neon: {
+      connected: dbConnected,
+      branch: env.NEON_BRANCH || 'production',
+      driver: 'prisma-client (postgresql)',
+    },
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get('/api/neon/status', async (req, res) => {
+  try {
+    const prisma = (await import('./db')).getPrismaClient();
+    const result = await prisma.$queryRaw<any[]>`SELECT version(), current_database(), current_user`;
+    const agencyCount = await prisma.agency.count();
+    const userCount = await prisma.user.count();
+    res.json({
+      success: true,
+      neon: {
+        status: 'connected',
+        branch: env.NEON_BRANCH || 'production',
+        database: result[0]?.current_database,
+        user: result[0]?.current_user,
+        postgresVersion: result[0]?.version,
+        metrics: {
+          agencies: agencyCount,
+          users: userCount,
+        },
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
 });
 
 // Mount modular API routes
@@ -94,6 +135,7 @@ app.use('/api/verifications', verificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/settlements', settlementRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/storage', storageRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

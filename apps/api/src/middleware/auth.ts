@@ -62,3 +62,20 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
   req.user = payload;
   next();
 }
+
+export function authenticateOptional(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  let token: string | undefined;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  } else if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
+  }
+  if (token) {
+    const payload = verifyAccessToken(token);
+    if (payload) {
+      req.user = payload;
+    }
+  }
+  next();
+}

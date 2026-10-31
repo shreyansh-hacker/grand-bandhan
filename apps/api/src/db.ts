@@ -1,18 +1,15 @@
-import { PrismaClient } from '@prisma/client';
+import './config/env';
+import { prisma as databasePrisma, getPrismaClient as getSharedPrismaClient, checkDatabaseConnection as checkSharedDbConnection } from '@grand-bandhan/database';
 import fs from 'fs';
 import path from 'path';
 
-let prismaInstance: PrismaClient | null = null;
 let isPostgresAvailable = false;
 
-export function getPrismaClient(): PrismaClient {
-  if (!prismaInstance) {
-    prismaInstance = new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
-    });
-  }
-  return prismaInstance;
+export function getPrismaClient() {
+  return databasePrisma;
 }
+
+export const prisma = databasePrisma;
 
 // In-Memory / File-based Local Mock Store for Seamless Offline Hackathon Evaluation
 const LOCAL_DB_PATH = path.resolve(process.cwd(), 'local-store.json');
@@ -107,11 +104,14 @@ export const localDb = new LocalDatabaseManager();
 
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
-    const prisma = getPrismaClient();
-    await prisma.$queryRaw`SELECT 1`;
-    isPostgresAvailable = true;
-    console.log('Successfully connected to PostgreSQL (Neon/Local).');
-    return true;
+    const connected = await checkSharedDbConnection();
+    isPostgresAvailable = connected;
+    if (connected) {
+      console.log('Successfully connected to Neon PostgreSQL.');
+    } else {
+      console.log('PostgreSQL database not directly reachable. Running in resilient local JSON storage mode with full persistence.');
+    }
+    return connected;
   } catch (error) {
     isPostgresAvailable = false;
     console.log('PostgreSQL database not directly reachable. Running in resilient local JSON storage mode with full persistence.');

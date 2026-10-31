@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { ServiceVerificationStatus, VerificationResponse } from '@grand-bandhan/shared';
+import { DocumentUploader } from '@/features';
 
 export default function VerificationPage() {
   const [verifications, setVerifications] = useState<any[]>([]);
@@ -344,6 +345,18 @@ export default function VerificationPage() {
                 </div>
               </div>
             )}
+
+            {/* Evidence & Verification Attachment (Neon PostgreSQL BYTEA) */}
+            <div className="pt-2">
+              <DocumentUploader
+                entityType="SERVICE_VERIFICATION"
+                entityId={v.id}
+                title="Service Verification Evidence (Neon PostgreSQL BYTEA)"
+                onUploadSuccess={(file) => {
+                  setIssueNote((prev) => (prev ? `${prev} [Attachment: ${file.fileName}]` : `[Attachment: ${file.fileName}]`));
+                }}
+              />
+            </div>
 
             {/* Auditable History Timeline */}
             <div className="pt-2 border-t border-navy-100 space-y-2 text-xs">

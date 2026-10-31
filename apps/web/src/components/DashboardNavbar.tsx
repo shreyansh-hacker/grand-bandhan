@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { User, Bell, Radio, ExternalLink, Plus, Sparkles } from 'lucide-react';
+import { NeonStatusBadge } from '../features/neon/NeonStatusBadge';
 
 export default function DashboardNavbar() {
   const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
@@ -27,6 +28,9 @@ export default function DashboardNavbar() {
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 text-[11px] font-semibold">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span>Socket.IO Live Radar</span>
+        </div>
+        <div className="hidden lg:block">
+          <NeonStatusBadge />
         </div>
       </div>
 
