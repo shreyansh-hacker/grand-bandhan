@@ -10,11 +10,7 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="md:col-span-1 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gold-gradient p-0.5 flex items-center justify-center">
-                <div className="w-full h-full bg-navy-900 rounded-full flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-gold" />
-                </div>
-              </div>
+             
               <span className="font-serif text-2xl font-bold tracking-wider text-gold-gradient">
                 GRAND BANDHAN
               </span>
@@ -39,7 +35,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/dashboard/quotations" className="hover:text-gold transition-colors">
-                  Three Vendors, One Decision
+                  Multiple Vendors System 
                 </Link>
               </li>
               <li>

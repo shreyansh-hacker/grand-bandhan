@@ -75,7 +75,7 @@ grand-bandhan/
 - Enforces proper legal digital execution with an **HTML5 interactive drawing canvas** (does not treat typed names as verified signatures).
 - Binds signer legal name, signature PNG data URL, client IP address, user agent, and timestamp into an immutable audit trail.
 
-### 3. "Three Vendors, One Decision" – Quotation Comparison Matrix
+### 3. "Multiple Vendor" – Quotation Comparison Matrix
 - Example: 400-guest royal banquet catering RFP.
 - Side-by-side comparison matrix evaluating:
   - **Price per plate** (with computed totals for 400 guests)

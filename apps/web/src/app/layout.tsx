@@ -15,15 +15,26 @@ export const metadata: Metadata = {
   ],
 };
 
+import RoyalLoader from '@/components/RoyalLoader';
+import SmoothScroll from '@/components/SmoothScroll';
+import PageTransition from '@/components/PageTransition';
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-cream text-darkText antialiased selection:bg-gold selection:text-navy-900 font-sans">
-        {children}
+    <html lang="en" className="bg-navy-950">
+      <body className="min-h-screen bg-navy-950 text-darkText antialiased selection:bg-gold selection:text-navy-900 font-sans">
+        {/* Luxury Grand Bandhan 3-4s Loading Screen */}
+        <RoyalLoader />
+
+        {/* Global Smooth Scrolling Engine with Sticky Header Offset */}
+        <SmoothScroll />
+
+        {/* Seamless Page Transitions Across Routes */}
+        <PageTransition>{children}</PageTransition>
       </body>
     </html>
   );

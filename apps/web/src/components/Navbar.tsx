@@ -7,13 +7,14 @@ import { Crown, Sparkles, User, Calendar, Menu, X, ArrowRight } from 'lucide-rea
 import { motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import EnquiryModal from './EnquiryModal';
 
-const SCROLL_THRESHOLD = 5; // Minimum scroll delta to trigger hide/show (prevents flickering)
+const SCROLL_THRESHOLD = 8; // Stable delta threshold to prevent jitter during smooth scrolling
 const TOP_ZONE = 80; // Always show navbar when scrollY < this value
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const lastScrollY = useRef(0);
@@ -28,10 +29,13 @@ export default function Navbar() {
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  // Scroll direction detection via Framer Motion's useMotionValueEvent
+  // Scroll direction & distance detection via Framer Motion's useMotionValueEvent
   useMotionValueEvent(scrollY, 'change', (currentY) => {
     const previousY = lastScrollY.current;
     const delta = currentY - previousY;
+
+    // Smooth transition between transparent and slightly darker background when scrolling
+    setIsScrolled(currentY > 30);
 
     // Always show when near the top
     if (currentY < TOP_ZONE) {
@@ -63,128 +67,175 @@ export default function Navbar() {
   return (
     <>
       <motion.header
-        initial={{ y: 0 }}
-        animate={{ y: isHidden ? '-120%' : '0%' }}
+        variants={{
+          visible: { y: '0%' },
+          hidden: { y: '-100%' },
+        }}
+        initial="visible"
+        animate={isHidden ? 'hidden' : 'visible'}
         transition={
           prefersReducedMotion
             ? { duration: 0 }
-            : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+            : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
         }
-        className="sticky top-0 z-50 bg-navy-900/95 backdrop-blur-md border-b border-gold/30 text-white shadow-navy-deep will-change-transform"
+        className="sticky top-0 z-50 will-change-transform"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center group">
-              <Image
-                src="/logo.png"
-                alt="Grand Bandhan"
-                width={180}
-                height={64}
-                className="h-14 sm:h-16 w-auto object-contain rounded-md transition-transform group-hover:scale-[1.02]"
-                priority
-              />
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
-              <Link href="#services" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
-                Royal Services
-              </Link>
-              <Link href="#venues" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
-                Heritage Venues
-              </Link>
-             
-              <Link href="#calculator" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
-                Budget Estimator
-              </Link>
-              <Link href="#workflow" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
-                Multiple Vendor System 
-              </Link>
-            </nav>
-
-            {/* CTAs */}
-            <div className="hidden lg:flex items-center gap-4">
-              <Link
-                href="/login"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gold border border-gold/40 hover:bg-gold/10 transition-colors"
-              >
-                <User className="w-4 h-4" />
-                Agency & Client Portal
+        {/* Main Glass Navbar using rgb(6 22 38) */}
+        <div
+          className={`relative transition-colors duration-300 ${
+            isScrolled ? 'navbar-glass-scrolled' : 'navbar-glass'
+          }`}
+          style={{
+            backgroundColor: isScrolled ? 'rgba(6, 20, 36, 1)' : 'rgba(6, 20, 36, 1)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(201, 169, 106, 0.2)',
+            boxShadow: isScrolled
+              ? '0 12px 35px rgba(0, 0, 0, 0.28)'
+              : '0 8px 32px rgba(0, 0, 0, 0.18)',
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-20">
+              {/* Logo */}
+              <Link href="/" className="flex items-center group relative py-1">
+                <div className="absolute -inset-2 rounded-xl bg-gold/10 opacity-0 group-hover:opacity-100 transition-opacity blur-md" />
+                <Image
+                  src="/logo.png"
+                  alt="Grand Bandhan"
+                  width={180}
+                  height={64}
+                  className="relative h-14 sm:h-16 w-auto object-contain drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:scale-[1.03]"
+                  priority
+                />
               </Link>
 
-              <button
-                onClick={() => setIsEnquiryModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-gold-gradient text-navy-950 shadow-gold-glow hover:brightness-105 transition-all transform hover:-translate-y-0.5"
-              >
-                <Sparkles className="w-4 h-4" />
-                Plan Your Wedding
-              </button>
-            </div>
+              {/* Desktop Navigation — Shade 2: Floating Frosted Crystal Capsule */}
+              <nav className="hidden md:flex items-center gap-1 p-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300">
+                <Link
+                  href="#services"
+                  className="px-4 py-2 rounded-full text-xs lg:text-sm font-medium text-cream-100/90 hover:text-gold hover:bg-white/[0.08] active:scale-95 transition-all duration-200"
+                >
+                  Royal Services
+                </Link>
+                <Link
+                  href="#venues"
+                  className="px-4 py-2 rounded-full text-xs lg:text-sm font-medium text-cream-100/90 hover:text-gold hover:bg-white/[0.08] active:scale-95 transition-all duration-200"
+                >
+                  Heritage Venues
+                </Link>
+                <Link
+                  href="#calculator"
+                  className="px-4 py-2 rounded-full text-xs lg:text-sm font-medium text-cream-100/90 hover:text-gold hover:bg-white/[0.08] active:scale-95 transition-all duration-200"
+                >
+                  Budget Estimator
+                </Link>
+                <Link
+                  href="#workflow"
+                  className="px-4 py-2 rounded-full text-xs lg:text-sm font-medium text-cream-100/90 hover:text-gold hover:bg-white/[0.08] active:scale-95 transition-all duration-200"
+                >
+                  Multiple Vendor System
+                </Link>
+              </nav>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center gap-2">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 rounded-md text-gold hover:text-white hover:bg-navy-800"
-              >
-                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+              {/* Action CTAs */}
+              <div className="hidden lg:flex items-center gap-3">
+                {/* Secondary CTA: Frosted Glass Button */}
+                <Link
+                  href="/login"
+                  className="group flex items-center gap-2 px-4 py-2.5 rounded-full text-xs lg:text-sm font-medium text-cream-100 bg-white/[0.04] hover:bg-gold/15 border border-gold/35 hover:border-gold/70 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)] hover:text-gold hover:shadow-[0_0_15px_rgba(201,169,106,0.25)] active:scale-95 transition-all duration-200"
+                >
+                  
+                  <span>Agency &amp; Client Portal</span>
+                </Link>
+
+                {/* Primary CTA: Polished Gold Gradient Glass Pill */}
+                <button
+                  onClick={() => setIsEnquiryModalOpen(true)}
+                  className="group flex items-center gap-2 px-5 py-2.5 rounded-full text-xs lg:text-sm font-semibold bg-gold-gradient text-navy-950 shadow-gold-glow hover:shadow-[0_0_24px_rgba(201,169,106,0.55)] hover:brightness-105 active:scale-95 transition-all duration-200"
+                >
+                  
+                  <span>Plan Your Wedding</span>
+                </button>
+              </div>
+
+              {/* Mobile Menu Toggle Button */}
+              <div className="md:hidden flex items-center gap-2">
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="p-2.5 rounded-xl text-gold hover:text-white bg-white/[0.05] border border-white/10 hover:bg-white/[0.1] backdrop-blur-md transition-all duration-200"
+                  aria-label="Toggle navigation menu"
+                >
+                  {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Mobile menu dropdown — Glass Container */}
+          {isMenuOpen && (
+            <div
+              style={{
+                backgroundColor: 'rgba(6, 22, 38, 0.95)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
+              }}
+              className="md:hidden border-t border-white/10 border-b border-gold/30 px-5 pt-3 pb-6 space-y-3 shadow-2xl"
+            >
+              <div className="p-1.5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
+                <Link
+                  href="#services"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-xl text-sm font-medium text-cream-100 hover:text-gold hover:bg-white/[0.06] transition-all"
+                >
+                  Royal Services
+                </Link>
+                <Link
+                  href="#venues"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-xl text-sm font-medium text-cream-100 hover:text-gold hover:bg-white/[0.06] transition-all"
+                >
+                  Heritage Venues
+                </Link>
+                <Link
+                  href="#calculator"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-xl text-sm font-medium text-cream-100 hover:text-gold hover:bg-white/[0.06] transition-all"
+                >
+                  Budget Estimator
+                </Link>
+                <Link
+                  href="#workflow"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-xl text-sm font-medium text-cream-100 hover:text-gold hover:bg-white/[0.06] transition-all"
+                >
+                  Multiple Vendor System
+                </Link>
+              </div>
+
+              <div className="pt-2 flex flex-col gap-2.5">
+                <Link
+                  href="/login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gold bg-white/[0.04] border border-gold/40 hover:bg-gold/10 transition-all"
+                >
+                  <User className="w-4 h-4" />
+                  Agency &amp; Client Portal
+                </Link>
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsEnquiryModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gold-gradient text-navy-950 shadow-gold-glow hover:brightness-105 transition-all"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Plan Your Wedding
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Mobile menu dropdown */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-navy-950/98 border-b border-gold/30 px-4 pt-2 pb-6 space-y-3">
-            <Link
-              href="#services"
-              onClick={() => setIsMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-base font-medium text-cream hover:bg-navy-800"
-            >
-              Royal Services
-            </Link>
-            <Link
-              href="#venues"
-              onClick={() => setIsMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-base font-medium text-cream hover:bg-navy-800"
-            >
-              Heritage Venues
-            </Link>
-            <Link
-              href="#vendors"
-              onClick={() => setIsMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-base font-medium text-cream hover:bg-navy-800"
-            >
-              Vendor Engine
-            </Link>
-            <Link
-              href="#calculator"
-              onClick={() => setIsMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-base font-medium text-cream hover:bg-navy-800"
-            >
-              Budget Estimator
-            </Link>
-            <div className="pt-4 border-t border-gold/20 flex flex-col gap-3">
-              <Link
-                href="/login"
-                className="w-full text-center px-4 py-2 rounded-lg text-sm font-medium text-gold border border-gold/40"
-              >
-                Agency & Client Portal
-              </Link>
-              <button
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  setIsEnquiryModalOpen(true);
-                }}
-                className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-gold-gradient text-navy-950"
-              >
-                <Sparkles className="w-4 h-4" />
-                Plan Your Wedding
-              </button>
-            </div>
-          </div>
-        )}
       </motion.header>
 
       {/* Interactive Enquiry Modal */}

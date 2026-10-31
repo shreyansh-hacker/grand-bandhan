@@ -14,8 +14,20 @@
     --dark-text: #1F2937;
   }
 
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 90px;
+    background-color: #061626;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   body {
-    background-color: var(--bg-cream);
+    background-color: #061626;
     color: var(--dark-text);
     font-family: var(--font-inter), sans-serif;
     overflow-x: hidden;
@@ -24,6 +36,23 @@
   h1, h2, h3, h4, .font-serif {
     font-family: var(--font-playfair), 'Playfair Display', Georgia, serif;
   }
+}
+
+/* Pure Glassmorphism Navigation with rgb(6 22 38) */
+.navbar-glass {
+  background: rgba(6, 22, 38, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(201, 169, 106, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.navbar-glass-scrolled {
+  background: rgba(6, 22, 38, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(201, 169, 106, 0.25);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28);
 }
 
 /* Luxury Gold & Navy Utilities */

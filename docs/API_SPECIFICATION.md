@@ -50,7 +50,7 @@
 
 ---
 
-## 5. Three Vendors, One Decision Quotation Engine (`/api/quotations`)
+## 5 Quotation Engine (`/api/quotations`)
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|

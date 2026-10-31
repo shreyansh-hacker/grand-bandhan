@@ -117,7 +117,7 @@ export default function QuotationsPage() {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-royal">
             <FileSpreadsheet className="w-4 h-4 text-gold-dark" />
-            <span>Three Vendors, One Decision Engine</span>
+            <span>Multiple Vendors System</span>
           </div>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-navy-900 mt-0.5">
             Quotation Comparison Matrix

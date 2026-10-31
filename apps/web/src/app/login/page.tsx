@@ -154,7 +154,10 @@ export default function LoginPage() {
               className="w-full py-2.5 px-4 rounded-lg bg-gold-gradient text-navy-950 font-bold text-sm shadow-gold-glow hover:brightness-105 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
-                <span>Authenticating with Neon DB...</span>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 animate-spin text-navy-950" />
+                  <span>Authenticating Royal Credentials...</span>
+                </div>
               ) : (
                 <>
                   <span>Sign In to Portal</span>

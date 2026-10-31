@@ -154,7 +154,7 @@ export default function HomePage() {
               <ul className="space-y-3 text-sm text-darkText/90">
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
-                  <span><strong>Three Vendors, One Decision</strong>: Automated RFP matrix for Catering, Decor & Photography</span>
+                  <span><strong>Multliple Vendors System</strong>: Automated RFP matrix for Catering, Decor & Photography</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
@@ -239,19 +239,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Feature Spotlight: "Three Vendors, One Decision" */}
+      {/* Feature Spotlight: "Multliple Vendors System" */}
       <section id="workflow" className="py-20 bg-navy-gradient text-white border-y border-gold/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-5 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-gold/40 bg-navy-950/60 text-xs font-semibold text-gold">
-                <Flame className="w-3.5 h-3.5" />
+                
                 <span>Mandatory Core Workflow</span>
               </div>
 
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-cream tracking-tight">
-                Three Vendors, <br />
-                <span className="text-gold-gradient">One Decision.</span>
+                Multiple Vendors,<br />
+                <span className="text-gold-gradient">One System</span>
               </h2>
 
               <p className="text-base text-cream-200 leading-relaxed">
@@ -493,11 +493,7 @@ export default function HomePage() {
       {/* Bottom CTA Banner */}
       <section className="bg-navy-900 text-white py-16 px-4 border-t border-gold/40">
         <div className="max-w-4xl mx-auto text-center space-y-6">
-          <div className="w-14 h-14 rounded-full bg-gold-gradient p-0.5 mx-auto flex items-center justify-center">
-            <div className="w-full h-full bg-navy-950 rounded-full flex items-center justify-center">
-              <Crown className="w-7 h-7 text-gold" />
-            </div>
-          </div>
+          
           <h2 className="font-serif text-3xl sm:text-4xl font-bold text-cream">
             Begin Your Royal Journey with Grand Bandhan
           </h2>
