@@ -34,34 +34,39 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center bg-white text-navy-900 overflow-hidden py-24 px-4 sm:px-6 lg:px-8 border-b border-navy-100">
+      <section className="relative min-h-[92vh] flex items-center justify-center text-white overflow-hidden py-24 px-4 sm:px-6 lg:px-8 border-b border-navy-900/40">
+        {/* Background Image Container */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <Image
+            src="/hero-bg.png"
+            alt="Hero Background"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+          {/* Rich Midnight Navy Overlay: darker in center for readability, preserving warm palace & mandap glow */}
+          <div className="absolute inset-0 bg-navy-950/45" />
+          <div className="absolute inset-0 bg-gradient-to-b from-navy-950/70 via-transparent to-navy-950/80" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-navy-950/50 via-transparent to-navy-950/60" />
+        </div>
+
+        {/* Hero Content */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: 'easeOut' }}
-          className="relative max-w-5xl mx-auto text-center space-y-8"
+          className="relative z-10 max-w-5xl mx-auto text-center space-y-8"
         >
-          {/* Imperial Crest Badge */}
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full gold-badge shadow-sm"
-          >
-            <Crown className="w-4 h-4 text-gold-dark" />
-            <span className="text-xs uppercase tracking-[0.2em] font-semibold">
-              Imperial Wedding Operations Platform
-            </span>
-          </motion.div>
 
           {/* Majestic Heading */}
-          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-navy-900 leading-[1.15]">
+          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.15] drop-shadow-md">
             Where Imperial Grandeur Meets{' '}
             <span className="text-gold-gradient italic">Precision Operations</span>
           </h1>
 
           {/* Subheading */}
-          <p className="max-w-3xl mx-auto text-lg sm:text-xl text-darkText/80 font-normal leading-relaxed">
+          <p className="max-w-3xl mx-auto text-lg sm:text-xl text-cream/90 font-normal leading-relaxed drop-shadow-sm">
             The definitive platform for luxury Indian weddings. Streamline multi-channel enquiries, compare vendor quotations side-by-side, auto-generate 25+ lead-time milestone plans, and verify wedding-day services in real-time.
           </p>
 
@@ -80,31 +85,31 @@ export default function HomePage() {
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
               <Link
                 href="/login"
-                className="w-full sm:w-auto px-8 py-4 rounded-xl border border-navy-300 text-navy-900 hover:bg-navy-50 font-semibold text-base transition-colors flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl border border-white/30 text-white hover:bg-white/10 font-semibold text-base transition-colors flex items-center justify-center gap-2 backdrop-blur-sm"
               >
                 <span>Agency & Client Portal</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-gold" />
               </Link>
             </motion.div>
           </div>
 
           {/* Key Metrics Strip */}
-          <div className="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-navy-100 text-left">
+          <div className="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-white/15 text-left">
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">Vendor Selection </div>
-              <p className="text-xs text-darkText/70 mt-0.5">RFP Quotation Comparison</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">Vendor Selection </div>
+              <p className="text-xs text-cream/70 mt-0.5">RFP Quotation Comparison</p>
             </div>
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">25+ Tasks</div>
-              <p className="text-xs text-darkText/70 mt-0.5">Instant Plan Auto-Generator</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">25+ Tasks</div>
+              <p className="text-xs text-cream/70 mt-0.5">Instant Plan Auto-Generator</p>
             </div>
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">Live Radar</div>
-              <p className="text-xs text-darkText/70 mt-0.5">Day-of Vendor Arrival Gate</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">Live Radar</div>
+              <p className="text-xs text-cream/70 mt-0.5">Day-of Vendor Arrival Gate</p>
             </div>
             <div className="p-3">
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-navy-900">Audited</div>
-              <p className="text-xs text-darkText/70 mt-0.5">Service Verification Escrow</p>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-white">Audited</div>
+              <p className="text-xs text-cream/70 mt-0.5">Service Verification Escrow</p>
             </div>
           </div>
         </motion.div>

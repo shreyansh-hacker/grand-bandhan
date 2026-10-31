@@ -35,14 +35,12 @@ export default function Navbar() {
               <Link href="#venues" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
                 Heritage Venues
               </Link>
-              <Link href="#vendors" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
-                Vendor Engine
-              </Link>
+             
               <Link href="#calculator" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
                 Budget Estimator
               </Link>
               <Link href="#workflow" className="text-sm font-medium text-cream-200 hover:text-gold transition-colors">
-                The 3-Vendor System
+                Multiple Vendor System 
               </Link>
             </nav>
 
