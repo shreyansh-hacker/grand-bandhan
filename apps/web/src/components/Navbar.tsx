@@ -98,7 +98,14 @@ export default function Navbar() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-20">
               {/* Logo */}
-              <Link href="/" className="flex items-center group relative py-1">
+              <Link
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = '/';
+                }}
+                className="flex items-center group relative py-1 cursor-pointer"
+              >
                 <div className="absolute -inset-2 rounded-xl bg-gold/10 opacity-0 group-hover:opacity-100 transition-opacity blur-md" />
                 <Image
                   src="/logo.png"

@@ -115,7 +115,14 @@ export default function LoginPage() {
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-royal/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3 relative z-10">
-        <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
+        <Link
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = '/';
+          }}
+          className="inline-block hover:opacity-90 transition-opacity cursor-pointer"
+        >
           <div className="flex items-center justify-center gap-2">
             <Crown className="w-8 h-8 text-gold-dark" />
             <span className="font-serif text-2xl font-bold tracking-widest text-gold-gradient">

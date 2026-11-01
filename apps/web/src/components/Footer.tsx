@@ -9,12 +9,18 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 pb-12 border-b border-navy-800">
           {/* Brand Info */}
           <div className="md:col-span-1 space-y-4">
-            <div className="flex items-center gap-3">
-             
-              <span className="font-serif text-2xl font-bold tracking-wider text-gold-gradient">
+            <Link
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = '/';
+              }}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <span className="font-serif text-2xl font-bold tracking-wider text-gold-gradient group-hover:opacity-90 transition-opacity">
                 GRAND BANDHAN
               </span>
-            </div>
+            </Link>
             <p className="text-sm text-cream-300 leading-relaxed">
               India&apos;s foremost imperial wedding operations platform. Bringing precision, elegance, and end-to-end transparency to luxury royal weddings.
             </p>

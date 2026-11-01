@@ -47,7 +47,14 @@ export default function DashboardSidebar() {
   return (
     <aside className="w-64 bg-navy-950 text-cream flex flex-col border-r border-gold/30 h-screen sticky top-0 flex-shrink-0">
       {/* Brand Header */}
-      <div className="h-20 flex items-center px-6 border-b border-gold/20 gap-3">
+      <Link
+        href="/"
+        onClick={(e) => {
+          e.preventDefault();
+          window.location.href = '/';
+        }}
+        className="h-20 flex items-center px-6 border-b border-gold/20 gap-3 cursor-pointer hover:bg-white/[0.03] transition-colors"
+      >
         <div className="w-10 h-10 rounded-full bg-gold-gradient p-0.5 shadow-gold-glow flex items-center justify-center">
           <div className="w-full h-full bg-navy-900 rounded-full flex items-center justify-center">
             <Crown className="w-5 h-5 text-gold" />
@@ -61,7 +68,7 @@ export default function DashboardSidebar() {
             Operations Center
           </span>
         </div>
-      </div>
+      </Link>
 
       {/* Nav Links */}
       <nav className="flex-1 px-3 py-6 space-y-1.5 overflow-y-auto">
