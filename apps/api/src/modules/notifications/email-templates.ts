@@ -308,6 +308,55 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
         text: `Enquiry ${data.referenceNumber} status updated to ${data.newStatus}. Notes: ${data.notes || 'None'}. View: ${appUrl}/dashboard/enquiries`,
       };
 
+
+    case NotificationEvent.CONSULTATION_RESCHEDULED:
+      return {
+        subject: `🔄 Wedding Consultation Rescheduled: ${data.customerName} (${new Date(data.consultationDate).toLocaleDateString('en-IN')})`,
+        html: baseTemplate(
+          'Consultation Rescheduled',
+          `
+          <div class="badge">CONSULTATION RESCHEDULED</div>
+          <h2 class="heading">Updated Consultation Details</h2>
+          <p>Dear <strong>${escapeHtml(data.recipientName || data.customerName)}</strong>,</p>
+          <p>Your wedding design consultation with Grand Bandhan has been rescheduled to the updated date and time below.</p>
+          <div class="card">
+            <div class="detail-row"><span class="detail-label">Client:</span><span class="detail-value">${escapeHtml(data.customerName)}</span></div>
+            <div class="detail-row"><span class="detail-label">New Date &amp; Time:</span><span class="detail-value">${new Date(data.consultationDate).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</span></div>
+            <div class="detail-row"><span class="detail-label">Meeting Format:</span><span class="detail-value">${escapeHtml(data.consultationType || 'Virtual Video Consultation')}</span></div>
+            ${data.meetingLink ? `<div class="detail-row"><span class="detail-label">Meeting Link:</span><span class="detail-value"><a href="${escapeHtml(data.meetingLink)}" style="color: #D4AF37; font-weight: bold;">Join Video Meeting</a></span></div>` : ''}
+            ${data.meetingLocation ? `<div class="detail-row"><span class="detail-label">Meeting Location:</span><span class="detail-value">${escapeHtml(data.meetingLocation)}</span></div>` : ''}
+            <div class="detail-row"><span class="detail-label">Assigned Planner:</span><span class="detail-value">${escapeHtml(data.plannerName || 'Lead Wedding Specialist')}</span></div>
+            ${data.rescheduleReason ? `<div class="detail-row"><span class="detail-label">Reschedule Note:</span><span class="detail-value">${escapeHtml(data.rescheduleReason)}</span></div>` : ''}
+          </div>
+          <p>If you need to make further adjustments, please contact your wedding concierge desk.</p>
+          `,
+          { label: 'View Consultation Status', url: data.referenceNumber ? `${appUrl}/enquiry/${data.referenceNumber}` : `${appUrl}/dashboard/enquiries` }
+        ),
+        text: `Wedding Consultation Rescheduled to ${new Date(data.consultationDate).toLocaleString('en-IN')}. Planner: ${data.plannerName || 'Lead Planner'}. Note: ${data.rescheduleReason || 'None'}.`,
+      };
+
+    case NotificationEvent.CONSULTATION_CANCELLED:
+      return {
+        subject: `Wedding Consultation Cancelled: ${data.customerName} (${data.referenceNumber || 'Notice'})`,
+        html: baseTemplate(
+          'Consultation Cancelled',
+          `
+          <div class="badge alert">CONSULTATION CANCELLED</div>
+          <h2 class="heading">Consultation Notice</h2>
+          <p>Dear <strong>${escapeHtml(data.recipientName || data.customerName)}</strong>,</p>
+          <p>Your scheduled wedding consultation for enquiry <strong>${escapeHtml(data.referenceNumber || '')}</strong> has been cancelled.</p>
+          <div class="card">
+            <div class="detail-row"><span class="detail-label">Client:</span><span class="detail-value">${escapeHtml(data.customerName)}</span></div>
+            <div class="detail-row"><span class="detail-label">Status:</span><span class="detail-value" style="color: #C53030; font-weight: bold;">Cancelled</span></div>
+            ${data.notes ? `<div class="detail-row"><span class="detail-label">Reason:</span><span class="detail-value">${escapeHtml(data.notes)}</span></div>` : ''}
+          </div>
+          <p>You may request a new meeting slot at your convenience through your tracker or contact your assigned planner.</p>
+          `,
+          { label: 'Reschedule Consultation', url: data.referenceNumber ? `${appUrl}/enquiry/${data.referenceNumber}` : `${appUrl}/dashboard/enquiries` }
+        ),
+        text: `Wedding consultation for ${data.customerName} has been cancelled. Contact concierge to reschedule.`,
+      };
+
     case NotificationEvent.CONSULTATION_SCHEDULED:
       return {
         subject: `📅 Wedding Consultation Scheduled: ${data.customerName} (${new Date(data.consultationDate).toLocaleDateString('en-IN')})`,
@@ -419,6 +468,75 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
           { label: 'Open Proposal Editor', url: `${appUrl}/dashboard/proposals` }
         ),
         text: `Revision requested on proposal ${data.proposalNumber} by ${data.customerName}: ${data.notes || 'Scope adjustments'}. Open editor: ${appUrl}/dashboard/proposals`,
+      };
+
+
+    case NotificationEvent.AGREEMENT_VERIFIED:
+      return {
+        subject: `👑 Service Agreement Verified & Active Operations Unlocked: ${data.weddingCode || data.agreementNumber}`,
+        html: baseTemplate(
+          'Agreement Verified',
+          `
+          <div class="badge">AGREEMENT VERIFIED &amp; CONFIRMED</div>
+          <h2 class="heading">Your Imperial Wedding Journey is Officially Live!</h2>
+          <p>Dear <strong>${escapeHtml(data.couple || data.customerName || 'Valued Couple')}</strong>,</p>
+          <p>We are delighted to confirm that your signed <strong>Wedding Planning &amp; Management Service Agreement</strong> (${escapeHtml(data.agreementNumber || 'GB-AGR')}) has been legally reviewed and officially <strong>VERIFIED</strong> by Grand Bandhan Senior Legal Operations.</p>
+          <div class="card">
+            <div class="detail-row"><span class="detail-label">Agreement Ref:</span><span class="detail-value">${escapeHtml(data.agreementNumber || 'GB-AGR-2026')}</span></div>
+            <div class="detail-row"><span class="detail-label">Wedding Code:</span><span class="detail-value">${escapeHtml(data.weddingCode || 'GB-W-2026')}</span></div>
+            <div class="detail-row"><span class="detail-label">Verification Status:</span><span class="detail-value" style="color: #2F855A; font-weight: bold;">VERIFIED &amp; EXECUTED ✓</span></div>
+            <div class="detail-row"><span class="detail-label">Active Features:</span><span class="detail-value">26+ Auto Tasks, Vendor Bidding, Ceremony Timeline, Guest RSVPs</span></div>
+          </div>
+          <p>All active operations inside your royal Couple Portal have now been unlocked. Your lead wedding planner has commenced full-scale vendor sourcing and timeline synchronization.</p>
+          `,
+          { label: 'Enter Active Couple Portal', url: data.portalUrl || `${appUrl}/portal/client` }
+        ),
+        text: `Congratulations! Your Service Agreement (${data.agreementNumber}) is VERIFIED. Active operations are now live: ${data.portalUrl || appUrl + '/portal/client'}`,
+      };
+
+    case NotificationEvent.AGREEMENT_CORRECTION_REQUIRED:
+      return {
+        subject: `⚠️ Action Required: Agreement Document Correction Needed (${data.weddingCode || data.agreementNumber})`,
+        html: baseTemplate(
+          'Agreement Correction Required',
+          `
+          <div class="badge alert">ACTION REQUIRED</div>
+          <h2 class="heading">Service Agreement Correction Notice</h2>
+          <p>Dear <strong>${escapeHtml(data.couple || data.customerName || 'Valued Couple')}</strong>,</p>
+          <p>During our administrative review of your submitted Service Agreement (<strong>${escapeHtml(data.agreementNumber || 'GB-AGR')}</strong>), our legal compliance desk identified that additional corrections or re-signing are required before operations can proceed.</p>
+          <div class="card">
+            <div class="detail-row"><span class="detail-label">Agreement Ref:</span><span class="detail-value">${escapeHtml(data.agreementNumber || 'GB-AGR')}</span></div>
+            <div class="detail-row"><span class="detail-label">Status:</span><span class="detail-value" style="color: #C53030; font-weight: bold;">Correction Required</span></div>
+            <div class="detail-row"><span class="detail-label">Reason / Correction Details:</span><span class="detail-value" style="color: #C53030;">${escapeHtml(data.rejectionReason || 'Document signature incomplete or illegible. Please re-sign.')}</span></div>
+          </div>
+          <p>Please visit your Couple Portal to review the notes, digitally re-sign, or upload a clear corrected document to resume verification.</p>
+          `,
+          { label: 'Review & Resubmit Agreement', url: data.portalUrl || `${appUrl}/portal/client` }
+        ),
+        text: `Notice: Corrections needed on agreement ${data.agreementNumber}. Reason: ${data.rejectionReason}. Resubmit at: ${data.portalUrl || appUrl + '/portal/client'}`,
+      };
+
+    case NotificationEvent.COUPLE_ACCOUNT_ACTIVATED:
+      return {
+        subject: `👑 Welcome to Your Grand Bandhan Royal Couple Portal (${data.coupleNames || 'Couple'})`,
+        html: baseTemplate(
+          'Account Activated',
+          `
+          <div class="badge">ROYAL PORTAL ACTIVATED</div>
+          <h2 class="heading">Welcome to Grand Bandhan Imperial Portal</h2>
+          <p>Dear <strong>${escapeHtml(data.coupleNames || 'Royal Couple')}</strong>,</p>
+          <p>Your dedicated Couple Portal account has been officially activated. You now have full access to manage your ceremony schedules, review digital agreements, track guest RSVPs, and oversee milestone payments.</p>
+          <div class="card" style="border: 2px solid #D4AF37; background: #fffcf0; padding: 18px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top:0; color: #0A2540; font-size: 16px;">👑 Your Royal Login Credentials</h3>
+            <div class="detail-row"><span class="detail-label">Login Email:</span><span class="detail-value"><strong>${escapeHtml(data.loginEmail || data.email)}</strong></span></div>
+            ${data.temporaryPassword ? `<div class="detail-row"><span class="detail-label">Temporary Password:</span><span class="detail-value" style="font-family: monospace; font-size: 15px; color: #8C1D40; font-weight: bold; background: #f3f3f3; padding: 2px 8px; border-radius: 4px;">${escapeHtml(data.temporaryPassword)}</span></div>` : ''}
+            <div class="detail-row"><span class="detail-label">Direct Portal Link:</span><span class="detail-value"><a href="${escapeHtml(data.portalUrl || `${appUrl}/portal/client`)}" style="color: #D4AF37; font-weight: bold;">Access Couple Portal</a></span></div>
+            <div class="detail-row"><span class="detail-label">Security Notice:</span><span class="detail-value" style="color: #718096; font-size: 12px;">For your privacy and data security, please change your password after logging in.</span></div>
+          </div>
+          `,
+          { label: 'Log In to Couple Portal', url: data.portalUrl || `${appUrl}/login` }
+        ),
+        text: `Your Grand Bandhan Couple Portal is active! Login: ${data.loginEmail}, Password: ${data.temporaryPassword || 'Use existing'}. Portal: ${data.portalUrl || appUrl + '/portal/client'}`,
       };
 
     case NotificationEvent.AGREEMENT_SENT:

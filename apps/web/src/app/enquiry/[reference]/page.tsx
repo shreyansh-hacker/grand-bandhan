@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Crown,
-
   Calendar,
   MapPin,
   Users,
@@ -18,15 +17,51 @@ import {
   ArrowRight,
   FileText,
   AlertCircle,
+  Video,
+  ExternalLink,
+  ShieldCheck,
+  Sparkles,
+  Lock,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 const LIFECYCLE_STEPS = [
-  { key: 'NEW', title: '1. Enquiry Registered', desc: 'Logged in Grand Bandhan Registry' },
-  { key: 'CONTACTED', title: '2. Planner Assigned', desc: 'Senior wedding specialist reviewing vision' },
-  { key: 'PROPOSAL_SENT', title: '3. Bespoke Proposal', desc: 'Quotation comparison & package prepared' },
-  { key: 'BOOKING_PENDING', title: '4. Agreement & Deposit', desc: 'Contract sign-off & milestone confirmation' },
-  { key: 'CONVERTED', title: '5. Active Operations', desc: '26+ auto tasks & live vendor coordination' },
+  {
+    step: 1,
+    key: 'ENQUIRY_REGISTERED',
+    title: '1. Enquiry Registered',
+    desc: 'Logged in Grand Bandhan Registry',
+  },
+  {
+    step: 2,
+    key: 'PLANNER_ASSIGNED',
+    title: '2. Planner Assigned',
+    desc: 'Senior wedding specialist reviewing vision',
+  },
+  {
+    step: 3,
+    key: 'FIRST_CONSULTATION',
+    title: '3. First Consultation',
+    desc: 'Bespoke design session & ceremonial vision discovery',
+  },
+  {
+    step: 4,
+    key: 'BESPOKE_PROPOSAL',
+    title: '4. Bespoke Proposal',
+    desc: 'Quotation comparison & package prepared',
+  },
+  {
+    step: 5,
+    key: 'AGREEMENT_DEPOSIT',
+    title: '5. Service Agreement & Deposit',
+    desc: 'Contract sign-off & milestone confirmation',
+  },
+  {
+    step: 6,
+    key: 'ACTIVE_OPERATIONS',
+    title: '6. Active Operations',
+    desc: '26+ auto tasks & live vendor coordination',
+  },
 ];
 
 export default function EnquiryTrackingPage() {
@@ -60,15 +95,85 @@ export default function EnquiryTrackingPage() {
     fetchEnquiry();
   }, [reference]);
 
-  function getStepStatus(stepKey: string, currentStatus: string) {
-    const order = ['NEW', 'CONTACTED', 'PROPOSAL_SENT', 'BOOKING_PENDING', 'CONVERTED'];
-    const currentIndex = order.indexOf(currentStatus);
-    const stepIndex = order.indexOf(stepKey);
+  /**
+   * Determine step status dynamically based on real database records
+   */
+  function getStepState(stepNumber: number) {
+    if (!enquiry) return 'upcoming';
 
-    if (currentIndex > stepIndex) return 'completed';
-    if (currentIndex === stepIndex) return 'current';
-    return 'upcoming';
+    const latestConsultation = enquiry.consultations?.[0];
+    const latestProposal = enquiry.proposals?.[0];
+    const latestAgreement = enquiry.agreements?.[0] || enquiry.convertedWedding?.agreement;
+    const isConverted = enquiry.status === 'CONVERTED' || !!enquiry.convertedWeddingId;
+
+    switch (stepNumber) {
+      case 1:
+        // Always completed once enquiry exists in Neon DB
+        return 'completed';
+
+      case 2:
+        // Planner assigned
+        if (enquiry.assignedPlanner) {
+          const hasPastStage =
+            latestConsultation?.status === 'COMPLETED' ||
+            latestProposal ||
+            latestAgreement ||
+            isConverted;
+          return hasPastStage ? 'completed' : 'current';
+        }
+        return 'current';
+
+      case 3:
+        // First Consultation
+        if (latestConsultation?.status === 'COMPLETED' || enquiry.status === 'CONSULTATION_COMPLETED' || latestProposal || isConverted) {
+          return 'completed';
+        }
+        if (latestConsultation?.status === 'SCHEDULED' || latestConsultation?.status === 'RESCHEDULED' || enquiry.status === 'CONSULTATION_SCHEDULED') {
+          return 'current';
+        }
+        return enquiry.assignedPlanner ? 'pending' : 'upcoming';
+
+      case 4:
+        // Bespoke Proposal
+        if (latestProposal?.status === 'ACCEPTED' || isConverted || enquiry.status === 'BOOKING_PENDING') {
+          return 'completed';
+        }
+        if (latestProposal?.status === 'SENT' || enquiry.status === 'PROPOSAL_SENT') {
+          return 'current';
+        }
+        return (latestConsultation?.status === 'COMPLETED' || enquiry.status === 'CONSULTATION_COMPLETED') ? 'pending' : 'upcoming';
+
+      case 5:
+        // Service Agreement & Deposit
+        if (latestAgreement?.verificationStatus === 'VERIFIED' || latestAgreement?.status === 'VERIFIED' || isConverted) {
+          return 'completed';
+        }
+        if (latestAgreement?.verificationStatus === 'REJECTED' || latestAgreement?.status === 'REJECTED') {
+          return 'rejected';
+        }
+        if (latestAgreement?.status === 'SIGNED' || latestAgreement?.status === 'PENDING_VERIFICATION') {
+          return 'current'; // Waiting admin verification
+        }
+        if (latestAgreement?.status === 'SENT' || latestAgreement?.status === 'DRAFT' || latestProposal?.status === 'ACCEPTED' || enquiry.status === 'BOOKING_PENDING') {
+          return 'current';
+        }
+        return latestProposal?.status === 'ACCEPTED' ? 'pending' : 'upcoming';
+
+      case 6:
+        // Active Operations
+        if (isConverted && (latestAgreement?.verificationStatus === 'VERIFIED' || latestAgreement?.status === 'VERIFIED')) {
+          return 'current'; // Actively live
+        }
+        return 'upcoming';
+
+      default:
+        return 'upcoming';
+    }
   }
+
+  const latestConsultation = enquiry?.consultations?.[0];
+  const latestProposal = enquiry?.proposals?.[0];
+  const latestAgreement = enquiry?.agreements?.[0] || enquiry?.convertedWedding?.agreement;
 
   return (
     <div className="min-h-screen bg-navy-gradient text-cream">
@@ -190,94 +295,271 @@ export default function EnquiryTrackingPage() {
 
                 <div className="p-3.5 bg-navy-50 rounded-xl border border-navy-200">
                   <span className="text-[10px] uppercase font-semibold text-darkText/70 flex items-center gap-1">
-
+                    <Crown className="w-3.5 h-3.5 text-gold-dark" />
                     Package Selected
                   </span>
                   <p className="font-bold text-navy-900 text-sm mt-1">
                     {enquiry.packageType === 'PARTIAL_DAY_OF' ? 'Partial / Day-Of' : 'Full-Service Royal'}
                   </p>
                   <p className="text-[10px] text-darkText/70">
-                    INR {(enquiry.minBudget / 100000).toFixed(0)}L - {(enquiry.maxBudget / 100000).toFixed(0)}L
+                    INR {((enquiry.minBudget || 500000) / 100000).toFixed(0)}L - {((enquiry.maxBudget || 2500000) / 100000).toFixed(0)}L
                   </p>
                 </div>
               </div>
-
-              {/* Dedicated Planner Section */}
-              {enquiry.assignedPlanner ? (
-                <div className="p-4 bg-navy-900 text-cream rounded-xl border border-gold/40 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gold-gradient text-navy-950 font-bold flex items-center justify-center">
-                      {enquiry.assignedPlanner.name[0]}
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gold-light">
-                        Your Dedicated Wedding Planner
-                      </span>
-                      <h4 className="font-serif text-base font-bold text-cream">
-                        {enquiry.assignedPlanner.name}
-                      </h4>
-                      <p className="text-xs text-cream-300">
-                        {enquiry.assignedPlanner.email} • {enquiry.assignedPlanner.phone || '+91 98200 00002'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-navy-50 rounded-xl border border-navy-200 flex items-center gap-3 text-xs text-navy-800">
-                  <Clock className="w-5 h-5 text-gold-dark flex-shrink-0" />
-                  <span>
-                    Our Operations Director is currently pairing your celebration parameters with the ideal senior wedding planner.
-                  </span>
-                </div>
-              )}
             </div>
 
-            {/* Lifecycle Progress Stepper */}
-            <div className="bg-navy-900/90 border border-gold/30 rounded-2xl p-6 sm:p-8 space-y-4">
-              <h3 className="font-serif text-lg font-bold text-gold-gradient flex items-center gap-2">
+            {/* Wedding Execution Lifecycle Stepper */}
+            <div className="bg-navy-900/90 border border-gold/30 rounded-2xl p-6 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between pb-2 border-b border-gold/20">
+                <h3 className="font-serif text-xl font-bold text-gold-gradient flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-gold" />
+                  <span>Wedding Execution Lifecycle</span>
+                </h3>
+                <span className="text-[10px] font-mono text-cream-300 uppercase tracking-widest">
+                  Live Status Tracking
+                </span>
+              </div>
 
-                <span>Wedding Execution Lifecycle</span>
-              </h3>
-
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {LIFECYCLE_STEPS.map((step, idx) => {
-                  const status = getStepStatus(step.key, enquiry.status);
+                  const state = getStepState(step.step);
+
                   return (
-                    <div key={step.key} className="flex items-start gap-3">
+                    <div key={step.key} className="flex items-start gap-4">
+                      {/* Step Circle Marker & Connecting Line */}
                       <div className="flex flex-col items-center">
                         <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                            status === 'completed'
-                              ? 'bg-emerald-500 text-navy-950'
-                              : status === 'current'
-                              ? 'bg-gold-gradient text-navy-950 animate-pulse'
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md ${
+                            state === 'completed'
+                              ? 'bg-emerald-500 text-navy-950 ring-2 ring-emerald-400'
+                              : state === 'current'
+                              ? 'bg-gold-gradient text-navy-950 ring-4 ring-gold/40 animate-pulse font-black'
+                              : state === 'rejected'
+                              ? 'bg-red-500 text-white ring-2 ring-red-400'
                               : 'bg-navy-800 text-cream-400 border border-navy-700'
                           }`}
                         >
-                          {status === 'completed' ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                          {state === 'completed' ? (
+                            <CheckCircle2 className="w-4 h-4 text-navy-950 font-bold" />
+                          ) : (
+                            step.step
+                          )}
                         </div>
+
                         {idx < LIFECYCLE_STEPS.length - 1 && (
                           <div
-                            className={`w-0.5 h-8 my-1 ${
-                              status === 'completed' ? 'bg-emerald-500' : 'bg-navy-800'
+                            className={`w-0.5 h-16 my-1.5 transition-colors ${
+                              state === 'completed' ? 'bg-emerald-500' : 'bg-navy-800'
                             }`}
                           />
                         )}
                       </div>
 
-                      <div className="pt-0.5">
-                        <p
-                          className={`text-sm font-bold ${
-                            status === 'current'
-                              ? 'text-gold'
-                              : status === 'completed'
-                              ? 'text-cream'
-                              : 'text-cream-400'
-                          }`}
-                        >
-                          {step.title}
-                        </p>
-                        <p className="text-xs text-cream-300 mt-0.5">{step.desc}</p>
+                      {/* Step Content */}
+                      <div className="pt-0.5 flex-1 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p
+                            className={`text-sm sm:text-base font-bold ${
+                              state === 'current'
+                                ? 'text-gold'
+                                : state === 'completed'
+                                ? 'text-cream'
+                                : state === 'rejected'
+                                ? 'text-red-400'
+                                : 'text-cream-400'
+                            }`}
+                          >
+                            {step.title}
+                          </p>
+
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                              state === 'completed'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                : state === 'current'
+                                ? 'bg-gold/20 text-gold-light border border-gold/40'
+                                : state === 'rejected'
+                                ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                : 'bg-navy-800 text-cream-400'
+                            }`}
+                          >
+                            {state === 'completed'
+                              ? 'Completed'
+                              : state === 'current'
+                              ? 'In Progress'
+                              : state === 'rejected'
+                              ? 'Action Required'
+                              : 'Pending'}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-cream-300 leading-relaxed">{step.desc}</p>
+
+                        {/* STEP 2: Dedicated Planner Details */}
+                        {step.step === 2 && enquiry.assignedPlanner && (
+                          <div className="p-3 bg-navy-950/80 border border-gold/30 rounded-xl flex items-center justify-between gap-3 text-xs mt-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-gold-gradient text-navy-950 font-bold flex items-center justify-center text-xs">
+                                {enquiry.assignedPlanner.name[0]}
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-gold-light uppercase font-bold tracking-wider block">
+                                  Assigned Senior Planner
+                                </span>
+                                <span className="font-bold text-cream text-xs">
+                                  {enquiry.assignedPlanner.name}
+                                </span>
+                                <span className="text-cream-400 text-[11px] block">
+                                  {enquiry.assignedPlanner.email}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="px-2 py-1 rounded bg-gold/15 text-gold-light text-[10px] font-bold">
+                              Verified Specialist
+                            </span>
+                          </div>
+                        )}
+
+                        {/* STEP 3: Consultation Details Card */}
+                        {step.step === 3 && latestConsultation && (
+                          <div className="p-3.5 bg-navy-950/80 border border-gold/30 rounded-xl space-y-2 text-xs mt-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-gold-light flex items-center gap-1.5">
+                                <Video className="w-3.5 h-3.5 text-gold" />
+                                <span>{latestConsultation.meetingType === 'IN_PERSON' ? 'In-Person Palace Session' : 'Virtual Design Video Session'}</span>
+                              </span>
+                              <span className="font-bold text-xs text-cream">
+                                {new Date(latestConsultation.scheduledAt).toLocaleString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+
+                            {latestConsultation.meetingLink && latestConsultation.status !== 'COMPLETED' && (
+                              <div className="pt-1 flex items-center gap-3">
+                                <a
+                                  href={latestConsultation.meetingLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gold-gradient text-navy-950 font-bold rounded-lg text-xs shadow-gold-glow hover:brightness-105"
+                                >
+                                  <Video className="w-3.5 h-3.5" />
+                                  <span>Join Video Consultation</span>
+                                  <ExternalLink className="w-3 h-3 ml-0.5" />
+                                </a>
+                              </div>
+                            )}
+
+                            {latestConsultation.status === 'COMPLETED' && (
+                              <div className="text-[11px] text-emerald-300 flex items-center gap-1.5 pt-1">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>Session Completed: Vision, Palace Themes &amp; Guest Count Recorded</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* STEP 4: Bespoke Proposal Card */}
+                        {step.step === 4 && latestProposal && (
+                          <div className="p-3.5 bg-navy-950/80 border border-gold/30 rounded-xl space-y-2 text-xs mt-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono text-xs font-bold text-gold-light">
+                                Proposal #{latestProposal.proposalNumber}
+                              </span>
+                              <span className="font-bold text-cream">
+                                Estimated Budget: ₹{(latestProposal.estimatedBudget / 100000).toFixed(1)} Lakhs
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-cream-300">
+                              Status: <strong>{latestProposal.status}</strong> {latestProposal.acceptedAt && `(Accepted on ${new Date(latestProposal.acceptedAt).toLocaleDateString()})`}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STEP 5: Service Agreement Card */}
+                        {step.step === 5 && latestAgreement && (
+                          <div className="p-3.5 bg-navy-950/80 border border-gold/30 rounded-xl space-y-2 text-xs mt-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono text-xs font-bold text-gold-light">
+                                Contract Ref: {latestAgreement.agreementNumber}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                latestAgreement.verificationStatus === 'VERIFIED'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  : latestAgreement.verificationStatus === 'REJECTED'
+                                  ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                              }`}>
+                                {latestAgreement.verificationStatus || latestAgreement.status}
+                              </span>
+                            </div>
+
+                            {latestAgreement.verificationStatus === 'REJECTED' && latestAgreement.rejectionReason && (
+                              <p className="text-red-300 text-xs italic bg-red-950/50 p-2 rounded border border-red-500/40">
+                                Correction Notice: {latestAgreement.rejectionReason}
+                              </p>
+                            )}
+
+                            <div className="pt-1 flex items-center gap-3">
+                              <Link
+                                href="/portal/client"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gold-gradient text-navy-950 font-bold rounded-lg text-xs shadow-gold-glow hover:brightness-105"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>{latestAgreement.status === 'VERIFIED' ? 'View Verified Contract' : 'Review & Sign Contract'}</span>
+                              </Link>
+                              <a
+                                href={`/api/agreements/download/${latestAgreement.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-gold hover:underline flex items-center gap-1"
+                              >
+                                <span>Preview Document</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STEP 6: Active Operations Card */}
+                        {step.step === 6 && (
+                          <div className="mt-2">
+                            {enquiry.convertedWedding ? (
+                              <div className="p-3.5 bg-emerald-950/30 border border-emerald-500/40 rounded-xl space-y-2 text-xs text-cream">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-emerald-300 flex items-center gap-1.5">
+                                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                                    <span>Active Wedding Operations Live ({enquiry.convertedWedding.weddingCode})</span>
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                                    CONFIRMED
+                                  </span>
+                                </div>
+                                <p className="text-cream-300 text-[11px]">
+                                  26+ automated milestone planning tasks initialized with multi-vendor RFPs active.
+                                </p>
+                                <div className="pt-1">
+                                  <Link
+                                    href={`/portal/client/${enquiry.convertedWedding.id}`}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gold-gradient text-navy-950 font-bold rounded-lg text-xs shadow-gold-glow hover:brightness-105"
+                                  >
+                                    <span>Access Couple Portal Dashboard &rarr;</span>
+                                  </Link>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-navy-950/40 border border-navy-800 rounded-xl flex items-center gap-2.5 text-xs text-cream-400">
+                                <Lock className="w-4 h-4 text-gold flex-shrink-0" />
+                                <span>
+                                  Active operations unlock automatically upon service agreement verification and booking deposit confirmation.
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

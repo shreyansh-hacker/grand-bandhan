@@ -18,6 +18,9 @@ import {
   VerificationResponse,
   PaymentMilestone,
   PaymentStatus,
+  ConsultationType,
+  ConsultationStatus,
+  AgreementStatus,
 } from '@grand-bandhan/shared';
 
 // Auth Validation
@@ -271,4 +274,46 @@ export const calculateSettlementSchema = z.object({
   extraVendorHourRate: z.coerce.number().min(0).default(0),
   unexpectedExpenses: z.coerce.number().min(0).default(0),
   notes: z.string().optional(),
+});
+
+// Consultation Validation
+export const scheduleConsultationSchema = z.object({
+  enquiryId: z.string().min(1, 'Enquiry ID is required'),
+  scheduledAt: z.string().min(1, 'Consultation date and time is required'),
+  meetingType: z.nativeEnum(ConsultationType).default(ConsultationType.ONLINE_VIDEO),
+  meetingLink: z.string().optional().nullable(),
+  meetingLocation: z.string().optional().nullable(),
+  plannerId: z.string().optional().nullable(),
+  clientPreferredTime: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const rescheduleConsultationSchema = z.object({
+  scheduledAt: z.string().min(1, 'New consultation date and time is required'),
+  meetingType: z.nativeEnum(ConsultationType).optional(),
+  meetingLink: z.string().optional().nullable(),
+  meetingLocation: z.string().optional().nullable(),
+  rescheduleReason: z.string().optional().nullable(),
+});
+
+export const completeConsultationSchema = z.object({
+  meetingNotes: z.string().min(5, 'Meeting notes and discussion summary are required'),
+  coupleVision: z.string().optional().nullable(),
+  themePreferences: z.string().optional().nullable(),
+  guestCountConfirmed: z.coerce.number().optional().nullable(),
+  budgetDiscussed: z.coerce.number().optional().nullable(),
+  venuePreferences: z.string().optional().nullable(),
+  specialRequirements: z.string().optional().nullable(),
+  familyExpectations: z.string().optional().nullable(),
+});
+
+export const verifyAgreementSchema = z.object({
+  status: z.enum(['VERIFIED', 'REJECTED']),
+  rejectionReason: z.string().optional().nullable(),
+});
+
+export const uploadSignedAgreementSchema = z.object({
+  signedByName: z.string().min(2, 'Signer full name is required'),
+  signedPdfUrl: z.string().min(5, 'Signed document URL/path is required'),
+  notes: z.string().optional().nullable(),
 });

@@ -49,6 +49,12 @@ export default function ClientPortalPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [signing, setSigning] = useState(false);
 
+  // Signed PDF Upload Mode
+  const [signingMode, setSigningMode] = useState<'CANVAS' | 'UPLOAD'>('CANVAS');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // Guest Management
   const [guestFilter, setGuestFilter] = useState<'ALL' | 'ATTENDING' | 'PENDING' | 'DECLINED'>('ALL');
   const [showAddGuestModal, setShowAddGuestModal] = useState(false);
@@ -214,6 +220,53 @@ export default function ClientPortalPage() {
     }
   }
 
+
+  async function handleUploadSignedDoc(e: React.FormEvent) {
+    e.preventDefault();
+    if (!uploadedFile) {
+      setUploadError('Please select a signed PDF document or image file');
+      return;
+    }
+    if (uploadedFile.size > 10 * 1024 * 1024) {
+      setUploadError('File exceeds maximum allowable size of 10MB');
+      return;
+    }
+
+    setUploadingDoc(true);
+    setUploadError(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Url = reader.result as string;
+          const targetId = agreement?.id || wedding?.id;
+          const res = await apiRequest(`/api/agreements/${targetId}/upload-signed`, {
+            method: 'POST',
+            body: JSON.stringify({
+              signedByName: signerName.trim() || `${wedding?.brideName} & ${wedding?.groomName}`,
+              signedPdfUrl: base64Url,
+              notes: `Uploaded signed contract: ${uploadedFile.name} (${(uploadedFile.size / 1024).toFixed(0)} KB)`,
+            }),
+          });
+          if (res.success) {
+            alert('Signed agreement document successfully uploaded! Submitted to Grand Bandhan Legal Desk for verification.');
+            loadData();
+          } else {
+            setUploadError(res.message || 'Upload failed');
+          }
+        } catch (err: any) {
+          setUploadError(err.message || 'Upload failed');
+        } finally {
+          setUploadingDoc(false);
+        }
+      };
+      reader.readAsDataURL(uploadedFile);
+    } catch (err: any) {
+      setUploadError(err.message || 'Error processing file');
+      setUploadingDoc(false);
+    }
+  }
+
   // RSVP Management Handlers
   async function handleAddGuest(e: React.FormEvent) {
     e.preventDefault();
@@ -297,7 +350,11 @@ export default function ClientPortalPage() {
     return g.rsvpStatus === guestFilter;
   });
 
-  const isAlreadySigned = agreement?.status === AgreementStatus.SIGNED;
+  const isVerified = agreement?.verificationStatus === 'VERIFIED' || agreement?.status === AgreementStatus.VERIFIED;
+  const isRejected = agreement?.verificationStatus === 'REJECTED' || agreement?.status === AgreementStatus.REJECTED;
+  const isPendingReview = !isVerified && !isRejected && (agreement?.status === AgreementStatus.SIGNED || agreement?.status === 'PENDING_VERIFICATION' || agreement?.verificationStatus === 'PENDING');
+  const isPendingSign = !isVerified && !isRejected && !isPendingReview;
+  const isAlreadySigned = isVerified || isPendingReview;
 
   return (
     <div className="min-h-screen bg-cream text-darkText font-sans print:bg-white">
@@ -406,6 +463,50 @@ export default function ClientPortalPage() {
           )}
         </div>
 
+        
+        {/* Mandatory Agreement Verification Gatekeeper Alert */}
+        {!isVerified && agreement && (
+          <div className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm ${
+            isRejected
+              ? 'bg-red-50 border-red-300 text-red-900'
+              : isPendingReview
+              ? 'bg-amber-50 border-amber-300 text-amber-900'
+              : 'bg-gold/10 border-gold/40 text-navy-950'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              {isRejected ? (
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              ) : isPendingReview ? (
+                <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              ) : (
+                <ShieldCheck className="w-5 h-5 text-gold-dark flex-shrink-0" />
+              )}
+              <div>
+                <span className="font-bold block text-sm">
+                  {isRejected
+                    ? 'Action Required: Service Agreement Correction Needed'
+                    : isPendingReview
+                    ? 'Service Agreement Submitted — Awaiting Legal Verification'
+                    : 'Service Agreement Signature & Submission Required'}
+                </span>
+                <span className="text-xs opacity-90">
+                  {isRejected
+                    ? `Correction notice: ${agreement?.rejectionReason || 'Please re-sign or re-upload your document'}.`
+                    : isPendingReview
+                    ? 'Your signed agreement has been received by Grand Bandhan Legal Operations. Active operations unlock once verified.'
+                    : 'Formal legal execution is required before booking confirmation and active operational workflows can unlock.'}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('AGREEMENT')}
+              className="px-3.5 py-1.5 rounded-lg bg-navy-900 text-gold font-bold text-xs hover:bg-navy-800 transition-colors shadow-sm self-start sm:self-auto flex items-center gap-1.5"
+            >
+              <span>{isRejected ? 'Resubmit Document →' : isPendingReview ? 'View Submission →' : 'Review & Sign Now →'}</span>
+            </button>
+          </div>
+        )}
+
         {/* Portal Navigation Tabs */}
         <div className="flex flex-wrap items-center gap-2 border-b border-navy-200 pb-2 print:hidden">
           <button
@@ -460,7 +561,16 @@ export default function ClientPortalPage() {
             }`}
           >
             <FileCheck className="w-3.5 h-3.5" />
-            <span>Legal Agreement {isAlreadySigned && '✓'}</span>
+            <span>Service Agreement &amp; Documents</span>
+            {isVerified ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-200 text-green-900 font-bold ml-1">✓ Verified</span>
+            ) : isRejected ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-200 text-red-900 font-bold ml-1">Action Req</span>
+            ) : isPendingReview ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-bold ml-1">Under Review</span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold/20 text-gold-dark font-bold ml-1">Sign Req</span>
+            )}
           </button>
         </div>
 
@@ -940,128 +1050,314 @@ export default function ClientPortalPage() {
           </div>
         )}
 
-        {/* TAB 5: DIGITAL LEGAL AGREEMENT */}
+        {/* TAB 5: SERVICE AGREEMENT & DOCUMENTS */}
         {activeTab === 'AGREEMENT' && (
           <div className="bg-white border-2 border-gold/40 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-navy-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-navy-100">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-royal">
-                  Legal Service Agreement
+                  Wedding Planning &amp; Management Service Agreement
                 </span>
                 <h3 className="font-serif text-2xl font-bold text-navy-900 mt-0.5">
-                  Digital Terms &amp; Conditions of Service
+                  Formal Legal Agreement &amp; Submission Desk
                 </h3>
+                <span className="text-xs text-darkText/60 font-mono">
+                  Document Ref: {agreement?.agreementNumber || 'GB-AGR-2026'} | Version: {agreement?.version || 1}.0
+                </span>
               </div>
 
-              {isAlreadySigned ? (
-                <span className="px-3 py-1 bg-green-100 text-green-900 border border-green-300 font-bold text-xs rounded-full flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                  <span>Legally Signed</span>
-                </span>
-              ) : (
-                <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-full">
-                  Pending Signature
-                </span>
-              )}
-            </div>
+              <div className="flex items-center gap-3">
+                {agreement?.id && (
+                  <a
+                    href={`/api/agreements/download/${agreement.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-navy-900 text-gold border border-gold/40 rounded-xl text-xs font-bold hover:bg-navy-800 transition-colors shadow-sm"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Download / Print PDF</span>
+                  </a>
+                )}
 
-            {/* Terms Preview Box */}
-            <div className="bg-cream-100 p-4 rounded-xl border border-navy-200/80 text-xs font-mono text-darkText/80 whitespace-pre-line leading-relaxed max-h-60 overflow-y-auto">
-              {agreement?.termsContent || 'Loading terms of service...'}
-            </div>
-
-            {isAlreadySigned ? (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-xl space-y-2 text-xs">
-                <div className="font-bold text-green-900 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-green-700" />
-                  <span>Digitally Executed by: {agreement.signedByName}</span>
-                </div>
-                <p className="text-green-800">
-                  Signed on: {new Date(agreement.signedAt).toLocaleString()} | Client IP: {agreement.clientIp || 'Verified'}
-                </p>
-                {agreement.signatureDataUrl && (
-                  <div className="pt-2">
-                    <span className="text-[10px] text-green-800 font-bold block mb-1">Audit Signature Record:</span>
-                    <img
-                      src={agreement.signatureDataUrl}
-                      alt="Digital Signature"
-                      className="h-14 border border-green-300 bg-white p-1 rounded"
-                    />
-                  </div>
+                {isVerified ? (
+                  <span className="px-3 py-1 bg-green-100 text-green-900 border border-green-300 font-bold text-xs rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                    <span>✓ Legally Verified &amp; Executed</span>
+                  </span>
+                ) : isRejected ? (
+                  <span className="px-3 py-1 bg-red-100 text-red-900 border border-red-300 font-bold text-xs rounded-full flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                    <span>Correction Required</span>
+                  </span>
+                ) : isPendingReview ? (
+                  <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-full flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Submitted — Pending Legal Review</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-full">
+                    Pending Signature
+                  </span>
                 )}
               </div>
-            ) : (
-              <form onSubmit={handleSignAgreement} className="space-y-4 pt-2 text-xs">
-                <div>
-                  <label className="block font-semibold text-darkText mb-1">
-                    Full Legal Signer Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={signerName}
-                    onChange={(e) => setSignerName(e.target.value)}
-                    placeholder="e.g. Siddharth Malhotra"
-                    className="w-full p-2.5 bg-cream-50 border border-navy-200 rounded-lg text-sm"
-                  />
+            </div>
+
+            {/* Rejection Alert Banner if applicable */}
+            {isRejected && agreement?.rejectionReason && (
+              <div className="p-4 bg-red-50 border-2 border-red-400 rounded-xl space-y-2 text-xs">
+                <div className="font-bold text-red-900 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span>Correction Required by Senior Legal Operations</span>
+                </div>
+                <p className="text-red-800 pl-7">
+                  &quot;{agreement.rejectionReason}&quot;
+                </p>
+                <p className="text-red-700 pl-7 text-[11px]">
+                  Please re-execute below using Canvas Digital Signature or upload a clear signed PDF document.
+                </p>
+              </div>
+            )}
+
+            {/* Verification Success Banner if applicable */}
+            {isVerified && (
+              <div className="p-4 bg-green-50 border-2 border-green-300 rounded-xl space-y-2 text-xs">
+                <div className="font-bold text-green-900 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-green-700" />
+                  <span>Official Legal Verification Completed ✓</span>
+                </div>
+                <p className="text-green-800 pl-7">
+                  Verified by Grand Bandhan Senior Legal Operations on {new Date(agreement.verifiedAt).toLocaleString('en-IN')}. Authorized Signatory: <strong>{agreement.agencySignedByName || 'Director of Operations'}</strong>.
+                </p>
+                <p className="text-green-700 pl-7 text-[11px]">
+                  All active operations, vendor line-item bidding, milestone disbursements, and palace coordination have been unlocked.
+                </p>
+              </div>
+            )}
+
+            {/* Under Review Notice if applicable */}
+            {isPendingReview && (
+              <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-xs">
+                <div className="font-bold text-amber-900 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-700" />
+                  <span>Document Submitted — Under Verification Review</span>
+                </div>
+                <p className="text-amber-800 pl-7">
+                  Executed by <strong>{agreement.signedByName}</strong> on {agreement.signedAt ? new Date(agreement.signedAt).toLocaleString() : 'Recent'}. Our operations team has been notified.
+                </p>
+              </div>
+            )}
+
+            {/* Terms Preview Box (20 Sections) */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-darkText/70 block">
+                Official Contract Terms &amp; Scope of Work (Sections 1 - 20)
+              </span>
+              <div className="bg-cream-100 p-5 rounded-xl border border-navy-200/80 text-xs font-mono text-darkText/80 whitespace-pre-line leading-relaxed max-h-72 overflow-y-auto">
+                {agreement?.termsContent || 'Loading official terms of service...'}
+              </div>
+            </div>
+
+            {/* If Verified, show digital audit block */}
+            {isVerified && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-navy-100 text-xs">
+                <div className="p-4 bg-white border border-green-300 rounded-xl space-y-2">
+                  <span className="font-bold text-green-900 block uppercase text-[10px]">Client Signatory Record</span>
+                  <div className="font-bold text-navy-900">{agreement.signedByName}</div>
+                  <div className="text-darkText/70 text-[11px]">Timestamp: {agreement.signedAt ? new Date(agreement.signedAt).toLocaleString() : 'Recorded'}</div>
+                  {agreement.signatureDataUrl && (
+                    <img src={agreement.signatureDataUrl} alt="Signature" className="h-12 border border-green-200 bg-white p-1 rounded mt-1" />
+                  )}
                 </div>
 
-                {/* Digital Signature Drawing Canvas */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-semibold text-darkText flex items-center gap-1.5">
-                      <PenTool className="w-3.5 h-3.5 text-gold-dark" />
-                      <span>Draw Your Digital Signature on Canvas * (Typed names not accepted)</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={clearCanvas}
-                      className="text-royal hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>Clear Canvas</span>
-                    </button>
-                  </div>
-
-                  <div className="border-2 border-dashed border-gold/60 rounded-xl overflow-hidden bg-white">
-                    <canvas
-                      ref={canvasRef}
-                      width={500}
-                      height={150}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                      className="w-full h-36 cursor-crosshair touch-none"
-                    />
+                <div className="p-4 bg-white border border-gold/40 rounded-xl space-y-2 text-right">
+                  <span className="font-bold text-royal block uppercase text-[10px]">Grand Bandhan Legal Seal</span>
+                  <div className="font-bold text-navy-900">{agreement.agencySignedByName || 'Director of Operations'}</div>
+                  <div className="text-darkText/70 text-[11px]">Verification: {agreement.verifiedAt ? new Date(agreement.verifiedAt).toLocaleString() : 'Verified'}</div>
+                  <div className="inline-block px-2.5 py-1 rounded bg-gold/15 text-gold-dark font-bold text-[10px] uppercase border border-gold mt-1">
+                    ✓ Official Corporate Seal
                   </div>
                 </div>
+              </div>
+            )}
 
+            {/* If NOT Verified (Pending Signature or Rejected), show Submission Suite */}
+            {!isVerified && (
+              <div className="pt-4 border-t border-navy-200 space-y-6">
+                <div>
+                  <h4 className="font-serif text-lg font-bold text-navy-900">
+                    Execute &amp; Submit Service Agreement
+                  </h4>
+                  <p className="text-xs text-darkText/70">
+                    Choose your preferred signing method: Draw your signature online or upload an externally signed PDF.
+                  </p>
+                </div>
+
+                {/* Mode Selector Toggle */}
                 <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="acceptTerms"
-                    required
-                    checked={acceptedTerms}
-                    onChange={(e) => setAcceptedTerms(e.target.checked)}
-                    className="accent-gold w-4 h-4"
-                  />
-                  <label htmlFor="acceptTerms" className="text-darkText font-medium">
-                    I have read and agree to the Grand Bandhan Terms of Service and acknowledge that this digital signature is legally binding.
-                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSigningMode('CANVAS')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      signingMode === 'CANVAS'
+                        ? 'bg-navy-900 text-gold shadow-sm'
+                        : 'bg-white border border-navy-200 text-darkText/70 hover:bg-cream-100'
+                    }`}
+                  >
+                    ✏️ Option A: Digital Signature Canvas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSigningMode('UPLOAD')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      signingMode === 'UPLOAD'
+                        ? 'bg-navy-900 text-gold shadow-sm'
+                        : 'bg-white border border-navy-200 text-darkText/70 hover:bg-cream-100'
+                    }`}
+                  >
+                    📄 Option B: Upload Signed Document (PDF / Scan)
+                  </button>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={signing}
-                  className="w-full py-3 px-4 rounded-xl bg-gold-gradient text-navy-950 font-bold text-sm shadow-gold-glow hover:brightness-105 transition-all disabled:opacity-50"
-                >
-                  {signing ? 'Verifying & Executing Agreement...' : 'Execute & Legally Sign Agreement'}
-                </button>
-              </form>
+                {/* MODE A: CANVAS DRAWING */}
+                {signingMode === 'CANVAS' && (
+                  <form onSubmit={handleSignAgreement} className="space-y-4 text-xs">
+                    <div>
+                      <label className="block font-semibold text-darkText mb-1">
+                        Full Legal Signer Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={signerName}
+                        onChange={(e) => setSignerName(e.target.value)}
+                        placeholder="e.g. Siddharth Malhotra & Kiara Advani"
+                        className="w-full p-2.5 bg-cream-50 border border-navy-200 rounded-lg text-sm"
+                      />
+                    </div>
+
+                    {/* Canvas Drawing Pad */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-semibold text-darkText flex items-center gap-1.5">
+                          <PenTool className="w-3.5 h-3.5 text-gold-dark" />
+                          <span>Draw Your Signature on Canvas * (Typed names not accepted)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={clearCanvas}
+                          className="text-royal hover:underline flex items-center gap-1 text-[11px]"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Clear Pad</span>
+                        </button>
+                      </div>
+
+                      <div className="border-2 border-dashed border-gold/60 rounded-xl overflow-hidden bg-white">
+                        <canvas
+                          ref={canvasRef}
+                          width={500}
+                          height={150}
+                          onMouseDown={startDrawing}
+                          onMouseMove={draw}
+                          onMouseUp={stopDrawing}
+                          onMouseLeave={stopDrawing}
+                          onTouchStart={startDrawing}
+                          onTouchMove={draw}
+                          onTouchEnd={stopDrawing}
+                          className="w-full h-36 cursor-crosshair touch-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="acceptTerms"
+                        required
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                        className="accent-gold w-4 h-4"
+                      />
+                      <label htmlFor="acceptTerms" className="text-darkText font-medium">
+                        I declare that I have read all 20 sections of the Grand Bandhan Wedding Planning &amp; Management Service Agreement and acknowledge that this digital signature is legally binding under the Information Technology Act 2000.
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={signing}
+                      className="w-full py-3 px-4 rounded-xl bg-gold-gradient text-navy-950 font-bold text-sm shadow-gold-glow hover:brightness-105 transition-all disabled:opacity-50"
+                    >
+                      {signing ? 'Executing & Submitting Agreement...' : 'Legally Execute & Submit Agreement'}
+                    </button>
+                  </form>
+                )}
+
+                {/* MODE B: SIGNED PDF UPLOAD */}
+                {signingMode === 'UPLOAD' && (
+                  <form onSubmit={handleUploadSignedDoc} className="space-y-4 text-xs">
+                    <div>
+                      <label className="block font-semibold text-darkText mb-1">
+                        Signer Full Legal Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={signerName}
+                        onChange={(e) => setSignerName(e.target.value)}
+                        placeholder="e.g. Siddharth Malhotra"
+                        className="w-full p-2.5 bg-cream-50 border border-navy-200 rounded-lg text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-darkText mb-1">
+                        Upload Signed Agreement Document (PDF, PNG, JPG — Max 10MB) *
+                      </label>
+                      <div className="border-2 border-dashed border-navy-300 rounded-xl p-6 text-center bg-cream-50 hover:bg-cream-100 transition-colors">
+                        <input
+                          type="file"
+                          id="signedDocFile"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          required
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setUploadedFile(e.target.files[0]);
+                              setUploadError(null);
+                            }
+                          }}
+                          className="hidden"
+                        />
+                        <label htmlFor="signedDocFile" className="cursor-pointer block space-y-2">
+                          <FileCheck className="w-8 h-8 text-gold-dark mx-auto" />
+                          <span className="font-bold text-navy-900 block text-sm">
+                            {uploadedFile ? uploadedFile.name : 'Choose signed PDF or scan to upload'}
+                          </span>
+                          <span className="text-darkText/60 text-[11px] block">
+                            {uploadedFile
+                              ? `${(uploadedFile.size / 1024).toFixed(0)} KB ready to submit`
+                              : 'Supports PDF, JPG, PNG up to 10MB'}
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {uploadError && (
+                      <div className="p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 text-xs">
+                        {uploadError}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={uploadingDoc || !uploadedFile}
+                      className="w-full py-3 px-4 rounded-xl bg-gold-gradient text-navy-950 font-bold text-sm shadow-gold-glow hover:brightness-105 transition-all disabled:opacity-50"
+                    >
+                      {uploadingDoc ? 'Uploading & Submitting...' : 'Upload & Submit Signed Document'}
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
           </div>
         )}

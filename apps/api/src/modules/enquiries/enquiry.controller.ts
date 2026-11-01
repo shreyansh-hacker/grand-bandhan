@@ -288,17 +288,50 @@ export async function getEnquiryByReference(req: Request, res: Response): Promis
   try {
     const enquiry = await prisma.customerEnquiry.findUnique({
       where: { referenceNumber },
-      select: {
-        referenceNumber: true,
-        customerName: true,
-        weddingDate: true,
-        location: true,
-        guestCount: true,
-        status: true,
-        planningFor: true,
-        packageType: true,
-        createdAt: true,
+      include: {
         agency: { select: { name: true, contactEmail: true, contactPhone: true } },
+        assignedPlanner: { select: { id: true, name: true, email: true, phone: true, avatarUrl: true } },
+        consultations: {
+          select: {
+            id: true,
+            scheduledAt: true,
+            meetingType: true,
+            meetingLink: true,
+            meetingLocation: true,
+            status: true,
+            meetingNotes: true,
+            coupleVision: true,
+            themePreferences: true,
+            guestCountConfirmed: true,
+            budgetDiscussed: true,
+            completedAt: true,
+          },
+          orderBy: { scheduledAt: 'desc' },
+        },
+        proposals: {
+          select: {
+            id: true,
+            proposalNumber: true,
+            packageType: true,
+            estimatedBudget: true,
+            status: true,
+            validUntil: true,
+            acceptedAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        agreements: {
+          select: {
+            id: true,
+            agreementNumber: true,
+            status: true,
+            verificationStatus: true,
+            signedByName: true,
+            signedAt: true,
+            verifiedAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -307,7 +340,28 @@ export async function getEnquiryByReference(req: Request, res: Response): Promis
       return;
     }
 
-    res.json({ success: true, data: enquiry });
+    let weddingData = null;
+    if (enquiry.convertedWeddingId) {
+      weddingData = await prisma.wedding.findUnique({
+        where: { id: enquiry.convertedWeddingId },
+        select: {
+          id: true,
+          weddingCode: true,
+          status: true,
+          tasks: { select: { id: true, status: true } },
+          payments: { select: { id: true, milestoneName: true, status: true, amount: true } },
+          agreement: { select: { id: true, status: true, verificationStatus: true } },
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...enquiry,
+        convertedWedding: weddingData,
+      },
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

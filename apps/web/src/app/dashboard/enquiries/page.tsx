@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Users,
   Search,
@@ -224,20 +225,30 @@ export default function EnquiriesPage() {
                     </td>
 
                     <td className="p-4 text-right">
-                      {enq.status === EnquiryStatus.CONVERTED ? (
-                        <span className="text-green-700 font-bold text-xs flex items-center justify-end gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Converted</span>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleConvert(enq.id)}
-                          disabled={convertingId === enq.id}
-                          className="px-3 py-1.5 rounded-lg bg-navy-900 text-gold font-bold text-[11px] hover:bg-navy-800 transition-colors shadow-sm disabled:opacity-50"
-                        >
-                          {convertingId === enq.id ? 'Converting...' : 'Convert to Wedding →'}
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {enq.status !== EnquiryStatus.CONVERTED && (
+                          <Link
+                            href={`/dashboard/consultations?enquiryId=${enq.id}`}
+                            className="px-2.5 py-1.5 rounded-lg border border-gold/40 text-royal hover:bg-cream-200 font-semibold text-[11px] transition-colors"
+                          >
+                            Consultation 📅
+                          </Link>
+                        )}
+                        {enq.status === EnquiryStatus.CONVERTED ? (
+                          <span className="text-green-700 font-bold text-xs flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Converted</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleConvert(enq.id)}
+                            disabled={convertingId === enq.id}
+                            className="px-3 py-1.5 rounded-lg bg-navy-900 text-gold font-bold text-[11px] hover:bg-navy-800 transition-colors shadow-sm disabled:opacity-50"
+                          >
+                            {convertingId === enq.id ? 'Converting...' : 'Convert to Wedding →'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

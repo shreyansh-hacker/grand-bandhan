@@ -74,6 +74,7 @@ enum EnquiryStatus {
   NEW
   CONTACTED
   CONSULTATION_SCHEDULED
+  CONSULTATION_COMPLETED
   QUALIFIED
   PROPOSAL_IN_PROGRESS
   PROPOSAL_SENT
@@ -90,7 +91,23 @@ enum AgreementStatus {
   SENT
   VIEWED
   SIGNED
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
   EXPIRED
+}
+
+
+enum ConsultationType {
+  ONLINE_VIDEO
+  IN_PERSON
+}
+
+enum ConsultationStatus {
+  SCHEDULED
+  COMPLETED
+  RESCHEDULED
+  CANCELLED
 }
 
 enum WeddingPackageType {
@@ -240,6 +257,8 @@ model Agency {
   auditLogs           AuditLog[]
   emailLogs           EmailLog[]
   notifications       Notification[]
+  consultations       WeddingConsultation[]
+  agreementTemplates  AgreementTemplate[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 }
@@ -275,6 +294,7 @@ model User {
   notificationPreference NotificationPreference?
   notifications        Notification[]
   passwordResetTokens  PasswordResetToken[]
+  consultations        WeddingConsultation[]
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 }
@@ -318,25 +338,41 @@ model CustomerEnquiry {
   notes                  String?
   convertedWeddingId     String?
   proposals              WeddingProposal[]
+  consultations          WeddingConsultation[]
+  agreements             DigitalAgreement[]
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 }
 
 model DigitalAgreement {
-  id               String          @id @default(uuid())
-  weddingId        String          @unique
-  wedding          Wedding         @relation(fields: [weddingId], references: [id], onDelete: Cascade)
-  agreementNumber  String          @unique
-  termsContent     String
-  signedByName     String?
-  signatureDataUrl String?
-  signatureFileId  String?
-  clientIp         String?
-  userAgent        String?
-  signedAt         DateTime?
-  status           AgreementStatus @default(DRAFT)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id                   String           @id @default(uuid())
+  weddingId            String?          @unique
+  wedding              Wedding?         @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  enquiryId            String?
+  enquiry              CustomerEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  agreementNumber      String           @unique
+  termsContent         String
+  version              Int              @default(1)
+  signedByName         String?
+  signatureDataUrl     String?
+  signatureFileId      String?
+  signedPdfUrl         String?
+  clientIp             String?
+  userAgent            String?
+  signedAt             DateTime?
+  status               AgreementStatus  @default(DRAFT)
+  verificationStatus   String?          @default("PENDING")
+  verifiedAt           DateTime?
+  verifiedById         String?
+  rejectionReason      String?
+  partner2SignedByName String?
+  partner2SignedAt     DateTime?
+  agencySignedByName   String?
+  agencySignedAt       DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([enquiryId])
 }
 
 model Wedding {
@@ -368,6 +404,7 @@ model Wedding {
   tasks                Task[]
   events               EventTimeline[]
   serviceVerifications ServiceVerification[]
+  consultations        WeddingConsultation[]
   payments             Payment[]
   settlement           Settlement?
   feedbacks            Feedback[]
@@ -793,3 +830,50 @@ model Notification {
   @@index([category])
 }
 
+
+model WeddingConsultation {
+  id                  String             @id @default(uuid())
+  enquiryId           String
+  enquiry             CustomerEnquiry    @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  weddingId           String?
+  wedding             Wedding?           @relation(fields: [weddingId], references: [id], onDelete: SetNull)
+  agencyId            String
+  agency              Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  plannerId           String?
+  planner             User?              @relation(fields: [plannerId], references: [id], onDelete: SetNull)
+  scheduledAt         DateTime
+  meetingType         ConsultationType   @default(ONLINE_VIDEO)
+  meetingLink         String?
+  meetingLocation     String?
+  status              ConsultationStatus @default(SCHEDULED)
+  clientPreferredTime String?
+  meetingNotes        String?
+  coupleVision        String?
+  themePreferences    String?
+  guestCountConfirmed Int?
+  budgetDiscussed     Float?
+  venuePreferences    String?
+  specialRequirements String?
+  familyExpectations  String?
+  completedAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([enquiryId])
+  @@index([agencyId])
+  @@index([plannerId])
+}
+
+model AgreementTemplate {
+  id         String   @id @default(uuid())
+  agencyId   String
+  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  title      String
+  content    String
+  isDefault  Boolean  @default(true)
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([agencyId])
+}

@@ -17,12 +17,16 @@ import {
   LogOut,
   ChevronRight,
   Bell,
+  Video,
+  FileCheck,
 } from 'lucide-react';
 
 const NAVIGATION_ITEMS = [
   { label: 'Executive Overview', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Notification Inbox', href: '/dashboard/notifications', icon: Bell },
   { label: 'Enquiries & CRM', href: '/dashboard/enquiries', icon: Users, badge: 'Bride/Groom' },
+  { label: 'First Consultations', href: '/dashboard/consultations', icon: Video, badge: 'Step 3' },
+  { label: 'Service Agreements', href: '/dashboard/agreements', icon: FileCheck, badge: 'Legal' },
   { label: 'Weddings Directory', href: '/dashboard/weddings', icon: Crown },
   { label: '3-Vendor Quotations', href: '/dashboard/quotations', icon: FileSpreadsheet, badge: 'Core' },
   { label: 'Instant Task Planner', href: '/dashboard/tasks', icon: CheckSquare, badge: '25+ Auto' },

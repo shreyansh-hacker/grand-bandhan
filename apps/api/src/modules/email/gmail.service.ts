@@ -272,60 +272,28 @@ export class GmailService {
    * Automatically refreshes via refresh_token when expired.
    * Multi-tenant resolution: checks for dedicated agency sender first, then falls back to platform concierge.
    */
-  public static async getValidAccessToken(agencyId?: string): Promise<string> {
-    let tokenRecord = null;
-
-    // 1. Check for dedicated agency sender token
-    if (agencyId) {
-      tokenRecord = await prisma.gmailOAuthToken.findFirst({
-        where: {
-          OR: [
-            { id: `agency_${agencyId}` },
-            { agencyId },
-          ],
-        },
-      });
-    }
-
-    // 2. Fall back to global platform concierge sender token
-    if (!tokenRecord) {
-      tokenRecord = await prisma.gmailOAuthToken.findUnique({
-        where: { id: 'default' },
-      });
-    }
-
-    // 3. Fallback: If not in DB yet but GMAIL_REFRESH_TOKEN exists in env, initialize encrypted record
-    if (!tokenRecord && env.GMAIL_REFRESH_TOKEN) {
-      tokenRecord = await prisma.gmailOAuthToken.create({
-        data: {
-          id: 'default',
-          refreshToken: encryptToken(env.GMAIL_REFRESH_TOKEN),
-          senderEmail: env.GMAIL_SENDER_EMAIL,
-          scope: GMAIL_SCOPE,
-        },
-      });
-    }
-
-    if (!tokenRecord || !tokenRecord.refreshToken) {
-      throw new Error(
-        'Gmail OAuth is not connected. Please connect via /api/email/oauth/start or configure GMAIL_REFRESH_TOKEN.'
-      );
-    }
-
-    // 4. Decrypt refresh token
+  /**
+   * Internal helper: Decrypts cached access token or refreshes with Google OAuth endpoint.
+   */
+  private static async resolveAndRefreshToken(tokenRecord: any): Promise<string> {
+    // Decrypt refresh token
     const plainRefreshToken = decryptToken(tokenRecord.refreshToken);
 
-    // 5. Check if cached access token is non-expired (with 2-minute safety window)
+    // Check if cached access token is non-expired (with 2-minute safety window)
     const safetyWindowMs = 2 * 60 * 1000;
     if (
       tokenRecord.accessToken &&
       tokenRecord.expiryDate &&
       tokenRecord.expiryDate.getTime() - safetyWindowMs > Date.now()
     ) {
-      return decryptToken(tokenRecord.accessToken);
+      try {
+        return decryptToken(tokenRecord.accessToken);
+      } catch (err: any) {
+        console.warn(`[GmailService] Failed to decrypt cached accessToken for ${tokenRecord.id}:`, err.message);
+      }
     }
 
-    // 6. Refresh the access token using decrypted refresh token
+    // Refresh the access token using decrypted refresh token
     const postData = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
@@ -345,7 +313,7 @@ export class GmailService {
       ? new Date(Date.now() + refreshResponse.expires_in * 1000)
       : new Date(Date.now() + 3600 * 1000);
 
-    // 7. Update Neon DB cache with encrypted tokens
+    // Update Neon DB cache with encrypted tokens
     await prisma.gmailOAuthToken.update({
       where: { id: tokenRecord.id },
       data: {
@@ -356,6 +324,58 @@ export class GmailService {
     });
 
     return refreshResponse.access_token;
+  }
+
+  /**
+   * Retrieves a valid access token. Decrypts AES-256-GCM token from Neon PostgreSQL.
+   * Automatically refreshes via refresh_token when expired.
+   * Multi-tenant resolution: checks for dedicated agency sender first, with automatic graceful fallback
+   * to platform concierge sender if agency token is invalid, expired, or corrupted.
+   */
+  public static async getValidAccessToken(agencyId?: string): Promise<string> {
+    // 1. Check for dedicated agency sender token
+    if (agencyId) {
+      try {
+        const agencyToken = await prisma.gmailOAuthToken.findFirst({
+          where: {
+            OR: [
+              { id: `agency_${agencyId}` },
+              { agencyId },
+            ],
+          },
+        });
+        if (agencyToken && agencyToken.refreshToken) {
+          return await this.resolveAndRefreshToken(agencyToken);
+        }
+      } catch (err: any) {
+        console.warn(`[GmailService] Dedicated token for agency ${agencyId} failed validation/refresh (${err.message}). Falling back to platform default sender.`);
+      }
+    }
+
+    // 2. Global platform concierge sender token
+    let defaultToken = await prisma.gmailOAuthToken.findUnique({
+      where: { id: 'default' },
+    });
+
+    // 3. Fallback: If not in DB yet but GMAIL_REFRESH_TOKEN exists in env, initialize encrypted record
+    if (!defaultToken && env.GMAIL_REFRESH_TOKEN) {
+      defaultToken = await prisma.gmailOAuthToken.create({
+        data: {
+          id: 'default',
+          refreshToken: encryptToken(env.GMAIL_REFRESH_TOKEN),
+          senderEmail: env.GMAIL_SENDER_EMAIL,
+          scope: GMAIL_SCOPE,
+        },
+      });
+    }
+
+    if (!defaultToken || !defaultToken.refreshToken) {
+      throw new Error(
+        'Gmail OAuth is not connected. Please connect via /api/email/oauth/start or configure GMAIL_REFRESH_TOKEN.'
+      );
+    }
+
+    return await this.resolveAndRefreshToken(defaultToken);
   }
 
   /**

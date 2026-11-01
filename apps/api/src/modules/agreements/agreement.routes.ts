@@ -1,12 +1,28 @@
 import { Router } from 'express';
-import { getAgreement, sendAgreement, signAgreement, updateAgreementTerms } from './agreement.controller';
+import { authenticate } from '../../middleware/auth';
+import {
+  getAgreement,
+  generateAgreement,
+  sendAgreement,
+  signAgreement,
+  uploadSignedAgreement,
+  verifyAgreement,
+  listAgreements,
+  downloadAgreementHtml,
+} from './agreement.controller';
 
 const router = Router();
 
-// Allows both authenticated clients/planners and portal users via token / link
-router.get('/:weddingId', getAgreement);
-router.put('/:weddingId', updateAgreementTerms);
-router.post('/:weddingId/send', sendAgreement);
-router.post('/:weddingId/sign', signAgreement);
+// Public / Portal Accessible (for couple viewing and signing)
+router.get('/download/:id', downloadAgreementHtml);
+router.get('/:id', getAgreement);
+router.post('/:id/sign', signAgreement);
+router.post('/:id/upload-signed', uploadSignedAgreement);
+
+// Authenticated / Admin Operations
+router.get('/', authenticate, listAgreements);
+router.post('/generate', authenticate, generateAgreement);
+router.post('/:id/send', authenticate, sendAgreement);
+router.post('/:id/verify', authenticate, verifyAgreement);
 
 export default router;
