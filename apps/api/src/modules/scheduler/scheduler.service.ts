@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { prisma } from '@grand-bandhan/database';
 import { PaymentStatus, TaskStatus, WeddingStatus, UserRole } from '@grand-bandhan/shared';
 import { NotificationService } from '../notifications/notification.service';
@@ -125,9 +126,10 @@ export class ProductionSchedulerService {
     entityId: string,
     agencyId?: string | null,
     metadata?: any
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     const STALE_CRASH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
     const staleThreshold = new Date(Date.now() - STALE_CRASH_THRESHOLD_MS);
+    const leaseToken = randomUUID();
 
     try {
       const existing = await prisma.scheduledReminder.findUnique({
@@ -138,21 +140,22 @@ export class ProductionSchedulerService {
             entityId,
           },
         },
-        select: { id: true, status: true, updatedAt: true },
+        select: { id: true, status: true, updatedAt: true, metadata: true },
       });
 
       if (existing) {
         // If already delivered, never resend
         if (existing.status === 'SENT') {
-          return false;
+          return null;
         }
 
         // Active processing by another alive worker within 5 minutes
         if (existing.status === 'PROCESSING' && existing.updatedAt > staleThreshold) {
-          return false;
+          return null;
         }
 
         // Safe Crash Recovery: Reclaim stale PROCESSING (> 5 mins) or FAILED reminder atomically
+        const existingMeta = (typeof existing.metadata === 'object' && existing.metadata) ? existing.metadata : {};
         const reclaimed = await prisma.scheduledReminder.updateMany({
           where: {
             id: existing.id,
@@ -164,10 +167,16 @@ export class ProductionSchedulerService {
           data: {
             status: 'PROCESSING',
             updatedAt: new Date(),
+            metadata: {
+              ...existingMeta,
+              ...(metadata || {}),
+              leaseToken,
+              claimedAt: new Date().toISOString(),
+            },
           },
         });
 
-        return reclaimed.count > 0;
+        return reclaimed.count > 0 ? leaseToken : null;
       }
 
       // Atomic insert: DB unique constraint serves as final concurrency safeguard across multiple instances
@@ -179,40 +188,74 @@ export class ProductionSchedulerService {
           entityId,
           scheduledFor: new Date(),
           status: 'PROCESSING',
-          metadata: metadata || null,
+          metadata: {
+            ...(metadata || {}),
+            leaseToken,
+            claimedAt: new Date().toISOString(),
+          },
         },
       });
-      return !!scheduled;
+      return scheduled ? leaseToken : null;
     } catch (err: any) {
       // Unique constraint violation P2002 means another instance claimed it at the exact same millisecond
       if (err.code === 'P2002') {
-        return false;
+        return null;
       }
       console.warn('[Scheduler] Claim reminder error:', err.message);
-      return false;
+      return null;
     }
   }
 
-  public static async markReminderSent(reminderType: string, entityType: string, entityId: string): Promise<void> {
-    await prisma.scheduledReminder.updateMany({
-      where: { reminderType, entityType, entityId },
+  public static async markReminderSent(
+    reminderType: string,
+    entityType: string,
+    entityId: string,
+    leaseToken?: string | null
+  ): Promise<boolean> {
+    const updated = await prisma.scheduledReminder.updateMany({
+      where: {
+        reminderType,
+        entityType,
+        entityId,
+        status: 'PROCESSING',
+        ...(leaseToken ? { metadata: { path: ['leaseToken'], equals: leaseToken } } : {}),
+      },
       data: { status: 'SENT', sentAt: new Date(), updatedAt: new Date() },
-    }).catch(() => {});
+    }).catch(() => ({ count: 0 }));
+
+    return updated.count > 0;
   }
 
-  public static async markReminderFailed(reminderType: string, entityType: string, entityId: string, errorMsg?: string): Promise<void> {
-    await prisma.scheduledReminder.updateMany({
-      where: { reminderType, entityType, entityId },
+  public static async markReminderFailed(
+    reminderType: string,
+    entityType: string,
+    entityId: string,
+    errorMsg?: string,
+    leaseToken?: string | null
+  ): Promise<boolean> {
+    const updated = await prisma.scheduledReminder.updateMany({
+      where: {
+        reminderType,
+        entityType,
+        entityId,
+        status: 'PROCESSING',
+        ...(leaseToken ? { metadata: { path: ['leaseToken'], equals: leaseToken } } : {}),
+      },
       data: {
         status: 'FAILED',
         updatedAt: new Date(),
-        metadata: { error: errorMsg || 'Unknown dispatch failure', failedAt: new Date().toISOString() },
+        metadata: {
+          error: errorMsg || 'Unknown dispatch failure',
+          failedAt: new Date().toISOString(),
+        },
       },
-    }).catch(() => {});
+    }).catch(() => ({ count: 0 }));
+
+    return updated.count > 0;
   }
 
   /**
-   * Helper that executes reminder dispatch with atomic claim, safe error trapping, and retry status
+   * Helper that executes reminder dispatch with atomic claim, lease validation, safe error trapping, and retry status
    */
   public static async executeClaimedReminder(
     reminderType: string,
@@ -221,16 +264,15 @@ export class ProductionSchedulerService {
     agencyId: string | null | undefined,
     task: () => Promise<void>
   ): Promise<boolean> {
-    const claimed = await this.claimReminder(reminderType, entityType, entityId, agencyId);
-    if (!claimed) return false;
+    const leaseToken = await this.claimReminder(reminderType, entityType, entityId, agencyId);
+    if (!leaseToken) return false;
 
     try {
       await task();
-      await this.markReminderSent(reminderType, entityType, entityId);
-      return true;
+      return await this.markReminderSent(reminderType, entityType, entityId, leaseToken);
     } catch (err: any) {
       console.warn(`[Scheduler] Reminder dispatch failed for ${reminderType}:${entityId}:`, err.message);
-      await this.markReminderFailed(reminderType, entityType, entityId, err.message);
+      await this.markReminderFailed(reminderType, entityType, entityId, err.message, leaseToken);
       return false;
     }
   }

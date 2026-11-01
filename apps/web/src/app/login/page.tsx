@@ -74,7 +74,9 @@ export default function LoginPage() {
 
         // Redirect based on role
         if (res.data.user.role === 'CLIENT') {
-          router.push('/dashboard/weddings');
+          router.push('/portal/client');
+        } else if (res.data.user.role === 'VENDOR') {
+          router.push('/portal/vendor');
         } else {
           router.push('/dashboard');
         }

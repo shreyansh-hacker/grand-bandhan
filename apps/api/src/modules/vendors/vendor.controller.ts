@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma, VendorCategory } from '@grand-bandhan/database';
 import { AuthenticatedRequest } from '../../middleware/auth';
-import { UserRole } from '@grand-bandhan/shared';
+import { UserRole, AccountStatus } from '@grand-bandhan/shared';
+import { hashPassword } from '../../utils/hash';
 import { NotificationService } from '../notifications/notification.service';
 import { NotificationEvent } from '../notifications/notification.types';
 
@@ -212,23 +213,65 @@ export async function approveVendor(req: AuthenticatedRequest, res: Response): P
       data: { isApproved: true },
     });
 
-    // Send Approval Email to Vendor
+    // Auto-provision User account for Vendor if not already existing
+    const normalizedEmail = existing.email.toLowerCase().trim();
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    const defaultTempPassword = 'GrandVendor@2026';
+    let isNewUser = false;
+
+    if (!user) {
+      const passwordHash = await hashPassword(defaultTempPassword);
+      user = await prisma.user.create({
+        data: {
+          agencyId: existing.agencyId,
+          email: normalizedEmail,
+          passwordHash,
+          role: UserRole.VENDOR,
+          name: existing.contactPerson || existing.name,
+          phone: existing.phone,
+          accountStatus: AccountStatus.ACTIVE,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+      isNewUser = true;
+    }
+
+    const appUrl = process.env.APP_URL || 'https://grandbandhan.com';
+    const portalUrl = `${appUrl}/portal/vendor/${existing.id}`;
+    const loginUrl = `${appUrl}/login`;
+
+    // Send Approval Email to Vendor with temporary credentials and direct portal access
     await NotificationService.emit(NotificationEvent.VENDOR_APPROVED, {
       agencyId: existing.agencyId,
       recipientEmail: existing.email,
       recipientName: existing.contactPerson || existing.name,
+      recipientRole: 'VENDOR',
       subject: `🎉 Welcome to Grand Bandhan: Your Vendor Partnership is Approved! (${existing.name})`,
       data: {
         vendorName: existing.name,
         category: existing.category,
-        contactPerson: existing.contactPerson,
+        contactPerson: existing.contactPerson || existing.name,
+        loginEmail: existing.email,
+        temporaryPassword: isNewUser ? defaultTempPassword : 'Use your existing password',
+        isNewUser,
+        portalUrl,
+        loginUrl,
       },
     }).catch((err) => console.warn('[Vendor] Approval email error:', err?.message));
 
     res.json({
       success: true,
-      data: updated,
-      message: `Vendor ${existing.name} successfully approved. Confirmation email dispatched.`,
+      data: {
+        vendor: updated,
+        userProvisioned: isNewUser,
+        userEmail: user.email,
+        temporaryPassword: isNewUser ? defaultTempPassword : null,
+      },
+      message: `Vendor ${existing.name} successfully approved. Account provisioned and confirmation email dispatched.`,
     });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });

@@ -106,7 +106,8 @@ export async function runVerificationCheck(): Promise<{
           await ProductionSchedulerService.markReminderSent(
             broadcastReminderType,
             'ServiceVerification',
-            item.id
+            item.id,
+            claimed
           );
 
           broadcastCount++;
@@ -153,7 +154,8 @@ export async function runVerificationCheck(): Promise<{
             await ProductionSchedulerService.markReminderSent(
               escalationType,
               'ServiceVerification',
-              item.id
+              item.id,
+              claimed
             );
           } catch (notifErr: any) {
             console.warn('[Scheduler] Notification dispatch warning:', notifErr.message);
@@ -161,7 +163,8 @@ export async function runVerificationCheck(): Promise<{
               escalationType,
               'ServiceVerification',
               item.id,
-              notifErr.message
+              notifErr.message,
+              claimed
             );
           }
 

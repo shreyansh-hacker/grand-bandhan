@@ -5,10 +5,15 @@ import {
   createQuotationRequest,
   submitVendorQuotation,
   selectFinalQuotation,
+  getVendorRfps,
 } from './quotation.controller';
 import { authenticate } from '../../middleware/auth';
 
 const router = Router();
+
+// Vendor RFP discovery (for Vendor Portal)
+router.get('/vendor-rfps/:vendorId', getVendorRfps);
+router.get('/vendor-rfps', getVendorRfps);
 
 // Quotation Requests
 router.get('/', authenticate, listQuotationRequests);

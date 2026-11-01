@@ -140,11 +140,11 @@ async function main() {
 
     // Claim 1: Should succeed
     const claim1 = await (ProductionSchedulerService as any).claimReminder(reminderType, entityType, entityId);
-    assert(claim1 === true, 'Initial reminder claim succeeds');
+    assert(Boolean(claim1) === true, 'Initial reminder claim succeeds');
 
-    // Claim 2: Duplicate check - should return false cleanly via pre-check without throwing P2002
+    // Claim 2: Duplicate check - should return false/null cleanly via pre-check without throwing P2002
     const claim2 = await (ProductionSchedulerService as any).claimReminder(reminderType, entityType, entityId);
-    assert(claim2 === false, 'Subsequent duplicate check returns false cleanly without error');
+    assert(!claim2, 'Subsequent duplicate check returns false cleanly without error');
 
     console.log('\n======================================================');
     console.log(`PHASE 1 TEST SUMMARY: ${passed} PASSED / ${failed} FAILED`);

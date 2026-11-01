@@ -64,6 +64,12 @@ enum PlanningForSide {
   NOT_SPECIFIED
 }
 
+enum RsvpStatus {
+  ATTENDING
+  DECLINED
+  PENDING
+}
+
 enum EnquiryStatus {
   NEW
   CONTACTED
@@ -365,8 +371,28 @@ model Wedding {
   payments             Payment[]
   settlement           Settlement?
   feedbacks            Feedback[]
+  guests               WeddingGuest[]
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+}
+
+model WeddingGuest {
+  id                String          @id @default(uuid())
+  weddingId         String
+  wedding           Wedding         @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  fullName          String
+  email             String?
+  phone             String?
+  side              PlanningForSide @default(NOT_SPECIFIED)
+  rsvpStatus        RsvpStatus      @default(PENDING)
+  guestCount        Int             @default(1)
+  dietaryPreference String?
+  roomAssigned      String?
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([weddingId])
 }
 
 model WeddingStaff {

@@ -90,6 +90,11 @@ export async function recordPaymentTransaction(req: AuthenticatedRequest, res: R
 
     // Execute atomic payment recording inside database transaction with row locking
     const result = await prisma.$transaction(async (tx) => {
+      // 0. Acquire global PostgreSQL transaction-level advisory lock on the transactionRef
+      // Serializes concurrent requests presenting the same transaction reference across ALL payment milestones,
+      // weddings, and agencies before any read or write, guaranteeing strict serializability.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'payment_txn:' + cleanRef}))`;
+
       // 1. Acquire pessimistic row lock on the Payment record to prevent race conditions on paidAmount
       const rows = await tx.$queryRaw<Array<any>>`
         SELECT p.*, w."agencyId", w."weddingCode", w."clientEmail", w."brideName", w."groomName"

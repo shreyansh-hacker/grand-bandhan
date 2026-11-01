@@ -293,6 +293,15 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
             <div class="detail-row"><span class="detail-label">New Status:</span><span class="detail-value">${escapeHtml(data.newStatus)}</span></div>
             ${data.notes ? `<div class="detail-row"><span class="detail-label">Notes:</span><span class="detail-value">${escapeHtml(data.notes)}</span></div>` : ''}
           </div>
+          ${data.temporaryPassword ? `
+          <div class="card" style="border: 2px solid #D4AF37; background: #fffcf0; padding: 18px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top:0; color: #0A2540; font-size: 16px;">👑 Your Royal Client Portal Access Credentials</h3>
+            <div class="detail-row"><span class="detail-label">Login Email:</span><span class="detail-value"><strong>${escapeHtml(data.loginEmail || data.email)}</strong></span></div>
+            <div class="detail-row"><span class="detail-label">Temporary Password:</span><span class="detail-value" style="font-family: monospace; font-size: 15px; color: #8C1D40; font-weight: bold; background: #f3f3f3; padding: 2px 8px; border-radius: 4px;">${escapeHtml(data.temporaryPassword)}</span></div>
+            <div class="detail-row"><span class="detail-label">Standard Login URL:</span><span class="detail-value"><a href="${escapeHtml(data.loginUrl || `${appUrl}/login`)}" style="color: #D4AF37; font-weight: bold;">${appUrl}/login</a></span></div>
+            <div class="detail-row"><span class="detail-label">Security Advisory:</span><span class="detail-value" style="color: #718096; font-size: 12px;">Sign in at /login to review your tailored proposals and customize your credentials.</span></div>
+          </div>
+          ` : ''}
           `,
           { label: 'Track Enquiry Status', url: data.referenceNumber ? `${appUrl}/enquiry/${data.referenceNumber}` : `${appUrl}/dashboard/enquiries` }
         ),
@@ -475,11 +484,21 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
             <div class="detail-row"><span class="detail-label">Package:</span><span class="detail-value">${escapeHtml(data.packageType)}</span></div>
             <div class="detail-row"><span class="detail-label">Lead Planner:</span><span class="detail-value">${escapeHtml(data.plannerName || 'Senior Planner')}</span></div>
           </div>
-          <p>Access your dedicated client portal anytime to track tasks, review vendor quotation comparisons, and verify services.</p>
+
+          <div class="card" style="border: 2px solid #D4AF37; background: #fffcf0; padding: 18px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top:0; color: #0A2540; font-size: 16px;">👑 Your Royal Client Portal Access Credentials</h3>
+            <div class="detail-row"><span class="detail-label">Portal Login Email:</span><span class="detail-value"><strong>${escapeHtml(data.loginEmail || data.recipientEmail)}</strong></span></div>
+            <div class="detail-row"><span class="detail-label">Default Temporary Password:</span><span class="detail-value" style="font-family: monospace; font-size: 15px; color: #8C1D40; font-weight: bold; background: #f3f3f3; padding: 2px 8px; border-radius: 4px;">${escapeHtml(data.temporaryPassword || 'RoyalClient@2026')}</span></div>
+            <div class="detail-row"><span class="detail-label">Portal Direct Access:</span><span class="detail-value"><a href="${escapeHtml(data.portalUrl || `${appUrl}/portal/client`)}" style="color: #0A2540; font-weight: bold;">Open Dedicated Client Portal &rarr;</a></span></div>
+            <div class="detail-row"><span class="detail-label">Standard Login URL:</span><span class="detail-value"><a href="${escapeHtml(data.loginUrl || `${appUrl}/login`)}" style="color: #D4AF37; font-weight: bold;">${appUrl}/login</a></span></div>
+            <div class="detail-row"><span class="detail-label">Security Advisory:</span><span class="detail-value" style="color: #718096; font-size: 12px;">Sign in anytime with this temporary password and customize your credentials in account settings.</span></div>
+          </div>
+
+          <p>Access your dedicated royal client portal to track guest RSVPs, inspect milestone payments, review vendor quotation comparisons, and verify services.</p>
           `,
-          { label: 'Access Client Portal', url: `${appUrl}/portal/client` }
+          { label: 'Access Royal Client Portal', url: data.portalUrl || `${appUrl}/portal/client` }
         ),
-        text: `Wedding celebration confirmed! Code: ${data.weddingCode}. Date: ${data.weddingDate ? new Date(data.weddingDate).toLocaleDateString('en-IN') : 'Scheduled'}. Access portal: ${appUrl}/portal/client`,
+        text: `Wedding celebration confirmed! Code: ${data.weddingCode}. Client Login: ${data.loginEmail || data.recipientEmail}, Password: ${data.temporaryPassword || 'RoyalClient@2026'}. Portal URL: ${data.portalUrl || `${appUrl}/portal/client`}`,
       };
 
     case NotificationEvent.PAYMENT_RECEIVED:
@@ -793,11 +812,22 @@ export function renderEmailTemplate(event: NotificationEvent, data: Record<strin
             <div class="detail-row"><span class="detail-label">Category:</span><span class="detail-value">${escapeHtml(data.category)}</span></div>
             <div class="detail-row"><span class="detail-label">Status:</span><span class="detail-value" style="color: #276749;">Verified &amp; Active Partner</span></div>
           </div>
+
+          <div class="card" style="border: 2px solid #D4AF37; background: #fffcf0; padding: 18px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top:0; color: #0A2540; font-size: 16px;">🔐 Your Vendor Partner Access Credentials</h3>
+            <div class="detail-row"><span class="detail-label">Portal Login Email:</span><span class="detail-value"><strong>${escapeHtml(data.loginEmail || data.email)}</strong></span></div>
+            <div class="detail-row"><span class="detail-label">Default Temporary Password:</span><span class="detail-value" style="font-family: monospace; font-size: 15px; color: #8C1D40; font-weight: bold; background: #f3f3f3; padding: 2px 8px; border-radius: 4px;">${escapeHtml(data.temporaryPassword || 'GrandVendor@2026')}</span></div>
+            <div class="detail-row"><span class="detail-label">Direct Portal Link:</span><span class="detail-value"><a href="${escapeHtml(data.portalUrl || `${appUrl}/portal/vendor`)}" style="color: #0A2540; font-weight: bold;">Open Vendor Sealed Bidding Portal &rarr;</a></span></div>
+            <div class="detail-row"><span class="detail-label">Standard Login URL:</span><span class="detail-value"><a href="${escapeHtml(data.loginUrl || `${appUrl}/login`)}" style="color: #D4AF37; font-weight: bold;">${appUrl}/login</a></span></div>
+            <div class="detail-row"><span class="detail-label">Security Advisory:</span><span class="detail-value" style="color: #718096; font-size: 12px;">Sign in anytime using your temporary password and update your credentials under Profile Settings.</span></div>
+          </div>
+
+          <p>You can access your vendor bidding portal directly with the button below, or log in anytime using your official email and password.</p>
           <p>You are now eligible to receive 3-quote RFP requests, submit live competitive bids, and coordinate palace wedding execution across Rajasthan and India.</p>
           `,
-          { label: 'Access Vendor Portal', url: `${appUrl}/login` }
+          { label: 'Access Vendor Portal Now', url: data.portalUrl || `${appUrl}/portal/vendor` }
         ),
-        text: `Congratulations! ${data.vendorName || data.name} is approved as a Grand Bandhan partner. Sign in: ${appUrl}/login`,
+        text: `Congratulations! ${data.vendorName || data.name} is approved. Sign in with Email: ${data.loginEmail || data.email}, Password: ${data.temporaryPassword || 'GrandVendor@2026'}. Portal: ${data.portalUrl || `${appUrl}/portal/vendor`}`,
       };
 
     case NotificationEvent.PROFILE_UPDATED:

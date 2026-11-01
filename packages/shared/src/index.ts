@@ -54,6 +54,12 @@ export enum PlanningForSide {
   NOT_SPECIFIED = 'NOT_SPECIFIED',
 }
 
+export enum RsvpStatus {
+  ATTENDING = 'ATTENDING',
+  DECLINED = 'DECLINED',
+  PENDING = 'PENDING',
+}
+
 export enum EnquiryStatus {
   NEW = 'NEW',
   CONTACTED = 'CONTACTED',

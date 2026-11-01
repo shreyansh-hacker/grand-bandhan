@@ -1,8 +1,9 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { prisma } from '@grand-bandhan/database';
 import { createWeddingSchema, updateWeddingSchema } from '@grand-bandhan/validation';
 import { AuthenticatedRequest } from '../../middleware/auth';
-import { WeddingStatus, WeddingPackageType, UserRole, PaymentMilestone, PaymentType, PaymentStatus, AgreementStatus } from '@grand-bandhan/shared';
+import { WeddingStatus, WeddingPackageType, UserRole, PaymentMilestone, PaymentType, PaymentStatus, AgreementStatus, AccountStatus, RsvpStatus, PlanningForSide } from '@grand-bandhan/shared';
+import { hashPassword } from '../../utils/hash';
 import { generateInstantWeddingPlan } from '../tasks/task.service';
 import { NotificationService } from '../notifications/notification.service';
 import { NotificationEvent } from '../notifications/notification.types';
@@ -209,6 +210,10 @@ export async function createWedding(req: AuthenticatedRequest, res: Response): P
     });
 
     // Emit Booking Confirmed Event
+    const appUrl = process.env.APP_URL || 'https://grandbandhan.com';
+    const clientPortalUrl = `${appUrl}/portal/client/${wedding.id}`;
+    const loginUrl = `${appUrl}/login`;
+
     await NotificationService.emit(NotificationEvent.BOOKING_CONFIRMED, {
       agencyId,
       recipientEmail: wedding.clientEmail,
@@ -255,9 +260,34 @@ export async function convertEnquiryToWedding(req: AuthenticatedRequest, res: Re
     }
 
     const { packageType, brideName, groomName } = req.body;
+    const defaultTempPassword = 'RoyalClient@2026';
+    let isNewUser = false;
     const weddingCode = `GB-W-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const result = await prisma.$transaction(async (tx) => {
+      // Auto-provision Client User in Neon DB if not existing
+      const normalizedEmail = enquiry.email.toLowerCase().trim();
+      let clientUser = await tx.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (!clientUser) {
+        const passwordHash = await hashPassword(defaultTempPassword);
+        clientUser = await tx.user.create({
+          data: {
+            agencyId: enquiry.agencyId,
+            email: normalizedEmail,
+            passwordHash,
+            role: UserRole.CLIENT,
+            name: enquiry.customerName,
+            phone: enquiry.phone,
+            accountStatus: AccountStatus.ACTIVE,
+            isActive: true,
+            emailVerified: true,
+          },
+        });
+        isNewUser = true;
+      }
       const wedding = await tx.wedding.create({
         data: {
           agencyId: enquiry.agencyId,
@@ -274,6 +304,7 @@ export async function convertEnquiryToWedding(req: AuthenticatedRequest, res: Re
           packageType: packageType || enquiry.packageType || WeddingPackageType.FULL_SERVICE,
           status: WeddingStatus.CONFIRMED,
           plannerId: enquiry.assignedPlannerId || req.user?.userId || null,
+          clientId: clientUser.id,
           notes: enquiry.notes,
         },
       });
@@ -310,26 +341,44 @@ export async function convertEnquiryToWedding(req: AuthenticatedRequest, res: Re
 
       const tasks = await generateInstantWeddingPlan(wedding.id, wedding.weddingDate, wedding.packageType as any, tx);
 
-      return { wedding, tasksCount: tasks.length };
+      return { wedding, clientUser, tasksCount: tasks.length };
     });
+
+    const appUrl = process.env.APP_URL || 'https://grandbandhan.com';
+    const clientPortalUrl = `${appUrl}/portal/client/${result.wedding.id}`;
+    const loginUrl = `${appUrl}/login`;
 
     await NotificationService.emit(NotificationEvent.BOOKING_CONFIRMED, {
       agencyId: enquiry.agencyId,
       recipientEmail: enquiry.email,
       recipientName: `${result.wedding.brideName} & ${result.wedding.groomName}`,
+      recipientRole: 'CLIENT',
       data: {
         weddingCode: result.wedding.weddingCode,
         coupleNames: `${result.wedding.brideName} & ${result.wedding.groomName}`,
         weddingDate: result.wedding.weddingDate,
         location: result.wedding.location,
         packageType: result.wedding.packageType,
+        loginEmail: enquiry.email,
+        temporaryPassword: isNewUser ? defaultTempPassword : 'Use your existing password',
+        isNewUser,
+        portalUrl: clientPortalUrl,
+        loginUrl,
       },
-    });
+    }).catch((err) => console.warn('[Wedding] Booking confirmation notification error:', err?.message));
 
     res.json({
       success: true,
-      data: result.wedding,
-      message: `Enquiry successfully converted to Wedding ${result.wedding.weddingCode} with ${result.tasksCount} dynamic tasks initialized.`,
+      data: {
+        wedding: result.wedding,
+        clientUser: {
+          id: result.clientUser.id,
+          email: result.clientUser.email,
+          isNewUser,
+          temporaryPassword: isNewUser ? defaultTempPassword : null,
+        },
+      },
+      message: `Enquiry successfully converted to Wedding ${result.wedding.weddingCode}. Client account provisioned with ${result.tasksCount} dynamic tasks initialized.`,
     });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
@@ -372,6 +421,196 @@ export async function updateWedding(req: AuthenticatedRequest, res: Response): P
       res.status(400).json({ success: false, errors: err.errors });
       return;
     }
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+
+/**
+ * Client Portal Wedding Details (Overview, Events, Payments, Guests, Agreement)
+ * Accessible via Wedding ID or Wedding Code
+ */
+export async function getWeddingPortalDetails(req: Request, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  try {
+    const wedding = await prisma.wedding.findFirst({
+      where: {
+        OR: [{ id }, { weddingCode: id }],
+      },
+      include: {
+        planner: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        client: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        agreement: true,
+        events: {
+          orderBy: { startTime: 'asc' },
+        },
+        payments: {
+          orderBy: { dueDate: 'asc' },
+        },
+        guests: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!wedding) {
+      res.status(404).json({ success: false, message: 'Wedding celebration not found' });
+      return;
+    }
+
+    // Compute RSVP Statistics
+    const guests = wedding.guests || [];
+    const attendingCount = guests
+      .filter((g) => g.rsvpStatus === 'ATTENDING')
+      .reduce((sum, g) => sum + (g.guestCount || 1), 0);
+    const declinedCount = guests
+      .filter((g) => g.rsvpStatus === 'DECLINED')
+      .reduce((sum, g) => sum + (g.guestCount || 1), 0);
+    const pendingCount = guests
+      .filter((g) => g.rsvpStatus === 'PENDING')
+      .reduce((sum, g) => sum + (g.guestCount || 1), 0);
+
+    res.json({
+      success: true,
+      data: {
+        wedding,
+        rsvpStats: {
+          totalRegisteredGuests: guests.length,
+          totalAttendees: attendingCount,
+          totalDeclined: declinedCount,
+          totalPending: pendingCount,
+          targetCapacity: wedding.guestCount,
+        },
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Get Wedding Guests
+ */
+export async function getWeddingGuests(req: Request, res: Response): Promise<void> {
+  const weddingId = req.params.id as string;
+  try {
+    const guests = await prisma.weddingGuest.findMany({
+      where: { weddingId },
+      orderBy: [{ rsvpStatus: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    res.json({ success: true, data: guests });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Add Wedding Guest
+ */
+export async function addWeddingGuest(req: Request, res: Response): Promise<void> {
+  const weddingId = req.params.id as string;
+  try {
+    const { fullName, email, phone, side, rsvpStatus, guestCount, dietaryPreference, roomAssigned, notes } = req.body;
+
+    if (!fullName) {
+      res.status(400).json({ success: false, message: 'Guest full name is required' });
+      return;
+    }
+
+    const wedding = await prisma.wedding.findUnique({ where: { id: weddingId } });
+    if (!wedding) {
+      res.status(404).json({ success: false, message: 'Wedding not found' });
+      return;
+    }
+
+    const guest = await prisma.weddingGuest.create({
+      data: {
+        weddingId,
+        fullName: String(fullName).trim(),
+        email: email ? String(email).trim().toLowerCase() : null,
+        phone: phone ? String(phone).trim() : null,
+        side: side || 'NOT_SPECIFIED',
+        rsvpStatus: rsvpStatus || 'PENDING',
+        guestCount: Number(guestCount) || 1,
+        dietaryPreference: dietaryPreference ? String(dietaryPreference).trim() : null,
+        roomAssigned: roomAssigned ? String(roomAssigned).trim() : null,
+        notes: notes ? String(notes).trim() : null,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: guest,
+      message: `${guest.fullName} successfully registered on the royal guest list.`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Update Wedding Guest RSVP or Details
+ */
+export async function updateWeddingGuest(req: Request, res: Response): Promise<void> {
+  const guestId = req.params.guestId as string;
+  try {
+    const { fullName, email, phone, side, rsvpStatus, guestCount, dietaryPreference, roomAssigned, notes } = req.body;
+
+    const existing = await prisma.weddingGuest.findUnique({ where: { id: guestId } });
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Guest record not found' });
+      return;
+    }
+
+    const updated = await prisma.weddingGuest.update({
+      where: { id: guestId },
+      data: {
+        ...(fullName && { fullName: String(fullName).trim() }),
+        ...(email !== undefined && { email: email ? String(email).trim().toLowerCase() : null }),
+        ...(phone !== undefined && { phone: phone ? String(phone).trim() : null }),
+        ...(side && { side }),
+        ...(rsvpStatus && { rsvpStatus }),
+        ...(guestCount !== undefined && { guestCount: Number(guestCount) || 1 }),
+        ...(dietaryPreference !== undefined && { dietaryPreference: dietaryPreference ? String(dietaryPreference).trim() : null }),
+        ...(roomAssigned !== undefined && { roomAssigned: roomAssigned ? String(roomAssigned).trim() : null }),
+        ...(notes !== undefined && { notes: notes ? String(notes).trim() : null }),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Guest RSVP details updated successfully.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * Delete Wedding Guest
+ */
+export async function deleteWeddingGuest(req: Request, res: Response): Promise<void> {
+  const guestId = req.params.guestId as string;
+  try {
+    const existing = await prisma.weddingGuest.findUnique({ where: { id: guestId } });
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Guest record not found' });
+      return;
+    }
+
+    await prisma.weddingGuest.delete({ where: { id: guestId } });
+
+    res.json({
+      success: true,
+      message: 'Guest removed from list.',
+    });
+  } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
 }

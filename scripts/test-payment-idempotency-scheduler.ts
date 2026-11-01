@@ -329,7 +329,7 @@ async function main() {
       milestone2.id,
       testAgency.id
     );
-    assert(workerAClaim === true, 'Worker A successfully claims reminder (first arrival)');
+    assert(Boolean(workerAClaim) === true, 'Worker A successfully claims reminder (first arrival)');
 
     // Worker B attempts to claim the EXACT same reminder concurrently
     const workerBClaim = await ProductionSchedulerService.claimReminder(
@@ -338,10 +338,10 @@ async function main() {
       milestone2.id,
       testAgency.id
     );
-    assert(workerBClaim === false, 'Worker B claim is rejected (zero duplicate execution across instances)');
+    assert(!workerBClaim, 'Worker B claim is rejected (zero duplicate execution across instances)');
 
     // Worker A marks it SENT
-    await ProductionSchedulerService.markReminderSent(reminderType1, 'Payment', milestone2.id);
+    await ProductionSchedulerService.markReminderSent(reminderType1, 'Payment', milestone2.id, workerAClaim);
 
     // Worker C arrives after completion
     const workerCClaim = await ProductionSchedulerService.claimReminder(
@@ -350,7 +350,7 @@ async function main() {
       milestone2.id,
       testAgency.id
     );
-    assert(workerCClaim === false, 'Worker C claim on already SENT reminder is rejected');
+    assert(!workerCClaim, 'Worker C claim on already SENT reminder is rejected');
 
     // -------------------------------------------------------------
     // Test 9: Scheduler Crash Recovery for Stale PROCESSING Reminders
@@ -381,7 +381,7 @@ async function main() {
       testAgency.id
     );
     assert(
-      recoveryClaim === true,
+      Boolean(recoveryClaim) === true,
       'Recovery worker successfully reclaims stale PROCESSING reminder abandoned by crashed worker'
     );
 
@@ -391,7 +391,7 @@ async function main() {
     console.log('\n--- 10. Scheduler Safe Retry for FAILED Reminders ---');
     const reminderTypeFail = `TEST_FAIL_RETRY_${Date.now()}`;
 
-    await ProductionSchedulerService.claimReminder(
+    const failLease = await ProductionSchedulerService.claimReminder(
       reminderTypeFail,
       'Payment',
       milestone2.id,
@@ -403,7 +403,8 @@ async function main() {
       reminderTypeFail,
       'Payment',
       milestone2.id,
-      'Simulated SMTP Gateway Timeout 504'
+      'Simulated SMTP Gateway Timeout 504',
+      failLease
     );
 
     const failedRecord = await prisma.scheduledReminder.findFirst({
@@ -418,7 +419,7 @@ async function main() {
       milestone2.id,
       testAgency.id
     );
-    assert(retryClaim === true, 'Subsequent sweep successfully reclaims FAILED reminder for automated retry');
+    assert(Boolean(retryClaim) === true, 'Subsequent sweep successfully reclaims FAILED reminder for automated retry');
 
   } finally {
     // Clean up test records

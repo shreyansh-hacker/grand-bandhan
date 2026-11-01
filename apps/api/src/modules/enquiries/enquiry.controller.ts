@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { prisma } from '@grand-bandhan/database';
 import { publicEnquirySchema, createEnquirySchema, updateEnquiryStatusSchema } from '@grand-bandhan/validation';
 import { AuthenticatedRequest } from '../../middleware/auth';
-import { EnquiryStatus, PlanningForSide, UserRole } from '@grand-bandhan/shared';
+import { EnquiryStatus, PlanningForSide, UserRole, AccountStatus } from '@grand-bandhan/shared';
+import { hashPassword } from '../../utils/hash';
 import { NotificationService } from '../notifications/notification.service';
 import { NotificationEvent } from '../notifications/notification.types';
 
@@ -399,6 +400,36 @@ export async function updateEnquiryStatus(req: AuthenticatedRequest, res: Respon
       },
     });
 
+    // Auto-provision Client User if status transitioned to APPROVED
+    const defaultTempPassword = 'RoyalClient@2026';
+    let isNewUser = false;
+    let provisionedUser: any = null;
+
+    if (parsed.status === EnquiryStatus.APPROVED || parsed.status === ('APPROVED' as any)) {
+      const normalizedEmail = enquiry.email.toLowerCase().trim();
+      let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (!user) {
+        const passwordHash = await hashPassword(defaultTempPassword);
+        user = await prisma.user.create({
+          data: {
+            agencyId: enquiry.agencyId,
+            email: normalizedEmail,
+            passwordHash,
+            role: UserRole.CLIENT,
+            name: enquiry.customerName,
+            phone: enquiry.phone,
+            accountStatus: AccountStatus.ACTIVE,
+            isActive: true,
+            emailVerified: true,
+          },
+        });
+        isNewUser = true;
+      }
+      provisionedUser = user;
+    }
+
+    const appUrl = process.env.APP_URL || 'https://grandbandhan.com';
+
     // Emit Enquiry Status Changed Event
     await NotificationService.emit(NotificationEvent.ENQUIRY_STATUS_CHANGED, {
       agencyId: enquiry.agencyId,
@@ -411,6 +442,9 @@ export async function updateEnquiryStatus(req: AuthenticatedRequest, res: Respon
         oldStatus: enquiry.status,
         newStatus: parsed.status,
         notes: parsed.notes,
+        loginEmail: enquiry.email,
+        temporaryPassword: isNewUser ? defaultTempPassword : (provisionedUser ? 'Use your existing password' : null),
+        loginUrl: `${appUrl}/login`,
       },
     });
 

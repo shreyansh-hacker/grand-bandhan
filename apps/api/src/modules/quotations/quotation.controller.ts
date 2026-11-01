@@ -325,3 +325,55 @@ export async function selectFinalQuotation(req: AuthenticatedRequest, res: Respo
     res.status(500).json({ success: false, message: err.message });
   }
 }
+
+
+export async function getVendorRfps(req: Request, res: Response): Promise<void> {
+  const vendorId = (req.params.vendorId || req.query.vendorId) as string;
+  try {
+    let vendor = null;
+    if (vendorId && vendorId !== 'all') {
+      vendor = await prisma.vendor.findUnique({
+        where: { id: vendorId },
+        include: { quotations: true },
+      });
+    }
+
+    const where: any = {};
+    if (vendor) {
+      where.category = vendor.category;
+    }
+
+    const rfps = await prisma.quotationRequest.findMany({
+      where,
+      include: {
+        wedding: {
+          select: {
+            id: true,
+            weddingCode: true,
+            brideName: true,
+            groomName: true,
+            location: true,
+            weddingDate: true,
+            guestCount: true,
+          },
+        },
+        quotations: {
+          where: vendor ? { vendorId: vendor.id } : undefined,
+          include: { vendor: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        vendor,
+        rfps,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
