@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { prisma } from '@grand-bandhan/database';
 import { hashPassword, comparePassword } from '../../utils/hash';
-import { generateAccessToken, generateRefreshToken, generateSecurePortalToken, generatePasswordResetToken, verifyPasswordResetToken } from '../../utils/jwt';
+import { generateAccessToken, generateRefreshToken, generateSecurePortalToken, generatePasswordResetToken, verifyPasswordResetToken, verifyRefreshToken } from '../../utils/jwt';
 import { loginSchema, registerSchema } from '@grand-bandhan/validation';
 import { UserRole, AgencyStatus, AccountStatus } from '@grand-bandhan/shared';
 import { AuthenticatedRequest } from '../../middleware/auth';
@@ -111,7 +111,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
@@ -214,7 +214,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(201).json({
@@ -460,5 +460,72 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message || 'Error resetting password' });
+  }
+}
+
+export async function refreshTokens(req: Request, res: Response): Promise<void> {
+  try {
+    const token = req.body?.refreshToken || req.cookies?.refreshToken;
+    if (!token) {
+      res.status(401).json({ success: false, message: 'Refresh token required' });
+      return;
+    }
+
+    const payload = verifyRefreshToken(token);
+    if (!payload || !payload.userId) {
+      res.status(401).json({ success: false, message: 'Refresh token expired or invalid' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      include: { agency: true },
+    });
+
+    if (!user || !user.isActive) {
+      res.status(401).json({ success: false, message: 'User account is inactive or not found' });
+      return;
+    }
+
+    if (user.tokenVersion && user.tokenVersion !== payload.tokenVersion) {
+      res.status(401).json({ success: false, message: 'Session has been invalidated. Please log in again.' });
+      return;
+    }
+
+    const jwtPayload = {
+      userId: user.id,
+      agencyId: user.agencyId,
+      email: user.email,
+      role: user.role as any,
+      name: user.name,
+    };
+
+    const newAccessToken = generateAccessToken(jwtPayload);
+    const newRefreshToken = generateRefreshToken({ userId: user.id, tokenVersion: user.tokenVersion || 1 });
+
+    res.cookie('accessToken', newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          agencyId: user.agencyId,
+          agencyName: user.agency?.name,
+        },
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || 'Error refreshing token' });
   }
 }

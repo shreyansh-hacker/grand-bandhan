@@ -67,7 +67,7 @@ export default function LoginPage() {
       });
 
       if (res.success && res.data) {
-        setAuthToken(res.data.accessToken);
+        setAuthToken(res.data.accessToken, res.data.refreshToken);
         if (typeof window !== 'undefined') {
           localStorage.setItem('gb_user', JSON.stringify(res.data.user));
         }

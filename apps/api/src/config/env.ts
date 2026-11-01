@@ -16,7 +16,7 @@ export const env = {
   NEON_BRANCH: process.env.NEON_BRANCH || '',
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'grand-bandhan-jwt-access-secret-production-grade-2025',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'grand-bandhan-jwt-refresh-secret-production-grade-2025',
-  JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
+  JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || '7d',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
   API_URL: process.env.API_URL || 'http://localhost:4000',
