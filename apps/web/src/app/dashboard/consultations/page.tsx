@@ -82,7 +82,12 @@ function ConsultationsContent() {
 
       if (cRes.success && cRes.data) setConsultations(cRes.data);
       if (eRes.success && eRes.data) setEnquiries(eRes.data);
-      if (pRes.success && pRes.data) setPlanners(pRes.data);
+      if (pRes.success && pRes.data) {
+        setPlanners(pRes.data);
+      } else {
+        const uRes = await apiRequest('/api/agencies/users').catch(() => null);
+        if (uRes?.success && uRes.data) setPlanners(uRes.data);
+      }
     } catch (e) {
       console.error('Failed to load consultation data:', e);
     } finally {

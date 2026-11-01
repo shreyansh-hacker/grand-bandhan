@@ -11,6 +11,7 @@ export interface ImperialHeaderProps {
   subtitle?: string;
   showLiveSync?: boolean;
   showBell?: boolean;
+  onBackPress?: () => void;
   rightAction?: {
     icon?: string;
     label?: string;
@@ -23,6 +24,7 @@ export const ImperialHeader: React.FC<ImperialHeaderProps> = ({
   subtitle,
   showLiveSync = true,
   showBell = true,
+  onBackPress,
   rightAction,
 }) => {
   const { status, isConnected } = useSocket();
@@ -35,6 +37,15 @@ export const ImperialHeader: React.FC<ImperialHeaderProps> = ({
       <View style={styles.headerContent}>
         <View style={styles.titleArea}>
           <View style={styles.brandRow}>
+            {onBackPress && (
+              <TouchableOpacity
+                onPress={onBackPress}
+                style={styles.backButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.backButtonText}>←</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.crestRow}>
               <ImperialLogo size="xs" withGlow={false} />
               <Text style={styles.brandTitle}>GRAND BANDHAN</Text>
@@ -122,6 +133,16 @@ const styles = StyleSheet.create({
   },
   titleArea: {
     flex: 1,
+  },
+  backButton: {
+    marginRight: spacing.sm,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  backButtonText: {
+    color: colors.goldLight,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   brandRow: {
     flexDirection: 'row',

@@ -9,3 +9,5 @@ export * from './payment.service';
 export * from './enquiry.service';
 export * from './quotation.service';
 export * from './vendor.service';
+export * from './consultation.service';
+export * from './agreement.service';

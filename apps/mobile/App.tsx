@@ -8,7 +8,12 @@ import { queryClient } from './src/api/queryClient';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { useAuthStore } from './src/store/authStore';
 import { colors, typography } from './src/theme';
-import { ImperialLogo, ServiceVerificationModal, FloatingHelpWidget } from './src/components';
+import {
+  ImperialLogo,
+  ServiceVerificationModal,
+  FloatingHelpWidget,
+  ForegroundNotificationBanner,
+} from './src/components';
 import { useVerificationManager } from './src/hooks';
 
 function HydrationSplash() {
@@ -37,6 +42,7 @@ function MainAppContent() {
   return (
     <NavigationContainer>
       <RootNavigator />
+      <ForegroundNotificationBanner />
       <FloatingHelpWidget />
       {isAuthenticated && (
         <ServiceVerificationModal

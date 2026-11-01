@@ -5,6 +5,7 @@ import { queryClient } from './queryClient';
 import { getStoredAccessToken } from '../utils/storage';
 import { useNotificationStore } from '../store/notificationStore';
 import { useInboxStore } from '../store/inboxStore';
+import { useBannerStore } from '../store/bannerStore';
 import { scheduleSyncService } from '../services/scheduleSync';
 
 export type SocketStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
@@ -92,12 +93,22 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
     queryClient.invalidateQueries({ queryKey: ['analytics'] });
     queryClient.invalidateQueries({ queryKey: ['weddings'] });
 
+    const title = 'Task Status Updated';
+    const message = payload?.task?.title
+      ? `Task "${payload.task.title}" has been updated.`
+      : 'Wedding task progress was recorded.';
+
     useNotificationStore.getState().addNotification({
-      title: 'Task Status Updated',
-      message: payload?.task?.title
-        ? `Task "${payload.task.title}" has been updated.`
-        : 'Wedding task progress was recorded.',
+      title,
+      message,
       type: 'TASK',
+    });
+
+    useBannerStore.getState().showBanner({
+      title,
+      message,
+      type: 'TASK',
+      data: payload?.task,
     });
   });
 
@@ -107,12 +118,22 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
     queryClient.invalidateQueries({ queryKey: ['settlements'] });
     queryClient.invalidateQueries({ queryKey: ['analytics'] });
 
+    const title = 'Payment Recorded ⚜️';
+    const message = payload?.payment?.amount
+      ? `Escrow milestone payment of ₹${payload.payment.amount.toLocaleString('en-IN')} confirmed.`
+      : 'New wedding milestone payment recorded.';
+
     useNotificationStore.getState().addNotification({
-      title: 'Payment Recorded ⚜️',
-      message: payload?.payment?.amount
-        ? `Escrow milestone payment of ₹${payload.payment.amount.toLocaleString('en-IN')} confirmed.`
-        : 'New wedding milestone payment recorded.',
+      title,
+      message,
       type: 'PAYMENT',
+    });
+
+    useBannerStore.getState().showBanner({
+      title,
+      message,
+      type: 'PAYMENT',
+      data: payload?.payment,
     });
   });
 
@@ -121,12 +142,22 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
     queryClient.invalidateQueries({ queryKey: ['events'] });
     queryClient.invalidateQueries({ queryKey: ['timeline'] });
 
+    const title = 'Ceremony Radar Update';
+    const message = payload?.event?.name || payload?.event?.title
+      ? `Ceremony "${payload.event.name || payload.event.title}" status changed.`
+      : 'Day-of ceremony status updated.';
+
     useNotificationStore.getState().addNotification({
-      title: 'Ceremony Radar Update',
-      message: payload?.event?.name || payload?.event?.title
-        ? `Ceremony "${payload.event.name || payload.event.title}" status changed.`
-        : 'Day-of ceremony status updated.',
+      title,
+      message,
       type: 'INFO',
+    });
+
+    useBannerStore.getState().showBanner({
+      title,
+      message,
+      type: 'INFO',
+      data: payload?.event,
     });
   });
 
@@ -135,12 +166,22 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
     queryClient.invalidateQueries({ queryKey: ['arrivals'] });
     queryClient.invalidateQueries({ queryKey: ['events'] });
 
+    const title = 'Vendor Check-In Logged';
+    const message = payload?.vendorName
+      ? `${payload.vendorName} has checked in on venue.`
+      : 'Vendor arrival status updated on venue radar.';
+
     useNotificationStore.getState().addNotification({
-      title: 'Vendor Check-In Logged',
-      message: payload?.vendorName
-        ? `${payload.vendorName} has checked in on venue.`
-        : 'Vendor arrival status updated on venue radar.',
+      title,
+      message,
       type: 'ARRIVAL',
+    });
+
+    useBannerStore.getState().showBanner({
+      title,
+      message,
+      type: 'ARRIVAL',
+      data: payload,
     });
   });
 
@@ -149,12 +190,22 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
     queryClient.invalidateQueries({ queryKey: ['verifications'] });
 
     const verification = payload.verification || payload;
+    const title = 'Service Verification Triggered ⚠️';
+    const message = verification?.serviceName
+      ? `Scheduled milestone "${verification.serviceName}" is awaiting confirmation.`
+      : 'Service deliverable requires on-ground verification.';
+
     useNotificationStore.getState().addNotification({
-      title: 'Service Verification Triggered ⚠️',
-      message: verification?.serviceName
-        ? `Scheduled milestone "${verification.serviceName}" is awaiting confirmation.`
-        : 'Service deliverable requires on-ground verification.',
+      title,
+      message,
       type: 'VERIFICATION',
+    });
+
+    useBannerStore.getState().showBanner({
+      title,
+      message,
+      type: 'VERIFICATION',
+      data: verification,
     });
 
     verificationListeners.forEach((listener) => {
@@ -175,6 +226,12 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
     console.log('[Socket] NOTIFICATION_RECEIVED:', payload);
     if (payload?.notification) {
       useInboxStore.getState().addRealtimeNotification(payload.notification);
+      useBannerStore.getState().showBanner({
+        title: payload.notification.title || 'Grand Bandhan Alert',
+        message: payload.notification.message || 'New notification received.',
+        type: 'INFO',
+        data: payload.notification,
+      });
     }
   });
 

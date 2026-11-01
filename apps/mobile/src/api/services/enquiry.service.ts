@@ -80,4 +80,11 @@ export const enquiryService = {
     );
     return response.data.data;
   },
+
+  async trackByReference(referenceNumber: string): Promise<any> {
+    const response = await apiClient.get<{ success: boolean; data: any }>(
+      ENDPOINTS.ENQUIRIES.TRACK_REFERENCE(referenceNumber)
+    );
+    return response.data.data;
+  },
 };

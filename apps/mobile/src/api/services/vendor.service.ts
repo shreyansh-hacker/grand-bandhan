@@ -35,4 +35,11 @@ export const vendorService = {
     );
     return response.data.data;
   },
+
+  async approve(id: string): Promise<Vendor> {
+    const response = await apiClient.patch<{ success: boolean; data: Vendor }>(
+      ENDPOINTS.VENDORS.APPROVE(id)
+    );
+    return response.data.data;
+  },
 };

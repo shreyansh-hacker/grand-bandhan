@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import { ImperialButton, ImperialInput, ImperialCard, ImperialBadge, ImperialLogo } from '../../components';
 import { useAuthStore } from '../../store/authStore';
+import { TrackEnquiryModal } from '../business/TrackEnquiryModal';
 
 const loginFormSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
@@ -36,6 +37,7 @@ const DEMO_ROLES = [
 export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const { login, isLoading, error, clearError } = useAuthStore();
   const [selectedDemoRole, setSelectedDemoRole] = useState<string | null>(null);
+  const [showTrackModal, setShowTrackModal] = useState<boolean>(false);
 
   const {
     control,
@@ -151,7 +153,26 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
               <Text style={styles.registerLink}>Register Account</Text>
             </TouchableOpacity>
           </View>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>COUPLE SERVICES</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.trackEnquiryBtn}
+            onPress={() => setShowTrackModal(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.trackEnquiryBtnText}>🔍 Track Enquiry by Reference Code</Text>
+          </TouchableOpacity>
         </ImperialCard>
+
+        <TrackEnquiryModal
+          visible={showTrackModal}
+          onClose={() => setShowTrackModal(false)}
+        />
 
         {/* Development Quick Role Switcher */}
         {__DEV__ && (
@@ -366,5 +387,35 @@ const styles = StyleSheet.create({
     color: colors.goldDark,
     marginTop: 3,
     letterSpacing: 0.5,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    fontSize: 9,
+    fontWeight: typography.fontWeight.heavy,
+    color: colors.textMuted,
+    letterSpacing: 1,
+    marginHorizontal: spacing.sm,
+  },
+  trackEnquiryBtn: {
+    backgroundColor: '#FFFDF5',
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm + 2,
+    alignItems: 'center',
+  },
+  trackEnquiryBtnText: {
+    fontSize: typography.fontSize.xs + 1,
+    color: colors.imperialNavy,
+    fontWeight: typography.fontWeight.bold,
   },
 });

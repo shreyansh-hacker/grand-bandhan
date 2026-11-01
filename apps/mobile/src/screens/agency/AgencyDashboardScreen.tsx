@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { colors, typography, spacing, borderRadius } from '../../theme';
@@ -111,6 +112,45 @@ export const AgencyDashboardScreen: React.FC<{ navigation: any }> = ({ navigatio
           </ImperialCard>
         </View>
 
+        {/* Lifecycle Governance Quick Suite */}
+        <View style={styles.suiteContainer}>
+          <TouchableOpacity
+            style={styles.suitePill}
+            onPress={() => navigation.navigate('Consultations')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.suiteIcon}>📅</Text>
+            <View>
+              <Text style={styles.suiteTitle}>Consultations</Text>
+              <Text style={styles.suiteDesc}>Intake Sessions</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.suitePill}
+            onPress={() => navigation.navigate('Agreements')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.suiteIcon}>📜</Text>
+            <View>
+              <Text style={styles.suiteTitle}>Agreements</Text>
+              <Text style={styles.suiteDesc}>20-Section Contracts</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.suitePill}
+            onPress={() => navigation.navigate('VendorsDirectory')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.suiteIcon}>🏛️</Text>
+            <View>
+              <Text style={styles.suiteTitle}>Vendors</Text>
+              <Text style={styles.suiteDesc}>Directory & Approval</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* Agency Portfolio Summary */}
         <ImperialCard variant="elevated" style={styles.card}>
           <View style={styles.rowBetween}>
@@ -181,6 +221,36 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.base,
     paddingBottom: spacing.xxl,
+  },
+  suiteContainer: {
+    flexDirection: 'row',
+    gap: spacing.xs + 2,
+    marginBottom: spacing.md,
+  },
+  suitePill: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    borderRadius: borderRadius.md,
+    padding: spacing.xs + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suiteIcon: {
+    fontSize: 20,
+    marginBottom: 2,
+  },
+  suiteTitle: {
+    fontSize: 9,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.imperialNavy,
+    textAlign: 'center',
+  },
+  suiteDesc: {
+    fontSize: 8,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   skeletonCard: {
     marginBottom: spacing.md,

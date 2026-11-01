@@ -13,6 +13,9 @@ export type AdminTabParamList = {
   AdminEnquiries: undefined;
   AdminWeddings: undefined;
   AdminSettlements: undefined;
+  AdminVendors: undefined;
+  AdminAgreements: undefined;
+  AdminConsultations: undefined;
   AdminHealth: undefined;
   NotificationInbox: undefined;
   AdminProfile: undefined;
@@ -25,6 +28,9 @@ export type AgencyTabParamList = {
   AgencyEnquiries: undefined;
   AgencyWeddings: undefined;
   AgencySettlements: undefined;
+  AgencyVendors: undefined;
+  AgencyAgreements: undefined;
+  AgencyConsultations: undefined;
   NotificationInbox: undefined;
   AgencyProfile: undefined;
 };
@@ -35,6 +41,9 @@ export type PlannerTabParamList = {
   PlannerWeddings: undefined;
   PlannerTasks: undefined;
   PlannerQuotations: undefined;
+  PlannerConsultations: undefined;
+  PlannerAgreements: undefined;
+  PlannerVendors: undefined;
   NotificationInbox: undefined;
   PlannerProfile: undefined;
 };
@@ -81,4 +90,7 @@ export type RootStackParamList = {
   ClientRoot: NavigatorScreenParams<ClientTabParamList>;
   NotificationInbox: undefined;
   CommandCenter: undefined;
+  Consultations: undefined;
+  Agreements: undefined;
+  VendorsDirectory: undefined;
 };

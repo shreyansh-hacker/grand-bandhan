@@ -26,6 +26,7 @@ export const ENDPOINTS = {
     DETAIL: (id: string) => `/api/enquiries/${id}`,
     UPDATE_STATUS: (id: string) => `/api/enquiries/${id}/status`,
     ASSIGN: (id: string) => `/api/enquiries/${id}/assign`,
+    TRACK_REFERENCE: (ref: string) => `/api/enquiries/reference/${ref}`,
   },
 
   WEDDINGS: {
@@ -81,6 +82,24 @@ export const ENDPOINTS = {
     LIST: '/api/vendors',
     DETAIL: (id: string) => `/api/vendors/${id}`,
     CREATE: '/api/vendors',
+    APPROVE: (id: string) => `/api/vendors/${id}/approve`,
+  },
+
+  CONSULTATIONS: {
+    LIST: '/api/consultations',
+    DETAIL: (id: string) => `/api/consultations/${id}`,
+    SCHEDULE: '/api/consultations/schedule',
+    RESCHEDULE: (id: string) => `/api/consultations/${id}/reschedule`,
+    COMPLETE: (id: string) => `/api/consultations/${id}/complete`,
+    CANCEL: (id: string) => `/api/consultations/${id}/cancel`,
+  },
+
+  AGREEMENTS: {
+    LIST: '/api/agreements',
+    DETAIL: (id: string) => `/api/agreements/${id}`,
+    GENERATE: '/api/agreements/generate',
+    SEND: (id: string) => `/api/agreements/${id}/send`,
+    VERIFY: (id: string) => `/api/agreements/${id}/verify`,
   },
 
   ANALYTICS: {

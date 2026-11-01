@@ -5,6 +5,7 @@ import { comparePassword, hashPassword } from '../../utils/hash';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { NotificationService } from '../notifications/notification.service';
 import { NotificationEvent } from '../notifications/notification.types';
+import { UserRole } from '@grand-bandhan/shared';
 
 export async function getMyProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -220,6 +221,51 @@ export async function updateMyPreferences(req: AuthenticatedRequest, res: Respon
       success: true,
       data: pref,
       message: 'Notification preferences updated.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function getStaffList(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const agencyId = req.user?.agencyId;
+    const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+
+    const where: any = {
+      isActive: true,
+      role: {
+        in: [
+          UserRole.SUPER_ADMIN,
+          UserRole.AGENCY_ADMIN,
+          UserRole.WEDDING_PLANNER,
+          UserRole.COORDINATOR,
+        ],
+      },
+    };
+
+    if (!isSuperAdmin && agencyId) {
+      where.agencyId = agencyId;
+    }
+
+    const staff = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        department: true,
+        specialization: true,
+        avatarUrl: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    res.json({
+      success: true,
+      data: staff,
     });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });

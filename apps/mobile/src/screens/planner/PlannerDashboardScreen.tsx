@@ -133,6 +133,45 @@ export const PlannerDashboardScreen: React.FC<{ navigation: any }> = ({ navigati
           </ImperialCard>
         </View>
 
+        {/* Wedding Lifecycle Quick Suite */}
+        <View style={styles.suiteContainer}>
+          <TouchableOpacity
+            style={styles.suitePill}
+            onPress={() => navigation.navigate('Consultations')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.suiteIcon}>📅</Text>
+            <View>
+              <Text style={styles.suiteTitle}>Consultation Studio</Text>
+              <Text style={styles.suiteDesc}>Intake & Vision</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.suitePill}
+            onPress={() => navigation.navigate('Agreements')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.suiteIcon}>📜</Text>
+            <View>
+              <Text style={styles.suiteTitle}>Legal Contracts</Text>
+              <Text style={styles.suiteDesc}>20-Section Agreements</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.suitePill}
+            onPress={() => navigation.navigate('VendorsDirectory')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.suiteIcon}>🏛️</Text>
+            <View>
+              <Text style={styles.suiteTitle}>Vendor Ecosystem</Text>
+              <Text style={styles.suiteDesc}>Artisans & RFPs</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* Featured Wedding Operations Card */}
         {activeWedding ? (
           <ImperialCard variant="goldAccent" style={styles.card}>
@@ -244,6 +283,36 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.base,
     paddingBottom: spacing.xxl,
+  },
+  suiteContainer: {
+    flexDirection: 'row',
+    gap: spacing.xs + 2,
+    marginBottom: spacing.md,
+  },
+  suitePill: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    borderRadius: borderRadius.md,
+    padding: spacing.xs + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suiteIcon: {
+    fontSize: 20,
+    marginBottom: 2,
+  },
+  suiteTitle: {
+    fontSize: 9,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.imperialNavy,
+    textAlign: 'center',
+  },
+  suiteDesc: {
+    fontSize: 8,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   skeletonCard: {
     marginBottom: spacing.md,

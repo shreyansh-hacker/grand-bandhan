@@ -15,6 +15,11 @@ import { VendorNavigator } from './VendorNavigator';
 import { ClientNavigator } from './ClientNavigator';
 import { NotificationInboxScreen } from '../screens/common/NotificationInboxScreen';
 import { CommandCenterScreen } from '../screens/admin/CommandCenterScreen';
+import {
+  ConsultationsScreen,
+  AgreementsScreen,
+  VendorsDirectoryScreen,
+} from '../screens/business';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -47,6 +52,9 @@ export const RootNavigator: React.FC = () => {
           )}
           <Stack.Screen name="NotificationInbox" component={NotificationInboxScreen} />
           <Stack.Screen name="CommandCenter" component={CommandCenterScreen} />
+          <Stack.Screen name="Consultations" component={ConsultationsScreen} />
+          <Stack.Screen name="Agreements" component={AgreementsScreen} />
+          <Stack.Screen name="VendorsDirectory" component={VendorsDirectoryScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>

@@ -34,6 +34,7 @@ const NAVIGATION_ITEMS = [
   { label: 'Service Verification', href: '/dashboard/verification', icon: ShieldCheck },
   { label: 'Payments & Settlement', href: '/dashboard/payments', icon: CreditCard },
   { label: 'Vendor Directory', href: '/dashboard/vendors', icon: Building },
+  { label: 'Agency Governance', href: '/dashboard/agencies', icon: Building, badge: 'Admin' },
   { label: 'Profile & Settings', href: '/dashboard/profile', icon: UserCircle },
 ];
 
