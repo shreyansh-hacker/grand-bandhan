@@ -4,6 +4,8 @@ import { SOCKET_EVENTS } from '@grand-bandhan/shared';
 import { queryClient } from './queryClient';
 import { getStoredAccessToken } from '../utils/storage';
 import { useNotificationStore } from '../store/notificationStore';
+import { useInboxStore } from '../store/inboxStore';
+import { scheduleSyncService } from '../services/scheduleSync';
 
 export type SocketStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
@@ -65,6 +67,12 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
     if (activeWeddingId) {
       socket?.emit(SOCKET_EVENTS.JOIN_WEDDING, activeWeddingId);
     }
+
+    // Phase 3 & 4: Reconcile authoritative schedules and refresh inbox upon connection
+    scheduleSyncService.syncSchedules().catch((e) =>
+      console.warn('[Socket] Schedule sync on connect error:', e.message)
+    );
+    useInboxStore.getState().fetchUnreadCount().catch(() => {});
   });
 
   socket.on('disconnect', (reason) => {
@@ -161,6 +169,13 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
   socket.on(SOCKET_EVENTS.SERVICE_VERIFICATION_UPDATED, (payload) => {
     console.log('[Socket] SERVICE_VERIFICATION_UPDATED received:', payload);
     queryClient.invalidateQueries({ queryKey: ['verifications'] });
+  });
+
+  socket.on(SOCKET_EVENTS.NOTIFICATION_RECEIVED, (payload) => {
+    console.log('[Socket] NOTIFICATION_RECEIVED:', payload);
+    if (payload?.notification) {
+      useInboxStore.getState().addRealtimeNotification(payload.notification);
+    }
   });
 
   return socket;

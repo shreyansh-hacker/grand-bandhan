@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Crown, User, Calendar, Menu, X, ArrowRight } from 'lucide-react';
+import { Crown, User, Calendar, Menu, X, ArrowRight, Briefcase } from 'lucide-react';
 import { motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import EnquiryModal from './EnquiryModal';
 
@@ -110,7 +110,7 @@ export default function Navbar() {
                 />
               </Link>
 
-              {/* Desktop Navigation — Shade 2: Floating Frosted Crystal Capsule */}
+              {/* Desktop Navigation */}
               <nav className="hidden md:flex items-center gap-1 p-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300">
                 <Link
                   href="#services"
@@ -139,14 +139,22 @@ export default function Navbar() {
               </nav>
 
               {/* Action CTAs */}
-              <div className="hidden lg:flex items-center gap-3">
+              <div className="hidden lg:flex items-center gap-2.5">
+                {/* Vendor Partner Button */}
+                <Link
+                  href="/vendor-register"
+                  className="group flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/40 hover:border-amber-400/80 backdrop-blur-md shadow-[0_0_12px_rgba(251,191,36,0.15)] transition-all duration-200"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Join as Vendor</span>
+                </Link>
+
                 {/* Secondary CTA: Frosted Glass Button */}
                 <Link
                   href="/login"
                   className="group flex items-center gap-2 px-4 py-2.5 rounded-full text-xs lg:text-sm font-medium text-cream-100 bg-white/[0.04] hover:bg-gold/15 border border-gold/35 hover:border-gold/70 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)] hover:text-gold hover:shadow-[0_0_15px_rgba(201,169,106,0.25)] active:scale-95 transition-all duration-200"
                 >
-                  
-                  <span>Agency &amp; Client Portal</span>
+                  <span>Command Portal</span>
                 </Link>
 
                 {/* Primary CTA: Polished Gold Gradient Glass Pill */}
@@ -154,7 +162,6 @@ export default function Navbar() {
                   onClick={() => setIsEnquiryModalOpen(true)}
                   className="group flex items-center gap-2 px-5 py-2.5 rounded-full text-xs lg:text-sm font-semibold bg-gold-gradient text-navy-950 shadow-gold-glow hover:shadow-[0_0_24px_rgba(201,169,106,0.55)] hover:brightness-105 active:scale-95 transition-all duration-200"
                 >
-                  
                   <span>Plan Your Wedding</span>
                 </button>
               </div>
@@ -215,12 +222,20 @@ export default function Navbar() {
 
               <div className="pt-2 flex flex-col gap-2.5">
                 <Link
+                  href="/vendor-register"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-amber-300 bg-amber-500/10 border border-amber-400/40 hover:bg-amber-500/20 transition-all"
+                >
+                  <Briefcase className="w-4 h-4 text-amber-400" />
+                  <span>Join as Vendor &amp; Partner</span>
+                </Link>
+                <Link
                   href="/login"
                   onClick={() => setIsMenuOpen(false)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gold bg-white/[0.04] border border-gold/40 hover:bg-gold/10 transition-all"
                 >
                   <User className="w-4 h-4" />
-                  Agency &amp; Client Portal
+                  Command Portal &amp; 1-Click Login
                 </Link>
                 <button
                   onClick={() => {

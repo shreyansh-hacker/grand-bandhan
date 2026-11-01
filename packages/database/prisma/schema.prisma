@@ -233,6 +233,7 @@ model Agency {
   vendors             Vendor[]
   auditLogs           AuditLog[]
   emailLogs           EmailLog[]
+  notifications       Notification[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 }
@@ -266,6 +267,7 @@ model User {
   auditLogs            AuditLog[]
   uploadedFiles        StoredFile[]
   notificationPreference NotificationPreference?
+  notifications        Notification[]
   passwordResetTokens  PasswordResetToken[]
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -740,5 +742,28 @@ model OAuthState {
   agencyId  String?
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+  agencyId    String?
+  agency      Agency?   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    String    // 'SERVICE_VERIFICATION' | 'VENDOR_DELAY' | 'PAYMENT_DUE' | 'WEDDING_TIMELINE' | 'TASK_DEADLINE' | 'COMPLAINT' | 'ESCALATION' | 'GENERAL'
+  title       String
+  message     String
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  entityType  String?   // 'WEDDING' | 'VERIFICATION' | 'TASK' | 'PAYMENT' | 'ENQUIRY' | 'FEEDBACK'
+  entityId    String?
+  deepLinkUri String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, isRead])
+  @@index([agencyId, createdAt])
+  @@index([category])
 }
 

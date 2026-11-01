@@ -1,3 +1,4 @@
+import { ProductionSchedulerService } from '../scheduler/scheduler.service';
 import { prisma } from '@grand-bandhan/database';
 import {
   ServiceVerificationStatus,
@@ -68,66 +69,104 @@ export async function runVerificationCheck(): Promise<{
       const fifteenMinutesMs = 15 * 60 * 1000;
       const thirtyMinutesMs = 30 * 60 * 1000;
 
-      // Duplicate prevention: Only re-broadcast if at least 15 minutes have passed since last trigger
+      // Multi-instance safe verification broadcast claim (15-min atomic bucket)
+      const broadcastBucket = Math.floor(now.getTime() / fifteenMinutesMs);
+      const broadcastReminderType = `VERIFY_BROADCAST_${broadcastBucket}`;
+
       if (!lastBroadcastEntry || millisSinceLastBroadcast >= fifteenMinutesMs) {
-        broadcastWeddingUpdate(
-          item.weddingId,
-          SOCKET_EVENTS.SERVICE_VERIFICATION_TRIGGERED,
-          {
-            verification: item,
-            scheduledConfirmationTime: item.scheduledConfirmationTime,
-            isOverduePrompt: true,
-          }
+        const claimed = await ProductionSchedulerService.claimReminder(
+          broadcastReminderType,
+          'ServiceVerification',
+          item.id,
+          item.wedding.agencyId
         );
 
-        history.push({
-          action: 'SCHEDULED_TRIGGER_BROADCAST',
-          timestamp: now.toISOString(),
-          attempt: (lastBroadcastEntry?.attempt || 0) + 1,
-        });
+        if (claimed) {
+          broadcastWeddingUpdate(
+            item.weddingId,
+            SOCKET_EVENTS.SERVICE_VERIFICATION_TRIGGERED,
+            {
+              verification: item,
+              scheduledConfirmationTime: item.scheduledConfirmationTime,
+              isOverduePrompt: true,
+            }
+          );
 
-        await prisma.serviceVerification.update({
-          where: { id: item.id },
-          data: { auditHistory: history },
-        });
+          history.push({
+            action: 'SCHEDULED_TRIGGER_BROADCAST',
+            timestamp: now.toISOString(),
+            attempt: (lastBroadcastEntry?.attempt || 0) + 1,
+          });
 
-        broadcastCount++;
+          await prisma.serviceVerification.update({
+            where: { id: item.id },
+            data: { auditHistory: history },
+          });
+
+          await ProductionSchedulerService.markReminderSent(
+            broadcastReminderType,
+            'ServiceVerification',
+            item.id
+          );
+
+          broadcastCount++;
+        }
       }
 
-      // Unanswered verification escalation (> 30 mins past scheduled time)
+      // Multi-instance safe escalation claim (> 30 mins past scheduled time)
       const millisPastDue = now.getTime() - new Date(item.scheduledConfirmationTime).getTime();
       const alreadyEscalated = history.some((h) => h.action === 'UNANSWERED_ESCALATION');
 
       if (millisPastDue >= thirtyMinutesMs && !alreadyEscalated) {
-        history.push({
-          action: 'UNANSWERED_ESCALATION',
-          timestamp: now.toISOString(),
-          minutesOverdue: Math.floor(millisPastDue / 60000),
-        });
+        const escalationType = 'VERIFY_ESCALATION_30M';
+        const claimed = await ProductionSchedulerService.claimReminder(
+          escalationType,
+          'ServiceVerification',
+          item.id,
+          item.wedding.agencyId
+        );
 
-        await prisma.serviceVerification.update({
-          where: { id: item.id },
-          data: { auditHistory: history },
-        });
-
-        // Notify agency admin & vendor of unattended verification check
-        try {
-          await NotificationService.emit(NotificationEvent.SERVICE_ISSUE_REPORTED, {
-            agencyId: item.wedding.agencyId,
-            recipientEmail: item.vendor.email,
-            recipientName: item.vendor.name,
-            recipientRole: 'VENDOR',
-            data: {
-              vendorName: item.vendor.name,
-              serviceName: item.serviceName,
-              issueNotes: `Service confirmation for "${item.serviceName}" has been pending for over 30 minutes past scheduled time (${item.scheduledConfirmationTime.toISOString()}).`,
-            },
+        if (claimed) {
+          history.push({
+            action: 'UNANSWERED_ESCALATION',
+            timestamp: now.toISOString(),
+            minutesOverdue: Math.floor(millisPastDue / 60000),
           });
-        } catch (notifErr) {
-          console.warn('[Scheduler] Notification dispatch warning:', notifErr);
-        }
 
-        escalatedCount++;
+          await prisma.serviceVerification.update({
+            where: { id: item.id },
+            data: { auditHistory: history },
+          });
+
+          try {
+            await NotificationService.emit(NotificationEvent.SERVICE_ISSUE_REPORTED, {
+              agencyId: item.wedding.agencyId,
+              recipientEmail: item.vendor.email,
+              recipientName: item.vendor.name,
+              recipientRole: 'VENDOR',
+              data: {
+                vendorName: item.vendor.name,
+                serviceName: item.serviceName,
+                issueNotes: `Service confirmation for "${item.serviceName}" has been pending for over 30 minutes past scheduled time (${item.scheduledConfirmationTime.toISOString()}).`,
+              },
+            });
+            await ProductionSchedulerService.markReminderSent(
+              escalationType,
+              'ServiceVerification',
+              item.id
+            );
+          } catch (notifErr: any) {
+            console.warn('[Scheduler] Notification dispatch warning:', notifErr.message);
+            await ProductionSchedulerService.markReminderFailed(
+              escalationType,
+              'ServiceVerification',
+              item.id,
+              notifErr.message
+            );
+          }
+
+          escalatedCount++;
+        }
       }
     }
 

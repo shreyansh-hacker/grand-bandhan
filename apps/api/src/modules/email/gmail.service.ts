@@ -394,7 +394,55 @@ export class GmailService {
         }
       );
     } catch (apiError: any) {
-      // Log failure in Neon DB EmailLog
+      // Record failure on canonical outbox record if logId provided, else create standalone record
+      if (params.logId) {
+        await prisma.emailLog.update({
+          where: { id: params.logId },
+          data: {
+            status: EmailDeliveryStatus.FAILED,
+            errorMessage: apiError.message,
+          },
+        }).catch((dbErr: any) => {
+          console.warn(`[GmailService] Failed to update EmailLog ${params.logId} on dispatch error:`, dbErr.message);
+        });
+      } else if (!params.skipLogging) {
+        await prisma.emailLog.create({
+          data: {
+            agencyId: params.agencyId || null,
+            recipientEmail: params.to,
+            eventType: 'GMAIL_API_SEND',
+            subject: params.subject,
+            templateName: 'GMAIL_API',
+            status: EmailDeliveryStatus.FAILED,
+            errorMessage: apiError.message,
+            relatedEntityType: params.relatedEntityType || null,
+            relatedEntityId: params.relatedEntityId || null,
+          },
+        }).catch((dbErr: any) => {
+          console.warn('[GmailService] Failed to create standalone EmailLog on dispatch error:', dbErr.message);
+        });
+      }
+
+      throw new Error(`Gmail API sending failed: ${apiError.message}`);
+    }
+
+    const messageId = response.id || `gmail_${Date.now()}`;
+
+    // 4. Record successful dispatch: Update canonical outbox record if logId is provided, else create standalone record
+    if (params.logId) {
+      await prisma.emailLog.update({
+        where: { id: params.logId },
+        data: {
+          status: EmailDeliveryStatus.SENT,
+          providerMessageId: messageId,
+          sentAt: new Date(),
+          errorMessage: null,
+        },
+      }).catch((dbErr: any) => {
+        console.error(`[GmailService] Failed to update canonical EmailLog ${params.logId}:`, dbErr.message);
+        throw new Error(`Email sent via Gmail API (ID: ${messageId}) but failed to update canonical log: ${dbErr.message}`);
+      });
+    } else if (!params.skipLogging) {
       await prisma.emailLog.create({
         data: {
           agencyId: params.agencyId || null,
@@ -402,33 +450,16 @@ export class GmailService {
           eventType: 'GMAIL_API_SEND',
           subject: params.subject,
           templateName: 'GMAIL_API',
-          status: EmailDeliveryStatus.FAILED,
-          errorMessage: apiError.message,
+          status: EmailDeliveryStatus.SENT,
+          providerMessageId: messageId,
+          sentAt: new Date(),
           relatedEntityType: params.relatedEntityType || null,
           relatedEntityId: params.relatedEntityId || null,
         },
-      }).catch(() => {});
-
-      throw new Error(`Gmail API sending failed: ${apiError.message}`);
+      }).catch((dbErr: any) => {
+        console.warn('[GmailService] Failed to create standalone EmailLog on success:', dbErr.message);
+      });
     }
-
-    const messageId = response.id || `gmail_${Date.now()}`;
-
-    // 4. Record successful dispatch in Neon PostgreSQL EmailLog
-    await prisma.emailLog.create({
-      data: {
-        agencyId: params.agencyId || null,
-        recipientEmail: params.to,
-        eventType: 'GMAIL_API_SEND',
-        subject: params.subject,
-        templateName: 'GMAIL_API',
-        status: EmailDeliveryStatus.DELIVERED,
-        providerMessageId: messageId,
-        sentAt: new Date(),
-        relatedEntityType: params.relatedEntityType || null,
-        relatedEntityId: params.relatedEntityId || null,
-      },
-    }).catch(() => {});
 
     return {
       messageId,

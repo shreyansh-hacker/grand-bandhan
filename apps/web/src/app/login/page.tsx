@@ -3,24 +3,60 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Crown, Lock, Mail, ArrowRight, Loader2, AlertTriangle, Clock } from 'lucide-react';
+import { Crown, Lock, Mail, ArrowRight, Loader2, AlertTriangle, Clock, ShieldCheck, UserCheck } from 'lucide-react';
 import { apiRequest, setAuthToken } from '@/lib/api';
+
+const QUICK_ACCOUNTS = [
+  {
+    roleLabel: 'Super Admin',
+    name: 'Shreyansh Sharma',
+    email: 'shreyanshsharma049@gmail.com',
+    password: 'Password@123',
+    icon: '👑',
+    badgeColor: 'border-amber-400 bg-amber-500/10 text-amber-900',
+    description: 'Platform Master & Multi-Agency Governance',
+  },
+  {
+    roleLabel: 'Agency Admin',
+    name: 'Yash Rathore',
+    email: 'yashrathore2574@gmail.com',
+    password: 'Password@123',
+    icon: '🏛️',
+    badgeColor: 'border-blue-400 bg-blue-500/10 text-blue-900',
+    description: 'Agency Operations & Financial Control',
+  },
+  {
+    roleLabel: 'Lead Planner',
+    name: 'Yash Audichya',
+    email: 'yashaudichya001@gmail.com',
+    password: 'Password@123',
+    icon: '📋',
+    badgeColor: 'border-purple-400 bg-purple-500/10 text-purple-900',
+    description: 'Wedding Coordination & Day-of Operations',
+  },
+  {
+    roleLabel: 'Royal Client',
+    name: 'Demo Couple',
+    email: 'client@grandbandhan.com',
+    password: 'Password@123',
+    icon: '💍',
+    badgeColor: 'border-emerald-400 bg-emerald-500/10 text-emerald-900',
+    description: 'Wedding Checklist, Invoices & Itinerary',
+  },
+];
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loggingInAs, setLoggingInAs] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [agencyPending, setAgencyPending] = useState<string | null>(null);
 
-  // Allow evaluator quick-fill during development or if explicitly configured
-  const showEvaluatorQuickFill =
-    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' ||
-    process.env.NODE_ENV !== 'production';
-
-  async function handleLogin(userEmail = email, userPass = password) {
+  async function handleLogin(userEmail = email, userPass = password, roleTag?: string) {
     setLoading(true);
+    if (roleTag) setLoggingInAs(roleTag);
     setError('');
     setAgencyPending(null);
 
@@ -60,14 +96,14 @@ export default function LoginPage() {
       }
     } finally {
       setLoading(false);
+      setLoggingInAs(null);
     }
   }
 
-  // Pre-fill credentials helper for evaluation
-  function prefillEvaluatorAccount(evalEmail: string) {
-    setEmail(evalEmail);
-    // Uses standard demo password placeholder for dev review
-    setPassword('GrandBandhan@2025');
+  function handleOneClickLogin(acc: typeof QUICK_ACCOUNTS[0]) {
+    setEmail(acc.email);
+    setPassword(acc.password);
+    handleLogin(acc.email, acc.password, acc.roleLabel);
   }
 
   return (
@@ -77,8 +113,13 @@ export default function LoginPage() {
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-royal/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3 relative z-10">
-        <Link href="/">
-       
+        <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
+          <div className="flex items-center justify-center gap-2">
+            <Crown className="w-8 h-8 text-gold-dark" />
+            <span className="font-serif text-2xl font-bold tracking-widest text-gold-gradient">
+              GRAND BANDHAN
+            </span>
+          </div>
         </Link>
         <h2 className="font-serif text-3xl font-bold tracking-tight text-cream">
           Grand Bandhan Command Portal
@@ -88,8 +129,64 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg relative z-10 px-4 sm:px-0">
         <div className="bg-cream border border-gold/40 py-8 px-6 shadow-2xl rounded-2xl sm:px-10 space-y-6">
+          {/* Quick 1-Click Demo Login Bar */}
+          <div className="p-4 bg-navy-950/5 rounded-xl border border-gold/40 shadow-inner">
+            <div className="flex items-center justify-between gap-1.5 mb-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-navy-900">
+                
+                <span className="uppercase tracking-wider">⚡ 1-Click Instant Login</span>
+              </div>
+              <span className="text-[10px] text-darkText/60 font-medium">
+                Click any role to log in immediately
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {QUICK_ACCOUNTS.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleOneClickLogin(acc)}
+                  className="p-2.5 rounded-lg border border-gold/40 bg-white hover:bg-gold/10 hover:border-gold active:scale-95 transition-all text-left group shadow-sm flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-navy-950 group-hover:text-royal flex items-center gap-1">
+                      <span>{acc.icon}</span>
+                      <span>{acc.roleLabel}</span>
+                    </span>
+                    <span className="text-[10px] text-royal font-semibold group-hover:underline">
+                      {loggingInAs === acc.roleLabel ? (
+                        <span className="flex items-center gap-1 text-gold-dark">
+                          <Loader2 className="w-3 h-3 animate-spin text-gold-dark" />
+                          Signing In...
+                        </span>
+                      ) : (
+                        'Login →'
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-darkText/80 font-medium truncate">
+                    {acc.name}
+                  </div>
+                  <div className="text-[10px] text-darkText/50 truncate font-mono">
+                    {acc.email}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-navy-200"></div>
+            <span className="flex-shrink mx-4 text-xs font-bold text-darkText/50 uppercase tracking-widest">
+              Or Sign In Manually
+            </span>
+            <div className="flex-grow border-t border-navy-200"></div>
+          </div>
+
           {agencyPending && (
             <div className="p-3 text-xs bg-amber-50 border border-amber-300 text-amber-900 rounded-lg flex items-start gap-2">
               <Clock className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
@@ -123,7 +220,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@grandbandhan.com"
+                  placeholder="shreyanshsharma049@gmail.com"
                   className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-navy-200 rounded-lg focus:outline-none focus:border-gold"
                 />
               </div>
@@ -149,7 +246,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2.5 px-4 rounded-lg bg-gold-gradient text-navy-950 font-bold text-sm shadow-gold-glow hover:brightness-105 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {loading && !loggingInAs ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-navy-950" />
                   <span>Authenticating Royal Credentials...</span>
@@ -163,51 +260,20 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Development / Evaluation Role Evaluator Buttons */}
-          {showEvaluatorQuickFill && (
-            <div className="pt-4 border-t border-navy-200/80">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-navy-900 mb-2">
-
-                <span>Pre-fill Evaluator Accounts (Dev Mode):</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => prefillEvaluatorAccount('admin@grandbandhan.com')}
-                  className="py-1.5 px-2 bg-navy-900 text-gold rounded border border-gold/40 hover:bg-navy-800 text-left font-medium"
-                >
-                  👑 Super Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => prefillEvaluatorAccount('planner@grandbandhan.com')}
-                  className="py-1.5 px-2 bg-navy-900 text-gold rounded border border-gold/40 hover:bg-navy-800 text-left font-medium"
-                >
-                  📋 Wedding Planner
-                </button>
-                <button
-                  type="button"
-                  onClick={() => prefillEvaluatorAccount('coordinator@grandbandhan.com')}
-                  className="py-1.5 px-2 bg-navy-900 text-gold rounded border border-gold/40 hover:bg-navy-800 text-left font-medium"
-                >
-                  📍 On-ground Staff
-                </button>
-                <button
-                  type="button"
-                  onClick={() => prefillEvaluatorAccount('client@grandbandhan.com')}
-                  className="py-1.5 px-2 bg-navy-900 text-gold rounded border border-gold/40 hover:bg-navy-800 text-left font-medium"
-                >
-                  💍 Couple / Client
-                </button>
-              </div>
+          <div className="flex items-center justify-between text-xs text-darkText/70 pt-2 border-t border-navy-200/80">
+            <div>
+              Need to register an agency?{' '}
+              <Link href="/register" className="font-semibold text-royal hover:underline">
+                Register Agency
+              </Link>
             </div>
-          )}
-
-          <div className="text-center text-xs text-darkText/70">
-            Need to register a wedding agency?{' '}
-            <Link href="/register" className="font-semibold text-royal hover:underline">
-              Register New Agency
-            </Link>
+            <div>
+              <Link href="/vendor-register" className="font-semibold text-amber-700 hover:underline">
+                Join as Vendor →
+              </Link>
+            </div>
+          </div>
+            </div>
           </div>
         </div>
       </div>

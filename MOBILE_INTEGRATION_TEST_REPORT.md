@@ -20,7 +20,8 @@
 | **4. Production Security & Secrets** | 3 | 3 | 0 | 0 | 100% |
 | **5. Service Verification & Scheduler** | 2 | 1 | 0 | 1 | 50% |
 | **6. Dispatch Desk Email Notifications** | 2 | 2 | 0 | 0 | 100% |
-| **TOTAL** | **24** | **22** | **1** | **1** | **91.7%** |
+| **7. Notification Architecture & Local Alarms** | 16 | 16 | 0 | 0 | 100% |
+| **TOTAL** | **40** | **38** | **1** | **1** | **95.0%** |
 
 ---
 
@@ -136,7 +137,30 @@ The debug APK size is 117.0 MB because all 4 Android Native ABIs are packaged in
 
 ---
 
-## 5. Actionable Items & Unblocking Requirements
+## 5. Suite 7: Notification Architecture, Central Inbox & Local Alarms
+
+| Test ID | Test Name | Expected Result | Actual Result | Status | Evidence / Notes |
+|---|---|---|---|---|---|
+| **NOTIF-01** | Super Admin Neon Account Presence | Found in Neon `User` table | Yash Rathore (`admin@grandbandhan.com`) verified | ✅ **PASS** | Role: `SUPER_ADMIN` |
+| **NOTIF-02** | Agency Admin Neon Account Presence | Found in Neon `User` table | Verified agency admin account | ✅ **PASS** | Role: `AGENCY_ADMIN` |
+| **NOTIF-03** | Central Inbox Record Creation | Persisted in Neon `Notification` | Created `SERVICE_VERIFICATION` notification | ✅ **PASS** | `isRead: false` |
+| **NOTIF-04** | Initial Unread Status Verification | `isRead === false` | Verified unread state | ✅ **PASS** | Correctly initialized |
+| **NOTIF-05** | Notification Category Validation | Category enum stored accurately | `SERVICE_VERIFICATION` enum preserved | ✅ **PASS** | Verified enum integrity |
+| **NOTIF-06** | Unread Count Query Aggregation | Count query reflects active unread items | Accurately aggregates unread records | ✅ **PASS** | `count >= 1` |
+| **NOTIF-07** | Mark Single Notification Read | `isRead === true`, `readAt != null` | Marked read with timestamp | ✅ **PASS** | `readAt` populated |
+| **NOTIF-08** | Read Timestamp Populated | UTC date recorded upon read | Confirmed UTC ISO timestamp | ✅ **PASS** | Real timestamp verified |
+| **NOTIF-09** | Mark All As Read Invalidation | Unread count drops to 0 | All notifications marked read for user | ✅ **PASS** | `unreadCount === 0` |
+| **NOTIF-10** | Multi-Tenant Agency Isolation | Cross-agency notification blocked | Foreign agency query returns 0 rows | ✅ **PASS** | Strict agency isolation |
+| **NOTIF-11** | Authoritative Schedule Sync Queries | Verifications, Timelines, Tasks queried | Unified schedule payload returned | ✅ **PASS** | Authoritative backend data |
+| **NOTIF-12** | UTC ISO-8601 Timestamp Integrity | Timestamps have valid timezone offsets | Strict UTC comparison validated | ✅ **PASS** | Safe across timezones |
+| **NOTIF-13** | Admin Command Center Aggregation | Aggregates pending verifications, delays | Counts verifications, tasks, events | ✅ **PASS** | Live Neon aggregates |
+| **NOTIF-14** | Offline Cache Simulation | In-memory & local store snapshot | Caches weddings & notifications | ✅ **PASS** | Read-only offline access |
+| **NOTIF-15** | Security Logout Purge | Purges all cached records on logout | Cache completely wiped | ✅ **PASS** | Zero session leakage |
+| **NOTIF-16** | Notification Alarm Cancellation | Clears AlarmManager and local schedules | Alarms canceled upon logout | ✅ **PASS** | Local schedules purged |
+
+---
+
+## 6. Actionable Items & Unblocking Requirements
 
 1. **Super Admin Password Hash:**  
    `admin@grandbandhan.com` password hash in Neon does not match `GrandBandhan@2025`. All tests currently use `agency@grandbandhan.com` (`AGENCY_ADMIN`). If you wish to update the Super Admin password, authorize a password update script.

@@ -9,19 +9,23 @@ export type CommonScreensParamList = {
 // Super Admin Tabs
 export type AdminTabParamList = {
   AdminDashboard: undefined;
+  CommandCenter: undefined;
   AdminEnquiries: undefined;
   AdminWeddings: undefined;
   AdminSettlements: undefined;
   AdminHealth: undefined;
+  NotificationInbox: undefined;
   AdminProfile: undefined;
 };
 
 // Agency Admin Tabs
 export type AgencyTabParamList = {
   AgencyDashboard: undefined;
+  CommandCenter: undefined;
   AgencyEnquiries: undefined;
   AgencyWeddings: undefined;
   AgencySettlements: undefined;
+  NotificationInbox: undefined;
   AgencyProfile: undefined;
 };
 
@@ -31,6 +35,7 @@ export type PlannerTabParamList = {
   PlannerWeddings: undefined;
   PlannerTasks: undefined;
   PlannerQuotations: undefined;
+  NotificationInbox: undefined;
   PlannerProfile: undefined;
 };
 
@@ -39,6 +44,7 @@ export type CoordinatorTabParamList = {
   CoordinatorDashboard: undefined;
   CoordinatorTimeline: undefined;
   CoordinatorVerifications: undefined;
+  NotificationInbox: undefined;
   CoordinatorProfile: undefined;
 };
 
@@ -48,6 +54,7 @@ export type VendorTabParamList = {
   VendorQuotations: undefined;
   VendorArrival: undefined;
   VendorSettlements: undefined;
+  NotificationInbox: undefined;
   VendorProfile: undefined;
 };
 
@@ -56,6 +63,7 @@ export type ClientTabParamList = {
   ClientDashboard: undefined;
   ClientQuotations: undefined;
   ClientPayments: undefined;
+  NotificationInbox: undefined;
   ClientProfile: undefined;
 };
 
@@ -71,4 +79,6 @@ export type RootStackParamList = {
   CoordinatorRoot: NavigatorScreenParams<CoordinatorTabParamList>;
   VendorRoot: NavigatorScreenParams<VendorTabParamList>;
   ClientRoot: NavigatorScreenParams<ClientTabParamList>;
+  NotificationInbox: undefined;
+  CommandCenter: undefined;
 };

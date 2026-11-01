@@ -87,8 +87,18 @@ export default function HomePage() {
                 href="/login"
                 className="w-full sm:w-auto px-8 py-4 rounded-xl border border-white/30 text-white hover:bg-white/10 font-semibold text-base transition-colors flex items-center justify-center gap-2 backdrop-blur-sm"
               >
-                <span>Agency & Client Portal</span>
+                <span>Command Portal</span>
                 <ArrowRight className="w-4 h-4 text-gold" />
+              </Link>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+              <Link
+                href="/vendor-register"
+                className="w-full sm:w-auto px-6 py-4 rounded-xl border border-amber-400/50 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 font-semibold text-base transition-colors flex items-center justify-center gap-2 backdrop-blur-sm shadow-[0_0_15px_rgba(251,191,36,0.2)]"
+              >
+                <span>Join Vendor Network</span>
+                <ChevronRight className="w-4 h-4 text-amber-300" />
               </Link>
             </motion.div>
           </div>
@@ -520,6 +530,12 @@ export default function HomePage() {
               className="px-8 py-3.5 rounded-xl border border-gold/40 text-gold hover:bg-gold/15 font-semibold text-sm transition-colors"
             >
               Sign In to Command Center &rarr;
+            </Link>
+            <Link
+              href="/vendor-register"
+              className="px-8 py-3.5 rounded-xl border border-amber-400/50 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 font-semibold text-sm transition-colors"
+            >
+              Partner as Luxury Vendor &rarr;
             </Link>
           </div>
         </div>

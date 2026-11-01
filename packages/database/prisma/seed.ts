@@ -42,7 +42,7 @@ async function main() {
         name: 'Grand Bandhan Imperial Weddings',
         slug: 'grand-bandhan-imperial',
         logoUrl: '/images/brand/logo-gold.svg',
-        contactEmail: 'concierge@grandbandhan.com',
+        contactEmail: 'shreyanshsharma049@gmail.com',
         contactPhone: '+91 98200 12345',
         address: 'The Imperial Pavilion, Umaid Heritage Road, Udaipur, Rajasthan',
       },

@@ -11,3 +11,4 @@ export * from './ImperialLogo';
 export * from './ServiceVerificationModal';
 export * from './NotificationModal';
 export * from './FloatingHelpWidget';
+export * from './OfflineStatusBar';
