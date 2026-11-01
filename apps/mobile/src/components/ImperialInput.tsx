@@ -5,6 +5,7 @@ import {
   Text,
   StyleSheet,
   ViewStyle,
+  TextStyle,
   TextInputProps,
   TouchableOpacity,
 } from 'react-native';
@@ -12,6 +13,7 @@ import { colors, typography, spacing, borderRadius } from '../theme';
 
 export interface ImperialInputProps extends TextInputProps {
   label?: string;
+  labelStyle?: TextStyle;
   error?: string;
   containerStyle?: ViewStyle;
   leftIcon?: React.ReactNode;
@@ -21,6 +23,7 @@ export interface ImperialInputProps extends TextInputProps {
 
 export const ImperialInput: React.FC<ImperialInputProps> = ({
   label,
+  labelStyle,
   error,
   containerStyle,
   leftIcon,
@@ -37,7 +40,7 @@ export const ImperialInput: React.FC<ImperialInputProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
       <View
         style={[
           styles.inputWrapper,

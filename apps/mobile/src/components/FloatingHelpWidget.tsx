@@ -29,8 +29,8 @@ export const FloatingHelpWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<HelpCategory>('PLANNING_INQUIRY');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,12 +44,32 @@ export const FloatingHelpWidget: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    const customerName = name.trim() || user?.name || 'Grand Bandhan Guest';
-    const customerEmail = email.trim() || user?.email || 'guest@grandbandhan.com';
-    const customerPhone = phone.trim() || user?.phone || '+91 99999 99999';
+    const customerName = (name.trim() || user?.name || '').trim();
+    const customerEmail = (email.trim() || user?.email || '').trim().toLowerCase();
+    const customerPhone = (phone.trim() || user?.phone || '').trim();
+
+    if (!customerName || customerName.length < 2) {
+      Alert.alert('Name Required', 'Please enter your full name or couple name.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!customerEmail || !emailRegex.test(customerEmail)) {
+      Alert.alert(
+        'Valid Email Required',
+        'Please enter a valid email address so our concierge team can email your confirmation, reference code and quotation proposals.'
+      );
+      return;
+    }
+
+    const cleanedPhone = customerPhone.replace(/\D/g, '');
+    if (!customerPhone || cleanedPhone.length < 8) {
+      Alert.alert('Phone Required', 'Please provide a valid contact number (at least 8-10 digits).');
+      return;
+    }
 
     if (!message.trim()) {
-      Alert.alert('Details Required', 'Please provide a short description or inquiry.');
+      Alert.alert('Details Required', 'Please describe your wedding requirement, issue, or question.');
       return;
     }
 
@@ -62,10 +82,11 @@ export const FloatingHelpWidget: React.FC = () => {
         GENERAL_SUPPORT: '💬 CONCIERGE ASSISTANCE',
       };
 
-      const enrichedNotes = `[${categoryTitles[selectedCategory]}]\n${message.trim()}\n\nSender: ${customerName} (${customerPhone})`;
+      const enrichedNotes = `[${categoryTitles[selectedCategory]}]\n${message.trim()}\n\nSender: ${customerName} (${customerPhone}) | Email: ${customerEmail}`;
 
+      let refNumber = '';
       if (isAuthenticated) {
-        await enquiryService.create({
+        const res = await enquiryService.create({
           customerName,
           email: customerEmail,
           phone: customerPhone,
@@ -77,8 +98,9 @@ export const FloatingHelpWidget: React.FC = () => {
           planningFor: PlanningForSide.NOT_SPECIFIED,
           notes: enrichedNotes,
         });
+        refNumber = res.referenceNumber || '';
       } else {
-        await enquiryService.createPublic({
+        const res = await enquiryService.createPublic({
           customerName,
           email: customerEmail,
           phone: customerPhone,
@@ -90,14 +112,30 @@ export const FloatingHelpWidget: React.FC = () => {
           planningFor: PlanningForSide.NOT_SPECIFIED,
           notes: enrichedNotes,
         });
+        refNumber = res.referenceNumber;
       }
 
       Alert.alert(
         '👑 Royal Concierge Alerted',
-        'Your request has been dispatched directly to the Imperial Management Desk. A concierge officer will contact you promptly.',
-        [{ text: 'Dismiss', onPress: () => setIsOpen(false) }]
+        `Your request has been dispatched directly to the Imperial Management Desk.\n\n` +
+        `• Reference Code: ${refNumber || 'Assigned'}\n` +
+        `• Confirmation Email: ${customerEmail}\n\n` +
+        `A concierge officer will review your notes and contact you promptly.`,
+        [
+          {
+            text: 'Dismiss',
+            onPress: () => {
+              setIsOpen(false);
+              setMessage('');
+              if (!isAuthenticated) {
+                setName('');
+                setEmail('');
+                setPhone('');
+              }
+            },
+          },
+        ]
       );
-      setMessage('');
     } catch (err: any) {
       Alert.alert('Assistance Desk', err?.response?.data?.message || err?.message || 'Failed to dispatch request.');
     } finally {
@@ -214,15 +252,26 @@ export const FloatingHelpWidget: React.FC = () => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Form Inputs */}
+                {/* Form Inputs with Clear Gold/White Labels */}
                 <ImperialInput
                   label="Your Name *"
+                  labelStyle={styles.inputLabel}
                   placeholder="Royal Guest / Couple"
                   value={name}
                   onChangeText={setName}
                 />
                 <ImperialInput
+                  label="Email Address *"
+                  labelStyle={styles.inputLabel}
+                  placeholder="name@example.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+                <ImperialInput
                   label="Contact Phone *"
+                  labelStyle={styles.inputLabel}
                   placeholder="+91 98765 43210"
                   keyboardType="phone-pad"
                   value={phone}
@@ -230,6 +279,7 @@ export const FloatingHelpWidget: React.FC = () => {
                 />
                 <ImperialInput
                   label="Message / Inquiries *"
+                  labelStyle={styles.inputLabel}
                   placeholder="Describe your requirement, issue or question..."
                   multiline
                   numberOfLines={4}
@@ -308,7 +358,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   modalCard: {
-    maxHeight: '88%',
+    maxHeight: '90%',
     padding: spacing.md,
     borderRadius: borderRadius.xl,
   },
@@ -383,6 +433,13 @@ const styles = StyleSheet.create({
   catTextActive: {
     color: colors.gold,
     fontWeight: typography.fontWeight.bold,
+  },
+  inputLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.goldLight,
+    fontWeight: typography.fontWeight.bold,
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
   actionRow: {
     flexDirection: 'row',
