@@ -7,6 +7,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useInboxStore } from '../store/inboxStore';
 import { useBannerStore } from '../store/bannerStore';
 import { scheduleSyncService } from '../services/scheduleSync';
+import { nativeNotification } from '../services/nativeNotification';
 
 export type SocketStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
@@ -110,6 +111,15 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
       type: 'TASK',
       data: payload?.task,
     });
+
+    nativeNotification.displayNotification({
+      id: `task_${payload?.task?.id || Date.now()}`,
+      title,
+      message,
+      channelId: 'gb_general',
+      deepLinkUri: 'grandbandhan://tasks',
+      dataJson: JSON.stringify(payload?.task),
+    }).catch(() => {});
   });
 
   socket.on(SOCKET_EVENTS.PAYMENT_RECORDED, (payload) => {
@@ -135,6 +145,15 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
       type: 'PAYMENT',
       data: payload?.payment,
     });
+
+    nativeNotification.displayNotification({
+      id: `payment_${payload?.payment?.id || Date.now()}`,
+      title,
+      message,
+      channelId: 'gb_payments',
+      deepLinkUri: 'grandbandhan://payments',
+      dataJson: JSON.stringify(payload?.payment),
+    }).catch(() => {});
   });
 
   socket.on(SOCKET_EVENTS.EVENT_STATUS_CHANGED, (payload) => {
@@ -159,6 +178,15 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
       type: 'INFO',
       data: payload?.event,
     });
+
+    nativeNotification.displayNotification({
+      id: `event_${payload?.event?.id || Date.now()}`,
+      title,
+      message,
+      channelId: 'gb_milestones',
+      deepLinkUri: 'grandbandhan://timeline',
+      dataJson: JSON.stringify(payload?.event),
+    }).catch(() => {});
   });
 
   socket.on(SOCKET_EVENTS.VENDOR_ARRIVAL_UPDATED, (payload) => {
@@ -183,6 +211,15 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
       type: 'ARRIVAL',
       data: payload,
     });
+
+    nativeNotification.displayNotification({
+      id: `arrival_${payload?.vendorId || Date.now()}`,
+      title,
+      message,
+      channelId: 'gb_milestones',
+      deepLinkUri: 'grandbandhan://timeline',
+      dataJson: JSON.stringify(payload),
+    }).catch(() => {});
   });
 
   socket.on(SOCKET_EVENTS.SERVICE_VERIFICATION_TRIGGERED, (payload) => {
@@ -208,6 +245,16 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
       data: verification,
     });
 
+    // Pinned Android system notification in notification center
+    nativeNotification.displayNotification({
+      id: `verif_${verification?.id || Date.now()}`,
+      title,
+      message,
+      channelId: 'gb_verifications',
+      deepLinkUri: 'grandbandhan://verifications',
+      dataJson: JSON.stringify(verification),
+    }).catch(() => {});
+
     verificationListeners.forEach((listener) => {
       try {
         listener(verification);
@@ -232,6 +279,15 @@ export async function initSocket(explicitToken?: string): Promise<Socket> {
         type: 'INFO',
         data: payload.notification,
       });
+
+      nativeNotification.displayNotification({
+        id: `notif_${payload.notification.id || Date.now()}`,
+        title: payload.notification.title || 'Grand Bandhan Alert',
+        message: payload.notification.message || 'New notification received.',
+        channelId: 'gb_general',
+        deepLinkUri: payload.notification.deepLinkUri || 'grandbandhan://notifications',
+        dataJson: JSON.stringify(payload.notification),
+      }).catch(() => {});
     }
   });
 

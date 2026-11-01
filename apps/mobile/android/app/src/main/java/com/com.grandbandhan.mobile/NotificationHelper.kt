@@ -37,6 +37,7 @@ object NotificationHelper {
                     lightColor = Color.rgb(212, 168, 83)
                     enableVibration(true)
                     vibrationPattern = longArrayOf(0, 300, 150, 300)
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 },
                 NotificationChannel(
                     CHANNEL_MILESTONES,
@@ -47,6 +48,7 @@ object NotificationHelper {
                     enableLights(true)
                     lightColor = Color.rgb(212, 168, 83)
                     enableVibration(true)
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 },
                 NotificationChannel(
                     CHANNEL_PAYMENTS,
@@ -111,6 +113,9 @@ object NotificationHelper {
             else -> CHANNEL_GENERAL
         }
 
+        val isVerification = targetChannel == CHANNEL_VERIFICATIONS
+        val isCritical = isVerification || targetChannel == CHANNEL_MILESTONES
+
         val builder = NotificationCompat.Builder(context, targetChannel)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
@@ -118,13 +123,11 @@ object NotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setColor(IMPERIAL_GOLD_COLOR)
             .setAutoCancel(true)
+            .setOngoing(isVerification) // Pinned in notification center until resolved
             .setContentIntent(pendingIntent)
-            .setPriority(
-                if (targetChannel == CHANNEL_VERIFICATIONS || targetChannel == CHANNEL_MILESTONES)
-                    NotificationCompat.PRIORITY_HIGH
-                else
-                    NotificationCompat.PRIORITY_DEFAULT
-            )
+            .setPriority(if (isCritical) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_DEFAULT)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         try {
             managerCompat.notify(notificationId, builder.build())

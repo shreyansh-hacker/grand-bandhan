@@ -23,14 +23,9 @@ export const ForegroundNotificationBanner: React.FC<ForegroundNotificationBanner
   const { banner, dismissBanner } = useBannerStore();
   const translateY = useRef(new Animated.Value(-150)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (banner) {
-      if (dismissTimerRef.current) {
-        clearTimeout(dismissTimerRef.current);
-      }
-
       // Slide down animation
       Animated.parallel([
         Animated.spring(translateY, {
@@ -45,11 +40,7 @@ export const ForegroundNotificationBanner: React.FC<ForegroundNotificationBanner
           useNativeDriver: true,
         }),
       ]).start();
-
-      // Auto dismiss after 5 seconds
-      dismissTimerRef.current = setTimeout(() => {
-        handleDismiss();
-      }, 5000);
+      // Persistent in-app alert: Remains visible until user taps to act or dismisses
     } else {
       Animated.parallel([
         Animated.timing(translateY, {
@@ -64,12 +55,6 @@ export const ForegroundNotificationBanner: React.FC<ForegroundNotificationBanner
         }),
       ]).start();
     }
-
-    return () => {
-      if (dismissTimerRef.current) {
-        clearTimeout(dismissTimerRef.current);
-      }
-    };
   }, [banner]);
 
   const handleDismiss = () => {
@@ -156,9 +141,9 @@ export const ForegroundNotificationBanner: React.FC<ForegroundNotificationBanner
             <TouchableOpacity
               onPress={handleDismiss}
               style={styles.closeHitArea}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Text style={styles.closeIcon}>✕</Text>
+              <Text style={styles.closeIcon}>✕ Dismiss</Text>
             </TouchableOpacity>
           </View>
 
@@ -223,12 +208,15 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   closeHitArea: {
-    padding: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: borderRadius.round,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   closeIcon: {
-    color: '#8E9CAE',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: '#CBD5E1',
+    fontSize: 10,
+    fontWeight: '700',
   },
   bodyRow: {
     flexDirection: 'row',

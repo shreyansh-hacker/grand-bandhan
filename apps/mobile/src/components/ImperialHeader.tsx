@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, shadows, borderRadius } from '../theme';
 import { ImperialLogo } from './ImperialLogo';
 import { useSocket } from '../hooks/useSocket';
 import { useNotificationStore } from '../store/notificationStore';
+import { useInboxStore } from '../store/inboxStore';
 import { NotificationModal } from './NotificationModal';
 
 export interface ImperialHeaderProps {
@@ -29,7 +31,25 @@ export const ImperialHeader: React.FC<ImperialHeaderProps> = ({
 }) => {
   const { status, isConnected } = useSocket();
   const { unreadCount } = useNotificationStore();
+  const inboxUnread = useInboxStore((s) => s.unreadCount);
+  const totalUnread = Math.max(unreadCount, inboxUnread);
   const [modalVisible, setModalVisible] = useState(false);
+
+  let navigation: any = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    navigation = useNavigation();
+  } catch {}
+
+  const handleBellPress = () => {
+    if (navigation && typeof navigation.navigate === 'function') {
+      try {
+        navigation.navigate('NotificationInbox');
+        return;
+      } catch {}
+    }
+    setModalVisible(true);
+  };
 
   return (
     <View style={styles.container}>
@@ -92,15 +112,15 @@ export const ImperialHeader: React.FC<ImperialHeaderProps> = ({
           {showBell && (
             <TouchableOpacity
               style={styles.bellButton}
-              onPress={() => setModalVisible(true)}
+              onPress={handleBellPress}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               activeOpacity={0.7}
             >
               <Text style={styles.bellIcon}>🔔</Text>
-              {unreadCount > 0 && (
+              {totalUnread > 0 && (
                 <View style={styles.badgeCount}>
                   <Text style={styles.badgeCountText}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {totalUnread > 9 ? '9+' : totalUnread}
                   </Text>
                 </View>
               )}
@@ -108,6 +128,7 @@ export const ImperialHeader: React.FC<ImperialHeaderProps> = ({
           )}
         </View>
       </View>
+
       <View style={styles.goldDivider} />
 
       <NotificationModal

@@ -1,5 +1,13 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  ActivityIndicator,
+  Platform,
+  PermissionsAndroid,
+} from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
@@ -33,6 +41,13 @@ function MainAppContent() {
 
   useEffect(() => {
     hydrate();
+
+    // Request Android 13+ (API 33+) POST_NOTIFICATIONS permission
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS as any
+      ).catch((err) => console.warn('[App] POST_NOTIFICATIONS permission error:', err));
+    }
   }, [hydrate]);
 
   if (isHydrating) {
