@@ -10,30 +10,49 @@ import { AuthenticatedRequest } from '../../middleware/auth';
 
 export async function listQuotationRequests(req: AuthenticatedRequest, res: Response): Promise<void> {
   const weddingId = req.query.weddingId as string;
-  if (!weddingId) {
-    res.status(400).json({ success: false, message: 'weddingId query parameter is required' });
-    return;
-  }
+  const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+  const agencyId = req.user?.agencyId;
 
   try {
-    const wedding = await prisma.wedding.findUnique({
-      where: { id: weddingId },
-      select: { agencyId: true },
-    });
+    const where: any = {};
 
-    if (!wedding) {
-      res.status(404).json({ success: false, message: 'Wedding not found' });
-      return;
-    }
+    if (weddingId) {
+      const wedding = await prisma.wedding.findUnique({
+        where: { id: weddingId },
+        select: { agencyId: true },
+      });
 
-    if (req.user?.role !== UserRole.SUPER_ADMIN && wedding.agencyId !== req.user?.agencyId) {
-      res.status(403).json({ success: false, message: 'Access denied' });
-      return;
+      if (!wedding) {
+        res.status(404).json({ success: false, message: 'Wedding not found' });
+        return;
+      }
+
+      if (!isSuperAdmin && wedding.agencyId !== agencyId) {
+        res.status(403).json({ success: false, message: 'Access denied' });
+        return;
+      }
+
+      where.weddingId = weddingId;
+    } else {
+      if (!isSuperAdmin && agencyId) {
+        where.wedding = { agencyId };
+      }
     }
 
     const requests = await prisma.quotationRequest.findMany({
-      where: { weddingId },
+      where,
       include: {
+        wedding: {
+          select: {
+            id: true,
+            weddingCode: true,
+            brideName: true,
+            groomName: true,
+            weddingDate: true,
+            location: true,
+            guestCount: true,
+          },
+        },
         quotations: {
           include: { vendor: true },
         },
@@ -264,7 +283,7 @@ export async function selectFinalQuotation(req: AuthenticatedRequest, res: Respo
           quotationId: selectedQuote.id,
           agreedAmount: totalAgreed,
           contractStatus: 'CONFIRMED',
-          notes: parsed.selectionNotes || `Selected via Three Vendors One Decision workflow for ${qRequest.title}`,
+          notes: parsed.selectionNotes || `Selected via Multi-Vendor Quotations workflow for ${qRequest.title}`,
         },
         create: {
           weddingId: qRequest.weddingId,
@@ -272,7 +291,7 @@ export async function selectFinalQuotation(req: AuthenticatedRequest, res: Respo
           quotationId: selectedQuote.id,
           agreedAmount: totalAgreed,
           contractStatus: 'CONFIRMED',
-          notes: parsed.selectionNotes || `Selected via Three Vendors One Decision workflow for ${qRequest.title}`,
+          notes: parsed.selectionNotes || `Selected via Multi-Vendor Quotations workflow for ${qRequest.title}`,
         },
       });
 

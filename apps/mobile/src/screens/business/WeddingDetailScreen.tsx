@@ -223,22 +223,22 @@ export const WeddingDetailScreen: React.FC<WeddingDetailScreenProps> = ({
           </View>
         </ImperialGlassCard>
 
-        {/* Three Vendors, One Decision Quick Shortcut */}
+        {/* Multi-Vendor Quotations Quick Shortcut */}
         <ImperialGlassCard style={styles.sectionCard} tone="navy">
           <View style={styles.sectionHeaderRow}>
             <View>
-              <Text style={styles.sectionTitle}>⚖️ Quotations & Procurement</Text>
+              <Text style={styles.sectionTitle}>🏷️ Quotations & Procurement</Text>
               <Text style={styles.sectionSubtitle}>
-                Three Vendors, One Decision comparison engine
+                Multi-Vendor Quotations comparison engine
               </Text>
             </View>
           </View>
           <Text style={styles.quotationDesc}>
-            Review 3 competing vendor bids per service category, analyze per-plate margins, and award final contracts.
+            Review competing vendor bids per service category, analyze per-plate margins, and award final contracts.
           </Text>
           {onViewQuotations && (
             <ImperialButton
-              title="Compare 3-Way Quotations →"
+              title="Compare Multi-Vendor Quotations →"
               variant="gold"
               onPress={() => onViewQuotations(weddingId)}
               style={{ marginTop: spacing.sm }}

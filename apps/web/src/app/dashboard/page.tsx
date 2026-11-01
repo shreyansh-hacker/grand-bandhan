@@ -223,13 +223,13 @@ export default function DashboardOverviewPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
           <div className="bg-navy-50 p-4 rounded-xl border border-navy-200/80 space-y-2">
             <div className="font-bold text-navy-900 uppercase tracking-wider text-[11px]">
-              Three Vendors One Decision Status
+              Multi-Vendor Quotations Status
             </div>
             <p className="text-darkText/80">
-              400-guest Royal Catering RFP active with 3 bids. Royal Rajputana recommended at <strong>₹1,850/plate</strong>.
+              400-guest Royal Catering RFP active with competitive bids. Royal Rajputana recommended at <strong>₹1,850/plate</strong>.
             </p>
             <Link href="/dashboard/quotations" className="text-royal font-bold inline-block hover:underline">
-              Compare 3 Caterers &rarr;
+              Compare Multi-Vendor Quotes &rarr;
             </Link>
           </div>
 
@@ -301,7 +301,7 @@ export default function DashboardOverviewPage() {
               className="p-3 rounded-xl border border-gold/40 bg-cream text-navy-900 hover:bg-gold/10 transition-colors flex items-center gap-2"
             >
               <FileSpreadsheet className="w-4 h-4 text-gold" />
-              <span>Launch 3-Vendor RFP</span>
+              <span>Multi-Vendor RFP Matrix</span>
             </Link>
 
             <Link

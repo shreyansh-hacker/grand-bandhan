@@ -88,7 +88,7 @@ export default function VendorsDirectoryPage() {
             Vendor Directory &amp; Governance
           </h2>
           <p className="text-xs text-darkText/70">
-            Approved luxury artisans, royal caterers, palace decorators, and certified sound engineers ready for 3-vendor RFPs.
+            Approved luxury artisans, royal caterers, palace decorators, and certified sound engineers ready for Multi-Vendor RFPs.
           </p>
         </div>
 

@@ -135,7 +135,7 @@ export const QuotationsScreen: React.FC<QuotationsScreenProps> = ({ initialWeddi
   return (
     <View style={styles.container}>
       <ImperialHeader
-        title="Three Vendors, One Decision"
+        title="Multi-Vendor Quotations Matrix"
         subtitle="3-Way Quotation Comparison Engine"
       />
 

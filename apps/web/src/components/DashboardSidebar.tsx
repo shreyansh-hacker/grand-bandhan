@@ -28,7 +28,7 @@ const NAVIGATION_ITEMS = [
   { label: 'First Consultations', href: '/dashboard/consultations', icon: Video, badge: 'Step 3' },
   { label: 'Service Agreements', href: '/dashboard/agreements', icon: FileCheck, badge: 'Legal' },
   { label: 'Weddings Directory', href: '/dashboard/weddings', icon: Crown },
-  { label: '3-Vendor Quotations', href: '/dashboard/quotations', icon: FileSpreadsheet, badge: 'Core' },
+  { label: 'Multi-Vendor Quotations', href: '/dashboard/quotations', icon: FileSpreadsheet, badge: 'Core' },
   { label: 'Instant Task Planner', href: '/dashboard/tasks', icon: CheckSquare, badge: '25+ Auto' },
   { label: 'Live Day-of Timeline', href: '/dashboard/events', icon: Clock },
   { label: 'Service Verification', href: '/dashboard/verification', icon: ShieldCheck },

@@ -130,7 +130,7 @@ Agreed Planning Package:   ${data.package.packageType === 'PARTIAL_DAY_OF' ? 'Pa
 
 Included Deliverables:
 - Dedicated Senior Wedding Planner & 24/7 Operations Command.
-- Comprehensive 3-vendor transparent quotation matrices across catering, decor, photography, and sound.
+- Comprehensive multi-vendor transparent quotation matrices across catering, decor, photography, and sound.
 - Digital Guest Roster & RSVP portal with dietary and palace suite management.
 - Master Ceremony Run-of-Show timeline and multi-vendor arrival scheduling.
 - On-site live service quality verification checks before milestone disbursements.

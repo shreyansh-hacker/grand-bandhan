@@ -67,7 +67,7 @@ export default function BudgetCalculator() {
                     {packageType === WeddingPackageType.FULL_SERVICE && <Crown className="w-4 h-4 text-gold" />}
                   </div>
                   <p className="text-xs text-cream-300">
-                    Comprehensive planning, 3-vendor RFP engine, 25+ auto tasks, day-of operations.
+                    Comprehensive planning, Multi-vendor RFP engine, 25+ auto tasks, day-of operations.
                   </p>
                 </button>
 
@@ -226,7 +226,7 @@ export default function BudgetCalculator() {
                 <span>The Grand Bandhan Difference</span>
               </div>
               <p className="text-xs text-cream-300 leading-relaxed">
-                With our <strong>Three Vendors, One Decision</strong> comparison engine, couples save an average of 14% by eliminating arbitrary markups and locking verified per-plate rates.
+                With our <strong>Multi-Vendor Quotations</strong> comparison engine, couples save an average of 14% by eliminating arbitrary markups and locking verified per-plate rates.
               </p>
             </div>
 

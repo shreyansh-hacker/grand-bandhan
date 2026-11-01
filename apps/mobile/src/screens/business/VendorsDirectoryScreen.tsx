@@ -67,7 +67,7 @@ export const VendorsDirectoryScreen: React.FC<{ navigation: any }> = ({ navigati
   const handleApproveVendor = async (id: string, name: string) => {
     Alert.alert(
       'Approve Royal Vendor Partner?',
-      `Are you sure you want to approve "${name}" into the Grand Bandhan directory? They will become eligible for 3-vendor RFP bidding.`,
+      `Are you sure you want to approve "${name}" into the Grand Bandhan directory? They will become eligible for Multi-Vendor RFP bidding.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
