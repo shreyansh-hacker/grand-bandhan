@@ -41,3 +41,9 @@ local-store.json
 packages/database/src/generated/
 *.node
 *.tsbuildinfo
+
+# Android Builds & Binaries
+*.apk
+*.aab
+*.keystore
+!**/debug.keystore
