@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   X,
-  Sparkles,
+
   Send,
   CheckCircle2,
   User,
@@ -104,7 +104,7 @@ export default function EnquiryModal({ isOpen, onClose }: EnquiryModalProps) {
             <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 text-gold text-xs font-semibold tracking-wider uppercase mb-1">
-            <Sparkles className="w-4 h-4" />
+
             <span>Royal Wedding Concierge</span>
           </div>
           <h3 className="font-serif text-2xl font-bold text-cream">Plan Your Imperial Celebration</h3>

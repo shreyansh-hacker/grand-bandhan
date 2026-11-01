@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Crown,
-  Sparkles,
+
   FileCheck,
   CheckCircle2,
   Calendar,

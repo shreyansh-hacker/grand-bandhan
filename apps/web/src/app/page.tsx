@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Crown,
-  Sparkles,
+
   Calendar,
   ShieldCheck,
   CheckCircle2,
@@ -78,7 +78,7 @@ export default function HomePage() {
               onClick={() => setIsModalOpen(true)}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gold-gradient text-navy-950 font-bold text-base shadow-gold-glow hover:brightness-110 transition-all flex items-center justify-center gap-2"
             >
-              <Sparkles className="w-5 h-5" />
+
               <span>Plan Your Royal Wedding</span>
             </motion.button>
 
@@ -263,7 +263,7 @@ export default function HomePage() {
               </h2>
 
               <p className="text-base text-cream-200 leading-relaxed">
-                Take the guesswork and hidden kickbacks out of wedding vendor selection. For every category—such as 400-guest royal catering—the planner invites 3 verified vendors into a side-by-side comparison matrix.
+                Take the guesswork and hidden kickbacks out of wedding vendor selection. For every category—such as 400-guest royal catering—the planner invites multiple verified vendors into a side-by-side comparison matrix.
               </p>
 
               <div className="space-y-3 text-sm text-cream-300">

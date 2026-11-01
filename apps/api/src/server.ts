@@ -71,6 +71,23 @@ const apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
+// Root endpoint - Redirect browser to frontend website or return API status
+app.get('/', (req, res) => {
+  if (req.accepts('html')) {
+    res.redirect(env.FRONTEND_URL || 'http://localhost:3000');
+    return;
+  }
+  res.json({
+    service: 'Grand Bandhan Imperial API',
+    status: 'online',
+    frontend: env.FRONTEND_URL || 'http://localhost:3000',
+    endpoints: {
+      health: '/health',
+      apiHealth: '/api/health',
+    },
+  });
+});
+
 // Health check endpoints with Neon database status
 app.get('/health', async (req, res) => {
   const dbConnected = isUsingPostgres();

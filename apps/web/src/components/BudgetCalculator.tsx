@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calculator, Crown, Sparkles, Check, ArrowRight } from 'lucide-react';
+import { Calculator, Crown, Check, ArrowRight } from 'lucide-react';
 import { WeddingPackageType } from '@grand-bandhan/shared';
 
 const formatINR = (val: number) => new Intl.NumberFormat('en-IN').format(val);
@@ -222,7 +222,7 @@ export default function BudgetCalculator() {
 
             <div className="bg-navy-950/60 p-4 rounded-xl border border-gold/20 space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-gold">
-                <Sparkles className="w-4 h-4" />
+
                 <span>The Grand Bandhan Difference</span>
               </div>
               <p className="text-xs text-cream-300 leading-relaxed">

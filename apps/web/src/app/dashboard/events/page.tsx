@@ -9,7 +9,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Calendar,
-  Sparkles,
+
   ShieldAlert,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';

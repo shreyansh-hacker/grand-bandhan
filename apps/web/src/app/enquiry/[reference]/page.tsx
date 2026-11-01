@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Crown,
-  Sparkles,
+
   Calendar,
   MapPin,
   Users,
@@ -190,7 +190,7 @@ export default function EnquiryTrackingPage() {
 
                 <div className="p-3.5 bg-navy-50 rounded-xl border border-navy-200">
                   <span className="text-[10px] uppercase font-semibold text-darkText/70 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-gold-dark" />
+
                     Package Selected
                   </span>
                   <p className="font-bold text-navy-900 text-sm mt-1">
@@ -235,7 +235,7 @@ export default function EnquiryTrackingPage() {
             {/* Lifecycle Progress Stepper */}
             <div className="bg-navy-900/90 border border-gold/30 rounded-2xl p-6 sm:p-8 space-y-4">
               <h3 className="font-serif text-lg font-bold text-gold-gradient flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-gold" />
+
                 <span>Wedding Execution Lifecycle</span>
               </h3>
 

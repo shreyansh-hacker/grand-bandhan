@@ -6,7 +6,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Sparkles,
+
   MessageSquare,
   FileImage,
   ArrowRight,
@@ -145,7 +145,7 @@ export default function VerificationPage() {
 
       {/* Operational Protocol Banner */}
       <div className="bg-navy-900 text-white p-4 rounded-xl border border-gold/40 flex items-start gap-3 text-xs shadow-md">
-        <Sparkles className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
+
         <div className="space-y-1">
           <div className="font-bold text-gold uppercase tracking-wider">
             Operational Protocol – DJ & Critical Services Verification

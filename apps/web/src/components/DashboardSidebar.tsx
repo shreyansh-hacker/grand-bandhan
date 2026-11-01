@@ -16,7 +16,7 @@ import {
   UserCircle,
   LogOut,
   ChevronRight,
-  Sparkles,
+
 } from 'lucide-react';
 
 const NAVIGATION_ITEMS = [

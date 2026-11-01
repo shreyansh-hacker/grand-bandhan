@@ -10,7 +10,7 @@ import {
   Users,
   CheckCircle2,
   Clock,
-  Sparkles,
+
   FileCheck,
   ChevronRight,
   X,

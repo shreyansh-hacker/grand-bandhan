@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import {
   Building,
   Crown,
-  Sparkles,
+
   FileSpreadsheet,
   CheckCircle2,
   Clock,

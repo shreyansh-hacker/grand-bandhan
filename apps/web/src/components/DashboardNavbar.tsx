@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { User, Bell, Radio, ExternalLink, Plus, Sparkles } from 'lucide-react';
+import { User, Bell, Radio, ExternalLink, Plus } from 'lucide-react';
 import { NeonStatusBadge } from '../features/neon/NeonStatusBadge';
 
 export default function DashboardNavbar() {

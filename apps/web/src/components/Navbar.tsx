@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Crown, Sparkles, User, Calendar, Menu, X, ArrowRight } from 'lucide-react';
+import { Crown, User, Calendar, Menu, X, ArrowRight } from 'lucide-react';
 import { motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import EnquiryModal from './EnquiryModal';
 
@@ -229,7 +229,7 @@ export default function Navbar() {
                   }}
                   className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gold-gradient text-navy-950 shadow-gold-glow hover:brightness-105 transition-all"
                 >
-                  <Sparkles className="w-4 h-4" />
+
                   Plan Your Wedding
                 </button>
               </div>

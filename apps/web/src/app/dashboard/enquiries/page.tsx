@@ -11,7 +11,7 @@ import {
   Phone,
   Mail,
   ArrowRight,
-  Sparkles,
+
   Plus,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';

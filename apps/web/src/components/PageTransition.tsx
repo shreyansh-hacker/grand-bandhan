@@ -30,7 +30,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
         }}
         className="w-full min-h-screen"
       >
-        <React.Fragment>{children}</React.Fragment>
+        <div>{children}</div>
       </motion.div>
     </div>
   );

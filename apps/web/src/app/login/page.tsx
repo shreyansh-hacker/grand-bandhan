@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Crown, Lock, Mail, ArrowRight, Sparkles, AlertTriangle, Clock } from 'lucide-react';
+import { Crown, Lock, Mail, ArrowRight, Loader2, AlertTriangle, Clock } from 'lucide-react';
 import { apiRequest, setAuthToken } from '@/lib/api';
 
 export default function LoginPage() {
@@ -151,7 +151,7 @@ export default function LoginPage() {
             >
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 animate-spin text-navy-950" />
+                  <Loader2 className="w-4 h-4 animate-spin text-navy-950" />
                   <span>Authenticating Royal Credentials...</span>
                 </div>
               ) : (
@@ -167,7 +167,7 @@ export default function LoginPage() {
           {showEvaluatorQuickFill && (
             <div className="pt-4 border-t border-navy-200/80">
               <div className="flex items-center gap-1.5 text-xs font-bold text-navy-900 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-gold-dark" />
+
                 <span>Pre-fill Evaluator Accounts (Dev Mode):</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px]">

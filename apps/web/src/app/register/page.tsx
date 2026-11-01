@@ -16,7 +16,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
-  Sparkles,
+
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
@@ -125,7 +125,7 @@ export default function RegisterPage() {
 
               <div className="p-4 bg-navy-900 text-cream rounded-xl text-left text-xs space-y-2 border border-gold/30">
                 <div className="flex items-center gap-2 text-gold font-bold uppercase tracking-wider text-[11px]">
-                  <Sparkles className="w-4 h-4" />
+
                   <span>Next Steps in Agency Approval Lifecycle</span>
                 </div>
                 <p className="text-cream-300 leading-relaxed">
