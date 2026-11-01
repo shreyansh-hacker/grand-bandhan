@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   FileCheck,
   ShieldCheck,
@@ -19,7 +20,11 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
-export default function AgreementsPage() {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://grand-bandhan.onrender.com';
+
+function AgreementsContent() {
+  const searchParams = useSearchParams();
+  const queryEnquiryId = searchParams.get('enquiryId');
   const [agreements, setAgreements] = useState<any[]>([]);
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +34,13 @@ export default function AgreementsPage() {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedEnquiryId, setSelectedEnquiryId] = useState('');
   const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    if (queryEnquiryId) {
+      setSelectedEnquiryId(queryEnquiryId);
+      setShowGenerateModal(true);
+    }
+  }, [queryEnquiryId]);
 
   // Reject / Correction Modal State
   const [rejectingAgreement, setRejectingAgreement] = useState<any | null>(null);
@@ -374,7 +386,7 @@ export default function AgreementsPage() {
                       <td className="p-4 text-right space-x-2">
                         {/* Preview / Print PDF button */}
                         <a
-                          href={`/api/agreements/download/${a.id}`}
+                          href={`${API_BASE_URL}/api/agreements/download/${a.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-2.5 py-1 rounded border border-navy-200 text-navy-800 hover:bg-cream-100 font-semibold text-[11px] inline-flex items-center gap-1"
@@ -542,5 +554,13 @@ export default function AgreementsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AgreementsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-darkText/60">Loading Service Agreements Legal Desk...</div>}>
+      <AgreementsContent />
+    </Suspense>
   );
 }

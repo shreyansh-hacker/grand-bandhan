@@ -23,6 +23,8 @@ import {
   Sparkles,
   Lock,
 } from 'lucide-react';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://grand-bandhan.onrender.com';
 import { apiRequest } from '@/lib/api';
 
 const LIFECYCLE_STEPS = [
@@ -145,7 +147,7 @@ export default function EnquiryTrackingPage() {
 
       case 5:
         // Service Agreement & Deposit
-        if (latestAgreement?.verificationStatus === 'VERIFIED' || latestAgreement?.status === 'VERIFIED' || isConverted) {
+        if (latestAgreement?.verificationStatus === 'VERIFIED' || latestAgreement?.status === 'VERIFIED') {
           return 'completed';
         }
         if (latestAgreement?.verificationStatus === 'REJECTED' || latestAgreement?.status === 'REJECTED') {
@@ -154,14 +156,14 @@ export default function EnquiryTrackingPage() {
         if (latestAgreement?.status === 'SIGNED' || latestAgreement?.status === 'PENDING_VERIFICATION') {
           return 'current'; // Waiting admin verification
         }
-        if (latestAgreement?.status === 'SENT' || latestAgreement?.status === 'DRAFT' || latestProposal?.status === 'ACCEPTED' || enquiry.status === 'BOOKING_PENDING') {
+        if (latestAgreement?.status === 'SENT' || latestAgreement?.status === 'DRAFT' || latestAgreement || latestProposal?.status === 'ACCEPTED' || enquiry.status === 'BOOKING_PENDING') {
           return 'current';
         }
         return latestProposal?.status === 'ACCEPTED' ? 'pending' : 'upcoming';
 
       case 6:
         // Active Operations
-        if (isConverted && (latestAgreement?.verificationStatus === 'VERIFIED' || latestAgreement?.status === 'VERIFIED')) {
+        if ((latestAgreement?.verificationStatus === 'VERIFIED' || latestAgreement?.status === 'VERIFIED') && isConverted) {
           return 'current'; // Actively live
         }
         return 'upcoming';
@@ -512,7 +514,7 @@ export default function EnquiryTrackingPage() {
                                 <span>{latestAgreement.status === 'VERIFIED' ? 'View Verified Contract' : 'Review & Sign Contract'}</span>
                               </Link>
                               <a
-                                href={`/api/agreements/download/${latestAgreement.id}`}
+                                href={`${API_BASE_URL}/api/agreements/download/${latestAgreement.id}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-gold hover:underline flex items-center gap-1"

@@ -29,6 +29,8 @@ import {
 import { apiRequest } from '@/lib/api';
 import { AgreementStatus, VerificationResponse, RsvpStatus, PlanningForSide } from '@grand-bandhan/shared';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://grand-bandhan.onrender.com';
+
 export default function ClientPortalPage() {
   const params = useParams();
   const token = params?.token as string;
@@ -1069,7 +1071,7 @@ export default function ClientPortalPage() {
               <div className="flex items-center gap-3">
                 {agreement?.id && (
                   <a
-                    href={`/api/agreements/download/${agreement.id}`}
+                    href={`${API_BASE_URL}/api/agreements/download/${agreement.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-navy-900 text-gold border border-gold/40 rounded-xl text-xs font-bold hover:bg-navy-800 transition-colors shadow-sm"
