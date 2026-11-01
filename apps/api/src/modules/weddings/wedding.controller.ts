@@ -192,9 +192,6 @@ export async function createWedding(req: AuthenticatedRequest, res: Response): P
         ],
       });
 
-      // Generate 26+ tasks
-      await generateInstantWeddingPlan(w.id, w.weddingDate, w.packageType as any, tx);
-
       await tx.auditLog.create({
         data: {
           agencyId,
@@ -207,7 +204,10 @@ export async function createWedding(req: AuthenticatedRequest, res: Response): P
       });
 
       return w;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
+
+    // Generate 26+ tasks right after atomic transaction commits using standard prisma client
+    await generateInstantWeddingPlan(wedding.id, wedding.weddingDate, wedding.packageType as any, prisma);
 
     // Emit Booking Confirmed Event
     const appUrl = process.env.APP_URL || 'https://grandbandhan.com';
@@ -259,90 +259,123 @@ export async function convertEnquiryToWedding(req: AuthenticatedRequest, res: Re
       return;
     }
 
-    const { packageType, brideName, groomName } = req.body;
+    const packageType = req.body?.packageType;
+    let brideName = req.body?.brideName;
+    let groomName = req.body?.groomName;
+
+    // Resolve Couple Names accurately from enquiry fields
+    if (!brideName || !groomName) {
+      if (enquiry.planningFor === 'GROOM_SIDE') {
+        groomName = groomName || enquiry.customerName;
+        brideName = brideName || enquiry.partnerName || 'Bride';
+      } else if (enquiry.planningFor === 'BRIDE_SIDE') {
+        brideName = brideName || enquiry.customerName;
+        groomName = groomName || enquiry.partnerName || 'Groom';
+      } else {
+        brideName = brideName || enquiry.customerName || 'Bride';
+        groomName = groomName || enquiry.partnerName || 'Groom';
+      }
+    }
+
     const defaultTempPassword = 'RoyalClient@2026';
-    let isNewUser = false;
+    const normalizedEmail = enquiry.email.toLowerCase().trim();
     const weddingCode = `GB-W-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Auto-provision Client User in Neon DB if not existing
-      const normalizedEmail = enquiry.email.toLowerCase().trim();
-      let clientUser = await tx.user.findUnique({
-        where: { email: normalizedEmail },
-      });
+    // Hash password beforehand OUTSIDE the database transaction
+    const passwordHash = await hashPassword(defaultTempPassword);
 
-      if (!clientUser) {
-        const passwordHash = await hashPassword(defaultTempPassword);
-        clientUser = await tx.user.create({
+    // Check if user already exists outside transaction
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+    const isNewUser = !existingUser;
+
+    const result = await prisma.$transaction(
+      async (tx) => {
+        let clientUser = existingUser;
+
+        if (!clientUser) {
+          clientUser = await tx.user.create({
+            data: {
+              agencyId: enquiry.agencyId,
+              email: normalizedEmail,
+              passwordHash,
+              role: UserRole.CLIENT,
+              name: enquiry.customerName,
+              phone: enquiry.phone,
+              accountStatus: AccountStatus.ACTIVE,
+              isActive: true,
+              emailVerified: true,
+            },
+          });
+        }
+
+        const wedding = await tx.wedding.create({
           data: {
             agencyId: enquiry.agencyId,
-            email: normalizedEmail,
-            passwordHash,
-            role: UserRole.CLIENT,
-            name: enquiry.customerName,
-            phone: enquiry.phone,
-            accountStatus: AccountStatus.ACTIVE,
-            isActive: true,
-            emailVerified: true,
+            weddingCode,
+            brideName,
+            groomName,
+            clientEmail: enquiry.email,
+            clientPhone: enquiry.phone,
+            weddingDate: enquiry.weddingDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+            location: enquiry.location,
+            guestCount: enquiry.guestCount,
+            budgetMin: enquiry.minBudget,
+            budgetMax: enquiry.maxBudget,
+            packageType: packageType || enquiry.packageType || WeddingPackageType.FULL_SERVICE,
+            status: WeddingStatus.CONFIRMED,
+            plannerId: enquiry.assignedPlannerId || req.user?.userId || null,
+            clientId: clientUser.id,
+            notes: enquiry.notes,
           },
         });
-        isNewUser = true;
+
+        await tx.customerEnquiry.update({
+          where: { id: enquiry.id },
+          data: {
+            status: 'CONVERTED',
+            convertedWeddingId: wedding.id,
+          },
+        });
+
+        await tx.digitalAgreement.create({
+          data: {
+            weddingId: wedding.id,
+            agreementNumber: `GB-AGR-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            termsContent: `SERVICE AGREEMENT FOR WEDDING PLANNING & MANAGEMENT SERVICES\n\nClient: ${wedding.brideName} & ${wedding.groomName}\nPackage: ${wedding.packageType}\nGuest Count: ${wedding.guestCount}\nLocation: ${wedding.location}\n\nTerms & Conditions:\n1. Scope of work encompasses comprehensive wedding planning and day-of execution as agreed.\n2. Payment milestones: 25% booking deposit, 50% advance 30 days prior, 25% post-wedding settlement.\n3. Cancellation policies and vendor terms apply as per signed contracts.`,
+            status: AgreementStatus.DRAFT,
+          },
+        });
+
+        const depositAmount = wedding.budgetMin * 0.25;
+        await tx.payment.create({
+          data: {
+            weddingId: wedding.id,
+            type: PaymentType.CLIENT_MILESTONE,
+            milestoneName: PaymentMilestone.BOOKING_DEPOSIT,
+            amount: depositAmount,
+            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            status: PaymentStatus.PENDING,
+            notes: '25% Booking Deposit',
+          },
+        });
+
+        return { wedding, clientUser };
+      },
+      {
+        maxWait: 15000,
+        timeout: 30000,
       }
-      const wedding = await tx.wedding.create({
-        data: {
-          agencyId: enquiry.agencyId,
-          weddingCode,
-          brideName: brideName || (enquiry.planningFor === 'BRIDE_SIDE' ? enquiry.customerName : 'Bride'),
-          groomName: groomName || (enquiry.planningFor === 'GROOM_SIDE' ? enquiry.customerName : 'Groom'),
-          clientEmail: enquiry.email,
-          clientPhone: enquiry.phone,
-          weddingDate: enquiry.weddingDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-          location: enquiry.location,
-          guestCount: enquiry.guestCount,
-          budgetMin: enquiry.minBudget,
-          budgetMax: enquiry.maxBudget,
-          packageType: packageType || enquiry.packageType || WeddingPackageType.FULL_SERVICE,
-          status: WeddingStatus.CONFIRMED,
-          plannerId: enquiry.assignedPlannerId || req.user?.userId || null,
-          clientId: clientUser.id,
-          notes: enquiry.notes,
-        },
-      });
+    );
 
-      await tx.customerEnquiry.update({
-        where: { id: enquiry.id },
-        data: {
-          status: 'CONVERTED',
-          convertedWeddingId: wedding.id,
-        },
-      });
-
-      await tx.digitalAgreement.create({
-        data: {
-          weddingId: wedding.id,
-          agreementNumber: `GB-AGR-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-          termsContent: `SERVICE AGREEMENT FOR WEDDING PLANNING & MANAGEMENT SERVICES\n\nClient: ${wedding.brideName} & ${wedding.groomName}\nPackage: ${wedding.packageType}\nGuest Count: ${wedding.guestCount}\nLocation: ${wedding.location}\n\nTerms & Conditions:\n1. Scope of work encompasses comprehensive wedding planning and day-of execution as agreed.\n2. Payment milestones: 25% booking deposit, 50% advance 30 days prior, 25% post-wedding settlement.\n3. Cancellation policies and vendor terms apply as per signed contracts.`,
-          status: AgreementStatus.DRAFT,
-        },
-      });
-
-      const depositAmount = wedding.budgetMin * 0.25;
-      await tx.payment.create({
-        data: {
-          weddingId: wedding.id,
-          type: PaymentType.CLIENT_MILESTONE,
-          milestoneName: PaymentMilestone.BOOKING_DEPOSIT,
-          amount: depositAmount,
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          status: PaymentStatus.PENDING,
-          notes: '25% Booking Deposit',
-        },
-      });
-
-      const tasks = await generateInstantWeddingPlan(wedding.id, wedding.weddingDate, wedding.packageType as any, tx);
-
-      return { wedding, clientUser, tasksCount: tasks.length };
-    });
+    // Generate 26+ tasks right after transaction commits using standard prisma client
+    const tasks = await generateInstantWeddingPlan(
+      result.wedding.id,
+      result.wedding.weddingDate,
+      result.wedding.packageType as any,
+      prisma
+    );
 
     const appUrl = process.env.APP_URL || 'https://grandbandhan.com';
     const clientPortalUrl = `${appUrl}/portal/client/${result.wedding.id}`;
@@ -378,9 +411,10 @@ export async function convertEnquiryToWedding(req: AuthenticatedRequest, res: Re
           temporaryPassword: isNewUser ? defaultTempPassword : null,
         },
       },
-      message: `Enquiry successfully converted to Wedding ${result.wedding.weddingCode}. Client account provisioned with ${result.tasksCount} dynamic tasks initialized.`,
+      message: `Enquiry successfully converted to Wedding ${result.wedding.weddingCode}. Client account provisioned with ${tasks.length} dynamic tasks initialized.`,
     });
   } catch (err: any) {
+    console.error('[convertEnquiryToWedding] Error converting enquiry:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 }

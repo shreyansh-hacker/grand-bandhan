@@ -319,8 +319,5 @@ export async function generateInstantWeddingPlan(
     data: tasksToCreate,
   });
 
-  return dbClient.task.findMany({
-    where: { weddingId },
-    orderBy: { deadline: 'asc' },
-  });
+  return tasksToCreate;
 }
