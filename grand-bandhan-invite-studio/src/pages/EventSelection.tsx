@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { EventCategory } from '../types/invitation';
 import { BRAND_CONFIG } from '../config/brand';
-import { ArrowRight, BookOpen, Gift, CreditCard, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, Gift, CreditCard, Sparkles, Crown } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../locales';
+import { getUserAccount, UserAccount } from '../services/storage';
+import { AuthModal } from '../components/auth/AuthModal';
+import { UpgradeModal } from '../components/subscription/UpgradeModal';
 
 interface EventSelectionProps {
   onSelectCategory: (category: EventCategory) => void;
@@ -14,6 +17,9 @@ export const EventSelection: React.FC<EventSelectionProps> = ({
   onOpenDashboard,
 }) => {
   const { lang, t } = useLanguage();
+  const [user, setUser] = useState<UserAccount>(() => getUserAccount());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const categories = [
     {
@@ -74,12 +80,40 @@ export const EventSelection: React.FC<EventSelectionProps> = ({
           />
         </div>
 
-        {/* Header Right Actions: Dashboard & Language Switcher (Visible on all viewports down to 360px) */}
+        {/* Header Right Actions: Profile, Tier, Dashboard & Language Switcher */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Host Profile Pill */}
+          <div
+            onClick={() => setIsAuthModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-[#e8decb] hover:border-[#c9a96a] cursor-pointer shadow-xs transition-all text-xs"
+            title="Account profile"
+          >
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#6e1f2f] to-[#8a273c] text-white flex items-center justify-center font-bold text-[10px] uppercase">
+              {user.name ? user.name[0] : 'H'}
+            </div>
+            <span className="font-semibold text-[#2c2523] hidden sm:inline max-w-[90px] truncate">
+              {user.name || 'Sign In'}
+            </span>
+          </div>
+
+          {/* Tier Pill */}
+          {user.tier === 'royal' ? (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#dfba6a]/20 text-[#6e1f2f] border border-[#dfba6a]">
+              Royal ⭐
+            </span>
+          ) : (
+            <button
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[#f5ede0] text-[#8b7355] border border-[#c9a96a]/50 hover:text-[#6e1f2f]"
+            >
+              Free · Upgrade ⭐
+            </button>
+          )}
+
           {onOpenDashboard && (
             <button
               onClick={onOpenDashboard}
-              className="px-2.5 py-1 text-xs font-semibold text-[#6e1f2f] hover:bg-[#f2ede4] border border-[#e8decb] rounded-lg transition-all"
+              className="px-2.5 py-1 text-xs font-semibold text-[#6e1f2f] hover:bg-[#f2ede4] border border-[#e8decb] rounded-xl transition-all"
             >
               {t.dashboard}
             </button>
@@ -176,6 +210,20 @@ export const EventSelection: React.FC<EventSelectionProps> = ({
       <footer className="max-w-5xl mx-auto w-full pt-6 border-t border-[#e8decb] text-center text-xs text-[#7d6a58] font-sans">
         <p>© {new Date().getFullYear()} Grand Bandhan Invite Studio · {t.brandTagline}</p>
       </footer>
+
+      {/* Auth & Upgrade Modals */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={(u) => setUser(u)}
+      />
+
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        user={user}
+        onUpgraded={(u) => setUser(u)}
+      />
     </div>
   );
 };

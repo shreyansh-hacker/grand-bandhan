@@ -20,12 +20,14 @@ interface EditorToolbarProps {
   isSaving: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  tier?: 'free' | 'royal';
   onUndo: () => void;
   onRedo: () => void;
   onBack: () => void;
   onOpenPreview: () => void;
   onPublish: () => void;
   onOpenDashboard?: () => void;
+  onOpenUpgrade?: () => void;
   onExport: () => void;
   onImport: (jsonString: string) => void;
   onReset: () => void;
@@ -36,12 +38,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   isSaving,
   canUndo,
   canRedo,
+  tier = 'free',
   onUndo,
   onRedo,
   onBack,
   onOpenPreview,
   onPublish,
   onOpenDashboard,
+  onOpenUpgrade,
   onExport,
   onImport,
   onReset,
@@ -115,6 +119,22 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
       {/* Right Actions: Switcher, Undo/Redo, Overflow Menu, Publish, Preview */}
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {tier === 'royal' ? (
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#dfba6a]/20 text-[#6e1f2f] border border-[#dfba6a]">
+            Royal ⭐
+          </span>
+        ) : (
+          onOpenUpgrade && (
+            <button
+              onClick={onOpenUpgrade}
+              className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[#f5ede0] text-[#8b7355] border border-[#c9a96a]/50 hover:text-[#6e1f2f] hover:border-[#6e1f2f] transition-all"
+              title="Upgrade to Royal Plan for unlimited cards & custom audio"
+            >
+              Free · Upgrade ⭐
+            </button>
+          )
+        )}
+
         {/* Language Switcher (Always visible down to 360px) */}
         <LanguageSwitcher />
 

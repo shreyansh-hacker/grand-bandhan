@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { EventCategory, InvitationDraft } from './types/invitation';
 import { TemplateCatalogEntry, TEMPLATE_CATALOG } from './templates/catalog';
-import { loadSavedDraft, saveDraft, createInitialDraft, getAllDrafts } from './services/storage';
+import { loadSavedDraft, saveDraft, createInitialDraft, getAllDrafts, publishDraft, checkCanPublish } from './services/storage';
 import { EventSelection } from './pages/EventSelection';
 import { Gallery } from './pages/Gallery';
 import { Demo } from './pages/Demo';
@@ -156,14 +156,15 @@ export const AppContent: React.FC = () => {
           draft={currentDraft}
           onBackToStudio={() => navigateTo('studio')}
           onPublishDraft={() => {
-            const all = getAllDrafts();
-            const found = all.find((d) => d.id === currentDraft.id) || currentDraft;
-            found.isPublished = true;
-            found.publishedAt = Date.now();
-            found.publishedData = JSON.parse(JSON.stringify(found.data));
-            saveDraft(found);
-            setCurrentDraft({ ...found });
-            alert(`Invitation published live! Accessible at /i/${found.slug}`);
+            const check = checkCanPublish(currentDraft.id);
+            if (!check.allowed) {
+              alert(check.reason);
+              navigateTo('dashboard');
+              return;
+            }
+            const published = publishDraft(currentDraft);
+            setCurrentDraft({ ...published });
+            alert(`Invitation published live! Accessible at /i/${published.slug}`);
           }}
         />
       )}

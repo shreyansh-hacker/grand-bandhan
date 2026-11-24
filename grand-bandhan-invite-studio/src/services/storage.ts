@@ -7,32 +7,113 @@ import { DEFAULT_CUSTOM_DATA, DEFAULT_CUSTOM_SCENES } from '../templates/custom-
 const DRAFTS_INDEX_KEY = 'gb_invite_drafts_v2';
 const PUBLISHED_INDEX_KEY = 'gb_published_invites_v2';
 const CURRENT_DRAFT_KEY = 'grand_bandhan_invite_draft_v1';
-const USER_ACCOUNT_KEY = 'gb_user_account_v1';
+const USER_ACCOUNT_KEY = 'gb_user_account_v2';
+
+export type AccountTier = 'free' | 'royal';
 
 export interface UserAccount {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   isLoggedIn: boolean;
+  tier: AccountTier;
+  credits: number; // AI generation credits
+  planExpiry?: number;
+  avatar?: string;
 }
 
 export function getUserAccount(): UserAccount {
   try {
     const raw = localStorage.getItem(USER_ACCOUNT_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          id: parsed.id || 'user_guest',
+          email: parsed.email || '',
+          name: parsed.name || 'Guest Organizer',
+          phone: parsed.phone || '',
+          isLoggedIn: !!parsed.isLoggedIn,
+          tier: parsed.tier === 'royal' ? 'royal' : 'free',
+          credits: typeof parsed.credits === 'number' ? parsed.credits : (parsed.tier === 'royal' ? 999 : 5),
+          planExpiry: parsed.planExpiry,
+          avatar: parsed.avatar || '',
+        };
+      }
+    }
   } catch {
     // ignore
   }
   return {
     id: 'user_default_owner',
     email: 'organizer@grandbandhan.com',
-    name: 'Grand Bandhan Host',
+    name: 'Shreyansh Sharma',
+    phone: '+91 98765 43210',
     isLoggedIn: true,
+    tier: 'free',
+    credits: 5,
   };
 }
 
 export function saveUserAccount(account: UserAccount): void {
   localStorage.setItem(USER_ACCOUNT_KEY, JSON.stringify(account));
+}
+
+export function loginUser(name: string, email: string, phone?: string, tier: AccountTier = 'free'): UserAccount {
+  const account: UserAccount = {
+    id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name: name.trim() || 'Wedding Host',
+    email: email.trim().toLowerCase(),
+    phone: phone?.trim() || '',
+    isLoggedIn: true,
+    tier,
+    credits: tier === 'royal' ? 999 : 5,
+  };
+  saveUserAccount(account);
+  return account;
+}
+
+export function logoutUser(): void {
+  const guestAccount: UserAccount = {
+    id: 'user_guest',
+    email: '',
+    name: 'Guest Organizer',
+    isLoggedIn: false,
+    tier: 'free',
+    credits: 3,
+  };
+  saveUserAccount(guestAccount);
+}
+
+export function updateUserTier(tier: AccountTier): UserAccount {
+  const user = getUserAccount();
+  user.tier = tier;
+  if (tier === 'royal') {
+    user.credits = 999;
+    user.planExpiry = Date.now() + 365 * 24 * 60 * 60 * 1000; // 1 year
+  }
+  saveUserAccount(user);
+  return user;
+}
+
+export function checkCanPublish(draftId: string): { allowed: boolean; reason?: string } {
+  const user = getUserAccount();
+  if (user.tier === 'royal') {
+    return { allowed: true };
+  }
+
+  // Free tier limit: max 1 active published invitation
+  const all = getAllDrafts();
+  const currentlyPublished = all.filter((d) => d.isPublished && d.id !== draftId);
+  if (currentlyPublished.length >= 1) {
+    return {
+      allowed: false,
+      reason: 'Free tier allows 1 active published invitation. Upgrade to Royal Premium for unlimited invitations.',
+    };
+  }
+
+  return { allowed: true };
 }
 
 export function createInitialDraft(templateId = 'royal-wedding-book'): InvitationDraft {
@@ -234,6 +315,49 @@ export function getRsvpsForSlug(slug: string): RsvpRecord[] {
     // ignore
   }
   return [];
+}
+
+export async function fetchLiveRsvps(slug: string): Promise<RsvpRecord[]> {
+  const local = getRsvpsForSlug(slug);
+  if (typeof window === 'undefined') return local;
+
+  try {
+    const res = await fetch(`/api/rsvp?slug=${encodeURIComponent(slug)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (Array.isArray(json.records) && json.records.length > 0) {
+        // Map database columns to RsvpRecord format
+        const mapped: RsvpRecord[] = json.records.map((r: any) => ({
+          id: r.id || `rsvp_${r.submitted_at || Date.now()}`,
+          slug: r.slug || slug,
+          guestName: r.guest_name || r.guestName || 'Valued Guest',
+          status: (r.attendance === 'yes' || r.status === 'attending') ? 'attending' : 'declined',
+          guestCount: r.guest_count || r.guestCount || 1,
+          contact: r.contact || '',
+          dietaryOrNote: r.message || r.dietary || r.dietaryOrNote || '',
+          submittedAt: r.submitted_at ? new Date(r.submitted_at).getTime() : Date.now(),
+        }));
+
+        // Merge without duplicates
+        const map = new Map<string, RsvpRecord>();
+        local.forEach((rec) => map.set(rec.id, rec));
+        mapped.forEach((rec) => map.set(rec.id, rec));
+        const combined = Array.from(map.values()).sort((a, b) => b.submittedAt - a.submittedAt);
+        localStorage.setItem(`gb_rsvps_${slug}`, JSON.stringify(combined));
+        return combined;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch server RSVPs, using local storage cache:', err);
+  }
+
+  return local;
+}
+
+export function saveLocalRsvp(record: RsvpRecord): void {
+  const list = getRsvpsForSlug(record.slug);
+  list.unshift(record);
+  localStorage.setItem(`gb_rsvps_${record.slug}`, JSON.stringify(list));
 }
 
 export function exportRsvpsCsv(slug: string, eventName: string): void {

@@ -148,9 +148,16 @@ export const PublishedGuestPage: React.FC<PublishedGuestPageProps> = ({ slug, on
           <span>{activeData.venueName}</span>
         </a>
 
-        <div className="text-[10px] text-white/40">
-          Powered by Grand Bandhan
-        </div>
+        <a
+          href="/invite-studio"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-[#dfba6a]/90 hover:text-[#dfba6a] border border-[#dfba6a]/20 transition-all text-[10px]"
+          title="Create your own luxury 3D invitation card on Grand Bandhan Invite Studio"
+        >
+          <span>Design your 3D card on Grand Bandhan</span>
+          <span>✦</span>
+        </a>
       </footer>
     </div>
   );

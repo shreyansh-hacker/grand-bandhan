@@ -5,7 +5,8 @@ import { SceneListPanel } from '../components/editor/SceneListPanel';
 import { PropertiesPanel } from '../components/editor/PropertiesPanel';
 import { AiAssistantPanel } from '../components/editor/AiAssistantPanel';
 import { InvitationPlayer } from '../components/invitation/InvitationPlayer';
-import { saveDraft, resetDraftToDefault, exportDraftAsJson, parseImportedJson, publishDraft } from '../services/storage';
+import { saveDraft, resetDraftToDefault, exportDraftAsJson, parseImportedJson, publishDraft, getUserAccount, checkCanPublish, UserAccount } from '../services/storage';
+import { UpgradeModal } from '../components/subscription/UpgradeModal';
 import { Layers, Sliders, Bot, Smartphone, Monitor, CheckCircle, ExternalLink, Copy } from 'lucide-react';
 import { useLanguage } from '../locales';
 
@@ -33,6 +34,8 @@ export const Studio: React.FC<StudioProps> = ({
   const [mobileTab, setMobileTab] = useState<'canvas' | 'scenes' | 'props' | 'ai'>('canvas');
   const [canvasViewMode, setCanvasViewMode] = useState<'mobile' | 'responsive'>('mobile');
   const [publishToast, setPublishToast] = useState<{ show: boolean; url: string } | null>(null);
+  const [user, setUser] = useState<UserAccount>(() => getUserAccount());
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Undo / Redo history stacks
   const [history, setHistory] = useState<InvitationDraft[]>([initialDraft]);
@@ -215,6 +218,11 @@ export const Studio: React.FC<StudioProps> = ({
 
   // Publish invitation
   const handlePublish = () => {
+    const check = checkCanPublish(draft.id);
+    if (!check.allowed) {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
     const published = publishDraft(draft);
     setDraft({ ...published });
     const liveUrl = `${window.location.origin}/i/${published.slug}`;
@@ -245,12 +253,14 @@ export const Studio: React.FC<StudioProps> = ({
         isSaving={isSaving}
         canUndo={historyIndex > 0}
         canRedo={historyIndex < history.length - 1}
+        tier={user.tier}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onBack={onBackToGallery}
         onOpenPreview={() => onOpenGuestPreview(draft)}
         onPublish={handlePublish}
         onOpenDashboard={onOpenDashboard}
+        onOpenUpgrade={() => setIsUpgradeModalOpen(true)}
         onExport={() => exportDraftAsJson(draft)}
         onImport={handleImportJson}
         onReset={handleResetToDefault}
@@ -503,6 +513,13 @@ export const Studio: React.FC<StudioProps> = ({
           </div>
         )}
       </div>
+
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        user={user}
+        onUpgraded={(updatedUser) => setUser(updatedUser)}
+      />
     </div>
   );
 };

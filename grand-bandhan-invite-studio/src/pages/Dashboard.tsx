@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InvitationDraft, RsvpRecord } from '../types/invitation';
 import {
   getAllDrafts,
   publishDraft,
   unpublishDraft,
   getRsvpsForSlug,
+  fetchLiveRsvps,
   exportRsvpsCsv,
   getUserAccount,
   migrateLegacyDraftToAccount,
+  checkCanPublish,
+  UserAccount,
 } from '../services/storage';
 import { BRAND_CONFIG } from '../config/brand';
 import {
@@ -26,9 +29,20 @@ import {
   ExternalLink,
   Plus,
   RefreshCw,
-  AlertTriangle,
+  Crown,
+  QrCode,
+  MessageSquare,
+  Search,
+  Filter,
+  LogOut,
+  User,
+  Utensils,
 } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../locales';
+import { AuthModal } from '../components/auth/AuthModal';
+import { UpgradeModal } from '../components/subscription/UpgradeModal';
+import { WhatsAppShareModal } from '../components/share/WhatsAppShareModal';
+import { PrintableQrModal } from '../components/share/PrintableQrModal';
 
 interface DashboardProps {
   onBackToStudio: () => void;
@@ -50,8 +64,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
     drafts[0]?.slug || 'kabir-meera-wedding'
   );
   const [activeTab, setActiveTab] = useState<'invites' | 'rsvps'>('invites');
+  const [user, setUser] = useState<UserAccount>(() => getUserAccount());
 
-  const user = getUserAccount();
+  // Modals state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [whatsAppDraft, setWhatsAppDraft] = useState<InvitationDraft | null>(null);
+  const [qrDraft, setQrDraft] = useState<InvitationDraft | null>(null);
+
+  // RSVP filter & live sync state
+  const [rsvps, setRsvps] = useState<RsvpRecord[]>(() => getRsvpsForSlug(selectedRsvpSlug));
+  const [isSyncingRsvps, setIsSyncingRsvps] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'attending' | 'declined'>('all');
+
+  // Load live RSVPs on slug change or tab switch
+  useEffect(() => {
+    let isMounted = true;
+    const sync = async () => {
+      setIsSyncingRsvps(true);
+      const records = await fetchLiveRsvps(selectedRsvpSlug);
+      if (isMounted) {
+        setRsvps(records);
+        setIsSyncingRsvps(false);
+      }
+    };
+    sync();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedRsvpSlug, activeTab]);
+
+  const handleManualSync = async () => {
+    setIsSyncingRsvps(true);
+    const records = await fetchLiveRsvps(selectedRsvpSlug);
+    setRsvps(records);
+    setIsSyncingRsvps(false);
+  };
 
   // Detect whether an unmigrated legacy v1 draft exists in localStorage
   const hasLegacyDraft = (() => {
@@ -101,6 +150,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setDrafts([...getAllDrafts()]);
       }
     } else {
+      // Check subscription tier limits
+      const check = checkCanPublish(draft.id);
+      if (!check.allowed) {
+        setIsUpgradeModalOpen(true);
+        return;
+      }
       publishDraft(draft);
       setDrafts([...getAllDrafts()]);
     }
@@ -113,8 +168,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onOpenDraft(migrated);
   };
 
-  const currentRsvps: RsvpRecord[] = getRsvpsForSlug(selectedRsvpSlug);
   const currentEvent = drafts.find((d) => d.slug === selectedRsvpSlug);
+
+  // Filtered RSVPs
+  const filteredRsvps = rsvps.filter((r) => {
+    const matchesSearch =
+      r.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.contact && r.contact.includes(searchQuery)) ||
+      (r.dietaryOrNote && r.dietaryOrNote.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesStatus =
+      statusFilter === 'all' || r.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Dietary counts
+  const jainCount = rsvps.filter((r) => r.status === 'attending' && /jain/i.test(r.dietaryOrNote || '')).length;
+  const vegCount = rsvps.filter((r) => r.status === 'attending' && /veg/i.test(r.dietaryOrNote || '')).length;
 
   return (
     <div className="min-h-screen bg-[#faf7f2] flex flex-col justify-between p-4 sm:p-8 select-none">
@@ -135,23 +206,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
           />
         </div>
 
-        {/* User Badge & Language Switcher */}
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="hidden md:flex flex-col text-right">
-            <div className="flex items-center gap-1.5 justify-end text-stone-800">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="font-semibold text-xs">{user.name || user.email}</span>
+        {/* User Account, Tier & Controls */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Account Profile Badge */}
+          <div
+            onClick={() => setIsAuthModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#e8decb] hover:border-[#c9a96a] cursor-pointer shadow-xs transition-all"
+            title="Click to view or switch account"
+          >
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#6e1f2f] to-[#8a273c] text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs">
+              {user.name ? user.name[0] : 'H'}
             </div>
-            <span className="text-[10px] text-stone-500 font-sans">
-              Local Workspace · Saved on this device
-            </span>
+            <div className="hidden sm:flex flex-col text-left">
+              <span className="text-xs font-bold text-[#2c2523] truncate max-w-[120px]">
+                {user.name || 'Organizer'}
+              </span>
+              <span className="text-[10px] text-[#7c6f64] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>{user.isLoggedIn ? 'Signed In' : 'Guest Mode'}</span>
+              </span>
+            </div>
           </div>
+
+          {/* Tier Pill */}
+          {user.tier === 'royal' ? (
+            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#c9a96a]/20 to-[#d4af37]/30 border border-[#c9a96a] text-[#6e1f2f] text-xs font-bold shadow-xs">
+              <Crown className="w-3.5 h-3.5 text-[#c9a96a]" />
+              <span className="hidden md:inline">Royal Premium</span>
+              <span className="md:hidden">Royal</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#f5ede0] border border-[#c9a96a]/50 text-[#8b7355] hover:text-[#6e1f2f] hover:border-[#6e1f2f] text-xs font-semibold transition-all shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#c9a96a]" />
+              <span className="hidden md:inline">Free Tier · Upgrade ⭐</span>
+              <span className="md:hidden">Upgrade ⭐</span>
+            </button>
+          )}
 
           <LanguageSwitcher />
 
           <button
             onClick={onCreateNew}
-            className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold shadow hover:bg-[#541421] transition-all"
+            className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold shadow hover:bg-[#541421] transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t.createNew}</span>
@@ -201,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* Legacy Migration Alert Banner (ONLY shown when an unmigrated legacy draft actually exists) */}
+        {/* Legacy Migration Alert Banner */}
         {hasLegacyDraft && (
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-3">
@@ -228,7 +327,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex items-center gap-2 border-b border-[#e8decb] pb-2">
           <button
             onClick={() => setActiveTab('invites')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'invites'
                 ? 'bg-[#6e1f2f] text-white shadow-xs'
                 : 'text-stone-600 hover:bg-[#f2ede4]'
@@ -238,13 +337,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('rsvps')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
               activeTab === 'rsvps'
                 ? 'bg-[#6e1f2f] text-white shadow-xs'
                 : 'text-stone-600 hover:bg-[#f2ede4]'
             }`}
           >
-            Guest Responses ({totalRsvps})
+            <span>Live Guest RSVPs ({totalRsvps})</span>
+            {isSyncingRsvps && <RefreshCw className="w-3 h-3 animate-spin text-[#dfba6a]" />}
           </button>
         </div>
 
@@ -253,7 +353,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {drafts.map((d) => {
-                const rsvps = getRsvpsForSlug(d.slug);
+                const draftRsvps = getRsvpsForSlug(d.slug);
                 return (
                   <div
                     key={d.id}
@@ -285,7 +385,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </p>
 
                       {/* Slug & Links: Distinct behavior for published vs draft */}
-                      <div className="my-3 p-2.5 bg-[#faf7f2] rounded-lg border border-[#e8decb] text-xs space-y-1">
+                      <div className="my-3 p-2.5 bg-[#faf7f2] rounded-xl border border-[#e8decb] text-xs space-y-1">
                         {d.isPublished ? (
                           <>
                             <div className="flex items-center justify-between">
@@ -311,7 +411,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               </button>
                             </div>
                             <div className="text-[10px] text-stone-500 font-sans">
-                              Public guest responses: <strong>{rsvps.length}</strong>
+                              Public guest responses: <strong>{draftRsvps.length}</strong>
                             </div>
                           </>
                         ) : (
@@ -327,12 +427,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                     </div>
 
+                    {/* Social & Sharing Toolkit (WhatsApp & Print QR) */}
+                    {d.isPublished && (
+                      <div className="grid grid-cols-2 gap-2 my-2 pt-2 border-t border-[#f2ede4]">
+                        <button
+                          type="button"
+                          onClick={() => setWhatsAppDraft(d)}
+                          className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-[#25d366]/10 text-[#075e54] text-[11px] font-semibold border border-[#25d366]/30 hover:bg-[#25d366]/20 transition-all"
+                          title="Share invitation on WhatsApp"
+                        >
+                          <MessageSquare className="w-3 h-3 text-[#25d366]" />
+                          <span>WhatsApp</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQrDraft(d)}
+                          className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-[#c9a96a]/10 text-[#6e1f2f] text-[11px] font-semibold border border-[#c9a96a]/40 hover:bg-[#c9a96a]/20 transition-all"
+                          title="Generate printable QR code"
+                        >
+                          <QrCode className="w-3 h-3 text-[#c9a96a]" />
+                          <span>Print QR</span>
+                        </button>
+                      </div>
+                    )}
+
                     {/* Action buttons */}
-                    <div className="space-y-2 pt-3 border-t border-[#f2ede4]">
+                    <div className="space-y-2 pt-2 border-t border-[#f2ede4]">
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => onOpenDraft(d)}
-                          className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-[#6e1f2f] text-white text-xs font-semibold hover:bg-[#541421] transition-all"
+                          className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-xl bg-[#6e1f2f] text-white text-xs font-semibold hover:bg-[#541421] transition-all"
                         >
                           <Edit3 className="w-3.5 h-3.5 text-[#dfba6a]" />
                           <span>Edit</span>
@@ -343,7 +467,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             href={`/i/${d.slug}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-all"
+                            className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-all"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                             <span>View Live</span>
@@ -358,7 +482,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 window.location.hash = '#/preview';
                               }
                             }}
-                            className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-stone-100 text-stone-700 text-xs font-semibold hover:bg-stone-200 transition-all"
+                            className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-xl bg-stone-100 text-stone-700 text-xs font-semibold hover:bg-stone-200 transition-all"
                           >
                             <Eye className="w-3.5 h-3.5 text-stone-500" />
                             <span>Preview draft</span>
@@ -368,7 +492,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                       <button
                         onClick={() => handleTogglePublish(d)}
-                        className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                        className={`w-full py-1.5 px-3 rounded-xl text-xs font-semibold border transition-all ${
                           d.isPublished
                             ? 'border-rose-300 text-rose-700 hover:bg-rose-50'
                             : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
@@ -384,10 +508,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 2: Guest Responses & RSVP Analytics */}
+        {/* TAB 2: Guest Responses & RSVP Command Center */}
         {activeTab === 'rsvps' && (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-white border border-[#e8decb] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            {/* Event Selector & Actions */}
+            <div className="p-4 rounded-2xl bg-white border border-[#e8decb] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Users className="w-5 h-5 text-[#6e1f2f] shrink-0" />
                 <div className="w-full sm:w-auto">
@@ -397,7 +522,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <select
                     value={selectedRsvpSlug}
                     onChange={(e) => setSelectedRsvpSlug(e.target.value)}
-                    className="mt-1 px-3 py-1.5 text-xs rounded-lg border border-[#e8decb] bg-white font-sans w-full sm:w-64"
+                    className="mt-1 px-3 py-1.5 text-xs rounded-xl border border-[#e8decb] bg-white font-sans w-full sm:w-64 focus:ring-1 focus:ring-[#6e1f2f]"
                   >
                     {drafts.map((d) => (
                       <option key={d.slug} value={d.slug}>
@@ -408,34 +533,121 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
 
-              {currentRsvps.length > 0 && (
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
-                  onClick={() => exportRsvpsCsv(selectedRsvpSlug, currentEvent?.name || 'Event')}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#6e1f2f] text-white text-xs font-semibold hover:bg-[#541421] transition-all"
+                  type="button"
+                  onClick={handleManualSync}
+                  className="flex items-center gap-1 px-3 py-2 rounded-xl border border-[#e8decb] bg-white text-xs font-semibold text-[#7c6f64] hover:bg-[#f3ede2] transition-all"
+                  title="Sync live responses from database"
                 >
-                  <Download className="w-4 h-4 text-[#dfba6a]" />
-                  <span>{t.downloadCsv}</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingRsvps ? 'animate-spin text-[#c9a96a]' : ''}`} />
+                  <span className="hidden sm:inline">Refresh Sync</span>
                 </button>
-              )}
+
+                {rsvps.length > 0 && (
+                  <button
+                    onClick={() => exportRsvpsCsv(selectedRsvpSlug, currentEvent?.name || 'Event')}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6e1f2f] text-white text-xs font-semibold hover:bg-[#541421] transition-all shadow-xs"
+                  >
+                    <Download className="w-4 h-4 text-[#dfba6a]" />
+                    <span>{t.downloadCsv}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
+            {/* Attendance & Dietary Summary */}
+            {rsvps.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-white rounded-xl border border-[#e8decb] text-center">
+                  <span className="text-[10px] uppercase font-bold text-stone-500 block">Total Confirmed Guests</span>
+                  <span className="text-xl font-bold text-emerald-700">
+                    {rsvps.filter((r) => r.status === 'attending').reduce((acc, r) => acc + (r.guestCount || 1), 0)}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-[#e8decb] text-center">
+                  <span className="text-[10px] uppercase font-bold text-stone-500 block">Declined / Regrets</span>
+                  <span className="text-xl font-bold text-rose-700">
+                    {rsvps.filter((r) => r.status === 'declined').length}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-[#e8decb] text-center">
+                  <span className="text-[10px] uppercase font-bold text-stone-500 block">Vegetarian Meals</span>
+                  <span className="text-xl font-bold text-[#c99a3e]">{vegCount || 'All'}</span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-[#e8decb] text-center">
+                  <span className="text-[10px] uppercase font-bold text-stone-500 block">Jain Meals</span>
+                  <span className="text-xl font-bold text-amber-800">{jainCount}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Search and Filter Toolbar */}
+            {rsvps.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white rounded-xl border border-[#e8decb]">
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-3.5 h-3.5 text-[#a89984] absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search guest name, notes, phone..."
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#faf7f2] border border-[#d5c7b3] rounded-lg focus:outline-none focus:border-[#6e1f2f]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end text-xs">
+                  <span className="text-stone-500 text-[11px] font-medium">Status:</span>
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] ${statusFilter === 'all' ? 'bg-[#6e1f2f] text-white' : 'bg-stone-100 text-stone-600'}`}
+                  >
+                    All ({rsvps.length})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('attending')}
+                    className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] ${statusFilter === 'attending' ? 'bg-emerald-700 text-white' : 'bg-stone-100 text-stone-600'}`}
+                  >
+                    Attending ({rsvps.filter((r) => r.status === 'attending').length})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('declined')}
+                    className={`px-2.5 py-1 rounded-lg font-semibold text-[11px] ${statusFilter === 'declined' ? 'bg-rose-700 text-white' : 'bg-stone-100 text-stone-600'}`}
+                  >
+                    Declined ({rsvps.filter((r) => r.status === 'declined').length})
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Responses Table or Publication-Dependent Empty State */}
-            {currentRsvps.length === 0 ? (
-              <div className="p-8 text-center bg-white rounded-xl border border-[#e8decb]">
+            {filteredRsvps.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-2xl border border-[#e8decb]">
                 <Clock className="w-8 h-8 mx-auto text-stone-400 mb-2" />
                 {currentEvent?.isPublished ? (
                   <>
-                    <h4 className="text-sm font-bold text-stone-700">No RSVPs received yet</h4>
+                    <h4 className="text-sm font-bold text-stone-700">No RSVPs match your criteria</h4>
                     <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
-                      Share your live guest link <code>/i/{selectedRsvpSlug}</code> with your attendees to collect responses.
+                      Share your live guest link <code>/i/{selectedRsvpSlug}</code> with your attendees or send a WhatsApp invitation.
                     </p>
-                    <button
-                      onClick={() => handleCopyLink(selectedRsvpSlug)}
-                      className="mt-3 px-3.5 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold inline-flex items-center gap-1.5 shadow"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Guest Link</span>
-                    </button>
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleCopyLink(selectedRsvpSlug)}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold inline-flex items-center gap-1.5 shadow"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Guest Link</span>
+                      </button>
+                      {currentEvent && (
+                        <button
+                          onClick={() => setWhatsAppDraft(currentEvent)}
+                          className="px-3.5 py-1.5 rounded-xl bg-[#25d366] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>WhatsApp Share</span>
+                        </button>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
@@ -448,7 +660,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {currentEvent && (
                       <button
                         onClick={() => handleTogglePublish(currentEvent)}
-                        className="mt-3 px-4 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow hover:bg-emerald-800"
+                        className="mt-3 px-4 py-1.5 rounded-xl bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow hover:bg-emerald-800"
                       >
                         <Send className="w-3.5 h-3.5 text-[#ffd166]" />
                         <span>Publish This Invitation</span>
@@ -458,7 +670,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 )}
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-[#e8decb] overflow-x-auto shadow-xs">
+              <div className="bg-white rounded-2xl border border-[#e8decb] overflow-x-auto shadow-xs">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#faf7f2] border-b border-[#e8decb] text-stone-600 font-cinzel text-[10px] uppercase">
                     <tr>
@@ -466,12 +678,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <th className="py-3 px-4">Status</th>
                       <th className="py-3 px-4">Party Size</th>
                       <th className="py-3 px-4">Contact</th>
-                      <th className="py-3 px-4">Notes / Wishes</th>
+                      <th className="py-3 px-4">Dietary / Notes</th>
                       <th className="py-3 px-4">Submitted At</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100 font-sans">
-                    {currentRsvps.map((r) => (
+                    {filteredRsvps.map((r) => (
                       <tr key={r.id} className="hover:bg-stone-50/70">
                         <td className="py-3 px-4 font-semibold text-[#2c2523]">{r.guestName}</td>
                         <td className="py-3 px-4">
@@ -503,9 +715,42 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className="max-w-6xl mx-auto w-full pt-6 border-t border-[#e8decb] text-center text-xs text-stone-500 font-sans">
-        © {new Date().getFullYear()} {BRAND_CONFIG.name} · {BRAND_CONFIG.tagline}
+      <footer className="max-w-6xl mx-auto w-full pt-6 border-t border-[#e8decb] text-center text-xs text-stone-500 font-sans flex flex-col sm:flex-row items-center justify-between gap-2">
+        <span>© {new Date().getFullYear()} {BRAND_CONFIG.name} · {BRAND_CONFIG.tagline}</span>
+        <span className="text-[11px] text-[#8b7355]">
+          Host Plan: <strong>{user.tier === 'royal' ? 'Royal Premium VIP' : 'Free Starter Tier'}</strong>
+        </span>
       </footer>
+
+      {/* MODALS */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={(updatedUser) => setUser(updatedUser)}
+      />
+
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        user={user}
+        onUpgraded={(updatedUser) => setUser(updatedUser)}
+      />
+
+      {whatsAppDraft && (
+        <WhatsAppShareModal
+          isOpen={!!whatsAppDraft}
+          onClose={() => setWhatsAppDraft(null)}
+          draft={whatsAppDraft}
+        />
+      )}
+
+      {qrDraft && (
+        <PrintableQrModal
+          isOpen={!!qrDraft}
+          onClose={() => setQrDraft(null)}
+          draft={qrDraft}
+        />
+      )}
     </div>
   );
 };

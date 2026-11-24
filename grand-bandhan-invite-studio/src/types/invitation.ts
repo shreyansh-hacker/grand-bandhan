@@ -49,6 +49,7 @@ export interface ActivityItem {
 
 export interface RsvpRecord {
   id: string;
+  slug?: string;
   guestName: string;
   contact: string;
   status: 'attending' | 'declined';
@@ -56,7 +57,7 @@ export interface RsvpRecord {
   dietaryOrNote?: string;
   guestToken?: string;
   submittedAt: number;
-  updatedAt: number;
+  updatedAt?: number;
 }
 
 export interface GenericInvitationData {
