@@ -1,7 +1,20 @@
-class WeddingMusicSynth {
+// Grand Bandhan Audio Engine
+// Supports both zero-latency Web Audio synthesizers (Raga Bhupali) and custom MP3 / WAV soundtracks
+
+export interface MusicConfig {
+  enabled: boolean;
+  title: string;
+  artist: string;
+  type: 'synth' | 'mp3';
+  url?: string;
+}
+
+class WeddingAudioManager {
   private ctx: AudioContext | null = null;
   private isPlaying = false;
   private intervalId: any = null;
+  private audioEl: HTMLAudioElement | null = null;
+  private currentConfig: MusicConfig | null = null;
 
   private notes = [
     261.63, // C4 (Sa)
@@ -21,17 +34,65 @@ class WeddingMusicSynth {
     }
   }
 
-  public toggle(): boolean {
+  public setConfig(config: MusicConfig) {
+    this.currentConfig = config;
+    if (this.isPlaying) {
+      // Re-trigger with new config
+      this.stop();
+      this.play(config);
+    }
+  }
+
+  public toggle(config?: MusicConfig): boolean {
     if (this.isPlaying) {
       this.stop();
       return false;
     } else {
-      this.play();
+      this.play(config || this.currentConfig || undefined);
       return true;
     }
   }
 
-  public play() {
+  public play(config?: MusicConfig) {
+    if (config) {
+      this.currentConfig = config;
+    }
+
+    const cfg = this.currentConfig;
+
+    // 1. If custom MP3 audio is configured and valid
+    if (cfg && cfg.type === 'mp3' && cfg.url) {
+      this.stopSynth();
+      try {
+        if (!this.audioEl && typeof window !== 'undefined') {
+          this.audioEl = new Audio();
+          this.audioEl.loop = true;
+          this.audioEl.volume = 0.65;
+        }
+        if (this.audioEl) {
+          if (this.audioEl.src !== cfg.url) {
+            this.audioEl.src = cfg.url;
+          }
+          this.audioEl.play().then(() => {
+            this.isPlaying = true;
+          }).catch((err) => {
+            console.warn('HTML5 audio play blocked, falling back to Web Audio synth:', err);
+            this.playSynth();
+          });
+          this.isPlaying = true;
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not play MP3, using synth:', err);
+      }
+    }
+
+    // 2. Fallback to meditative Raga Bhupali synthesizer
+    this.stopAudioElement();
+    this.playSynth();
+  }
+
+  private playSynth() {
     this.init();
     if (!this.ctx) return;
     if (this.ctx.state === 'suspended') {
@@ -76,12 +137,26 @@ class WeddingMusicSynth {
     this.intervalId = setInterval(playNextNote, 950);
   }
 
-  public stop() {
-    this.isPlaying = false;
+  private stopSynth() {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+  }
+
+  private stopAudioElement() {
+    if (this.audioEl) {
+      try {
+        this.audioEl.pause();
+        this.audioEl.currentTime = 0;
+      } catch {}
+    }
+  }
+
+  public stop() {
+    this.isPlaying = false;
+    this.stopSynth();
+    this.stopAudioElement();
   }
 
   public getStatus(): boolean {
@@ -89,4 +164,4 @@ class WeddingMusicSynth {
   }
 }
 
-export const weddingMusic = new WeddingMusicSynth();
+export const weddingMusic = new WeddingAudioManager();

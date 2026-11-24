@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   GenericInvitationData,
   CeremonyFunction,
   ActivityItem,
   AgendaItem,
   SpeakerItem,
+  StoryPhoto,
   SelectedElement,
   InvitationLanguage,
 } from '../../types/invitation';
@@ -23,8 +24,17 @@ import {
   Image,
   User,
   Building,
+  Music,
+  Volume2,
+  VolumeX,
+  Play,
+  Square,
+  Upload,
+  Camera,
+  Heart,
 } from 'lucide-react';
 import { useLanguage } from '../../locales';
+import { weddingMusic } from '../../services/sound';
 
 interface PropertiesPanelProps {
   data: GenericInvitationData;
@@ -48,6 +58,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   onClearSelection,
 }) => {
   const { lang, t } = useLanguage();
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState<boolean>(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Helper for array field updates (activities, agenda, speakers)
   const handleUpdateActivity = (index: number, updated: Partial<ActivityItem>) => {
@@ -138,6 +151,81 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     const list = [...(data.speakers || [])];
     list.splice(index, 1);
     onUpdateField('speakers', list);
+  };
+
+  // Story Photo Gallery Helpers
+  const handleUpdateStoryPhoto = (index: number, updated: Partial<StoryPhoto>) => {
+    const list = [...(data.storyPhotos || [])];
+    if (list[index]) {
+      list[index] = { ...list[index], ...updated };
+      onUpdateField('storyPhotos', list);
+    }
+  };
+
+  const handleAddStoryPhoto = (customUrl?: string) => {
+    const list = [...(data.storyPhotos || [])];
+    const newIndex = list.length + 1;
+    list.push({
+      id: `st-${Date.now()}`,
+      url: customUrl || '/assets/templates/royal-wedding-book/photos/couple-1.svg',
+      title: `स्मृति प्रसंग #${newIndex}`,
+      caption: 'प्यार व अपनेपन के सुंदर पल।',
+    });
+    onUpdateField('storyPhotos', list);
+  };
+
+  const handleRemoveStoryPhoto = (index: number) => {
+    const list = [...(data.storyPhotos || [])];
+    list.splice(index, 1);
+    onUpdateField('storyPhotos', list);
+  };
+
+  const handleUploadStoryPhoto = (index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        handleUpdateStoryPhoto(index, { url: dataUrl });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadNewPhoto = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        handleAddStoryPhoto(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Music & Soundtrack Helpers
+  const handleUploadAudio = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        const customMusic = {
+          enabled: true,
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          artist: 'Custom Couple Track',
+          type: 'mp3' as const,
+          url: dataUrl,
+        };
+        onUpdateField('music', customMusic);
+        weddingMusic.play(customMusic);
+        setIsPreviewPlaying(true);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleAudioPreview = () => {
+    const playing = weddingMusic.toggle(data.music);
+    setIsPreviewPlaying(playing);
   };
 
   // Category-specific presets for Cover Title
@@ -797,6 +885,117 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 </div>
               </div>
             )}
+
+            {/* J. STORY PHOTOS / PHOTO GALLERY */}
+            {selectedElement.fieldKey === 'storyPhotos' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#6e1f2f]">
+                    Couple Story Photos ({(data.storyPhotos || []).length}):
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-[#c99a3e] hover:underline"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Photo</span>
+                    </button>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadNewPhoto(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                  {(data.storyPhotos || []).map((photo, i) => (
+                    <div
+                      key={photo.id || i}
+                      className="p-3 rounded-xl border border-[#e8decb] bg-[#faf7f2]/70 space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-[#852b3d] font-cinzel">
+                          PHOTO #{i + 1}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveStoryPhoto(i)}
+                          className="text-stone-400 hover:text-rose-600 p-1"
+                          title="Remove photo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Photo Thumbnail + Replace File */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden border border-[#dfba6a] bg-stone-100 shrink-0 shadow-xs">
+                          <img
+                            src={photo.url}
+                            alt={photo.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white border border-[#dfba6a] text-[11px] font-medium text-[#6e1f2f] hover:bg-[#f5ede0] transition-all">
+                            <Upload className="w-3 h-3 text-[#c99a3e]" />
+                            <span>Replace Photo File</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleUploadStoryPhoto(i, file);
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+                          <p className="text-[9px] text-stone-500">
+                            Live preview on card
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Title & Caption */}
+                      <div>
+                        <label className="block text-[10px] font-medium text-stone-600 mb-0.5">
+                          Photo Title / Milestone:
+                        </label>
+                        <input
+                          type="text"
+                          value={photo.title}
+                          onChange={(e) => handleUpdateStoryPhoto(i, { title: e.target.value })}
+                          placeholder="e.g. First Meeting · 2022"
+                          className="w-full text-xs bg-white px-2.5 py-1 rounded-lg border border-[#e8decb] font-medium outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-medium text-stone-600 mb-0.5">
+                          Story Caption / Romantic Note:
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={photo.caption}
+                          onChange={(e) => handleUpdateStoryPhoto(i, { caption: e.target.value })}
+                          placeholder="Brief memory caption..."
+                          className="w-full text-[11px] bg-white px-2.5 py-1 rounded-lg border border-[#e8decb] outline-none"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* ============================================================== */
@@ -926,6 +1125,196 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Wedding Soundtrack & Ambient Audio Manager */}
+            <div className="p-3.5 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#dfba6a]/20 border border-[#dfba6a] flex items-center justify-center text-[#6e1f2f]">
+                    <Music className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-[#6e1f2f] block leading-tight font-cinzel">
+                      Wedding Soundtrack:
+                    </span>
+                    <span className="text-[10px] text-stone-500 font-sans truncate max-w-[150px] block">
+                      {data.music?.title || 'Royal Shehnai Flute'}
+                    </span>
+                  </div>
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={data.music?.enabled ?? true}
+                  onChange={(e) => {
+                    const updated = { ...data.music, enabled: e.target.checked };
+                    onUpdateField('music', updated);
+                    if (!e.target.checked) {
+                      weddingMusic.stop();
+                      setIsPreviewPlaying(false);
+                    }
+                  }}
+                  className="w-4 h-4 accent-[#6e1f2f] rounded"
+                  title="Toggle music on/off"
+                />
+              </div>
+
+              {data.music?.enabled && (
+                <div className="space-y-2.5 pt-2 border-t border-[#f2ede4]">
+                  {/* Soundtrack Presets */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-600 mb-1">
+                      Soundtrack Presets:
+                    </label>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {[
+                        {
+                          name: 'शाही शहनाई व बांसुरी (Royal Flute Synth)',
+                          type: 'synth' as const,
+                          url: '',
+                          desc: 'Zero-lag classical flute melody in Raga Bhupali',
+                        },
+                        {
+                          name: 'मांगलिक शहनाई (Auspicious Shehnai Bells)',
+                          type: 'mp3' as const,
+                          url: 'https://assets.mixkit.co/music/preview/mixkit-indian-traditional-sitar-694.mp3',
+                          desc: 'Rich ceremonial Shehnai & temple bells',
+                        },
+                        {
+                          name: 'जश्न व ढोलक (Celebration Sitar Beats)',
+                          type: 'mp3' as const,
+                          url: 'https://assets.mixkit.co/music/preview/mixkit-bollywood-nights-242.mp3',
+                          desc: 'Festive wedding celebration rhythm',
+                        },
+                      ].map((track) => (
+                        <button
+                          key={track.name}
+                          type="button"
+                          onClick={() => {
+                            const newMusic = {
+                              enabled: true,
+                              title: track.name,
+                              artist: 'Grand Bandhan Studio Ensemble',
+                              type: track.type,
+                              url: track.url,
+                            };
+                            onUpdateField('music', newMusic);
+                            if (isPreviewPlaying) {
+                              weddingMusic.play(newMusic);
+                            }
+                          }}
+                          className={`p-2 rounded-lg text-left border transition-all text-xs flex flex-col ${
+                            (data.music.type === track.type && (!track.url || data.music.url === track.url))
+                              ? 'bg-[#6e1f2f] text-white border-[#6e1f2f] shadow-xs'
+                              : 'bg-[#faf7f2] text-stone-800 border-[#e8decb] hover:bg-[#f2ede4]'
+                          }`}
+                        >
+                          <span className="font-semibold text-[11px]">{track.name}</span>
+                          <span className="text-[9px] opacity-80">{track.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom MP3 File Uploader */}
+                  <div className="pt-1">
+                    <input
+                      ref={audioInputRef}
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadAudio(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => audioInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-dashed border-[#c99a3e] bg-amber-50/50 hover:bg-amber-100/60 text-[#6e1f2f] text-xs font-semibold transition-all"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#c99a3e]" />
+                      <span>Upload Custom Wedding MP3 / Song</span>
+                    </button>
+                    <p className="text-[9px] text-stone-500 mt-0.5 text-center">
+                      Supports MP3, WAV, M4A · Stored durably for all guests
+                    </p>
+                  </div>
+
+                  {/* Live Preview Button */}
+                  <button
+                    type="button"
+                    onClick={toggleAudioPreview}
+                    className={`w-full py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-semibold transition-all ${
+                      isPreviewPlaying
+                        ? 'bg-emerald-700 text-white shadow-xs'
+                        : 'bg-[#faf7f2] border border-[#dfba6a] text-[#6e1f2f] hover:bg-[#f2ede4]'
+                    }`}
+                  >
+                    {isPreviewPlaying ? (
+                      <>
+                        <Square className="w-3 h-3 fill-current" />
+                        <span>Stop Sound Preview</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3 h-3 fill-current text-[#dfba6a]" />
+                        <span>Preview Sound Track</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Couple Story / Photo Gallery Quick Card */}
+            <div className="p-3.5 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#dfba6a]/20 border border-[#dfba6a] flex items-center justify-center text-[#6e1f2f]">
+                    <Camera className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-[#6e1f2f] block leading-tight font-cinzel">
+                      Couple Photo Gallery:
+                    </span>
+                    <span className="text-[10px] text-stone-500 font-sans">
+                      {(data.storyPhotos || []).length} Memories in 3D Album
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="p-1.5 rounded-lg bg-[#faf7f2] border border-[#dfba6a] text-[#6e1f2f] hover:bg-[#f2ede4]"
+                  title="Upload photo"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Photo Mini Thumbnails Row */}
+              <div className="flex items-center gap-2 overflow-x-auto py-1">
+                {(data.storyPhotos || []).map((photo, i) => (
+                  <div
+                    key={photo.id || i}
+                    className="w-12 h-12 rounded-lg border border-[#dfba6a] overflow-hidden shrink-0 relative group bg-stone-100 shadow-2xs"
+                  >
+                    <img src={photo.url} alt={photo.title} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="w-12 h-12 rounded-lg border border-dashed border-[#dfba6a] flex flex-col items-center justify-center text-stone-400 hover:text-[#6e1f2f] hover:border-[#6e1f2f] shrink-0 text-[9px]"
+                >
+                  <Upload className="w-3.5 h-3.5 mb-0.5" />
+                  <span>Upload</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

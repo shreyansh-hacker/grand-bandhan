@@ -37,6 +37,7 @@ import {
   LogOut,
   User,
   Utensils,
+  Gift,
 } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../locales';
 import { AuthModal } from '../components/auth/AuthModal';
@@ -183,9 +184,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return matchesSearch && matchesStatus;
   });
 
-  // Dietary counts
+  // Dietary and Shagun metrics
   const jainCount = rsvps.filter((r) => r.status === 'attending' && /jain/i.test(r.dietaryOrNote || '')).length;
   const vegCount = rsvps.filter((r) => r.status === 'attending' && /veg/i.test(r.dietaryOrNote || '')).length;
+  const totalShagun = rsvps.reduce((acc, r) => {
+    const match = r.dietaryOrNote?.match(/\[Shagun: ₹?([0-9,]+)\]/i);
+    if (match) {
+      const num = parseInt(match[1].replace(/,/g, ''), 10);
+      return acc + (isNaN(num) ? 0 : num);
+    }
+    return acc;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-[#faf7f2] flex flex-col justify-between p-4 sm:p-8 select-none">
@@ -558,11 +567,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Attendance & Dietary Summary */}
             {rsvps.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div className="p-3 bg-white rounded-xl border border-[#e8decb] text-center">
-                  <span className="text-[10px] uppercase font-bold text-stone-500 block">Total Confirmed Guests</span>
+                  <span className="text-[10px] uppercase font-bold text-stone-500 block">Total Confirmed</span>
                   <span className="text-xl font-bold text-emerald-700">
                     {rsvps.filter((r) => r.status === 'attending').reduce((acc, r) => acc + (r.guestCount || 1), 0)}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-[#dfba6a] text-center bg-gradient-to-b from-[#faf7f2] to-white shadow-xs">
+                  <span className="text-[10px] uppercase font-bold text-[#852b3d] block flex items-center justify-center gap-1">
+                    <Gift className="w-3 h-3 text-[#c99a3e]" />
+                    <span>Digital Shagun</span>
+                  </span>
+                  <span className="text-xl font-bold text-[#6e1f2f]">
+                    ₹{totalShagun.toLocaleString('en-IN')}
                   </span>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-[#e8decb] text-center">
@@ -700,7 +718,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </td>
                         <td className="py-3 px-4 font-bold text-stone-800">{r.guestCount}</td>
                         <td className="py-3 px-4 text-stone-600">{r.contact || '-'}</td>
-                        <td className="py-3 px-4 text-stone-600 italic">{r.dietaryOrNote || '-'}</td>
+                        <td className="py-3 px-4 text-stone-600">
+                          {(() => {
+                            const raw = r.dietaryOrNote || '';
+                            const match = raw.match(/\[Shagun: ₹?([0-9,]+)\]/i);
+                            const blessingsOnly = raw.includes('[Blessings Only]');
+                            const cleanNote = raw.replace(/\[(Shagun: ₹?[0-9,]+|Blessings Only)\]\s*/i, '').trim();
+                            return (
+                              <div className="space-y-1">
+                                {match && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#dfba6a]/20 border border-[#dfba6a]/60 text-[#6e1f2f] text-[10px] font-bold">
+                                    <Gift className="w-3 h-3 text-[#c99a3e]" />
+                                    <span>₹{match[1]} Shagun</span>
+                                  </span>
+                                )}
+                                {blessingsOnly && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-medium">
+                                    <span>शुभाशीष (Blessings)</span>
+                                  </span>
+                                )}
+                                {cleanNote ? (
+                                  <p className="italic text-xs text-stone-700">{cleanNote}</p>
+                                ) : !match && !blessingsOnly ? (
+                                  <span className="text-stone-400">-</span>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td className="py-3 px-4 text-stone-400 text-[10px]">
                           {new Date(r.submittedAt).toLocaleDateString()}
                         </td>

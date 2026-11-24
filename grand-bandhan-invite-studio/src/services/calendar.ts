@@ -2,9 +2,12 @@ export function generateIcsCalendar(
   title: string,
   description: string,
   location: string,
-  startDateIso: string
+  startDateIso?: string
 ): void {
-  const start = new Date(startDateIso);
+  let start = new Date(startDateIso || '');
+  if (isNaN(start.getTime())) {
+    start = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  }
   const end = new Date(start.getTime() + 4 * 60 * 60 * 1000); // 4 hour duration
 
   const formatIcsDate = (date: Date) => {
@@ -43,9 +46,12 @@ export function getGoogleCalendarUrl(
   title: string,
   description: string,
   location: string,
-  startDateIso: string
+  startDateIso?: string
 ): string {
-  const start = new Date(startDateIso);
+  let start = new Date(startDateIso || '');
+  if (isNaN(start.getTime())) {
+    start = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  }
   const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
 
   const formatGoogleDate = (date: Date) => {

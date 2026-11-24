@@ -26,7 +26,7 @@ export const ClosingScene: React.FC<ClosingSceneProps> = ({
 
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const state = weddingMusic.toggle();
+    const state = weddingMusic.toggle(data.music);
     setIsPlayingMusic(state);
   };
 

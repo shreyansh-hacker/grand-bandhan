@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GenericInvitationData } from '../../types/invitation';
-import { MapPin, Navigation, Copy, Check, Video, Globe, ExternalLink } from 'lucide-react';
+import { MapPin, Navigation, Copy, Check, Video, Globe, ExternalLink, Calendar } from 'lucide-react';
+import { generateIcsCalendar, getGoogleCalendarUrl } from '../../services/calendar';
 
 interface VenueSceneProps {
   data: GenericInvitationData;
@@ -159,7 +160,7 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
           </div>
         )}
 
-        {/* Action Buttons: Get Directions & Copy Address */}
+        {/* Action Buttons: Get Directions, Copy Address & Calendar */}
         <div className="mt-4 w-full flex flex-col gap-2">
           {data.onlineMeetingUrl && (
             <button
@@ -180,23 +181,42 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
             <span>गूगल मैप्स में देखें (Get Directions)</span>
           </button>
 
-          <button
-            onClick={handleCopyAddress}
-            className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#faf7f2] border border-[#dfba6a] text-xs font-medium rounded-lg hover:bg-[#f2ede4] active:scale-98 transition-all"
-            style={{ color: data.theme.coverColor || '#6e1f2f' }}
-          >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-600" />
-                <span className="text-emerald-700 font-semibold">पता कॉपी हो गया! (Copied)</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4 text-[#c99a3e]" />
-                <span>पता कॉपी करें (Copy Address)</span>
-              </>
-            )}
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleCopyAddress}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 bg-[#faf7f2] border border-[#dfba6a] text-xs font-medium rounded-lg hover:bg-[#f2ede4] active:scale-98 transition-all"
+              style={{ color: data.theme.coverColor || '#6e1f2f' }}
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-700 font-semibold">कॉपी हुआ!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-[#c99a3e]" />
+                  <span>पता कॉपी करें</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                generateIcsCalendar(
+                  `${data.groomName || data.celebrantOrCouple || data.title || 'Grand Bandhan'} - Invitation`,
+                  `${data.invitationText || 'Grand Bandhan Celebration'}\nVenue: ${data.venueName}, ${data.venueAddress}`,
+                  `${data.venueName}, ${data.venueAddress}`,
+                  data.eventIsoDate || data.weddingIsoDate
+                );
+              }}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 bg-[#faf7f2] border border-[#dfba6a] text-xs font-medium rounded-lg hover:bg-[#f2ede4] active:scale-98 transition-all text-[#6e1f2f]"
+              title="Add event reminder to Apple / Google / Outlook calendar"
+            >
+              <Calendar className="w-3.5 h-3.5 text-[#c99a3e]" />
+              <span>कैलेंडर में जोड़ें</span>
+            </button>
+          </div>
         </div>
       </div>
 

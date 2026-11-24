@@ -81,7 +81,7 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
     setIsBookOpen(true);
     // Start ambient audio on first user gesture if enabled
     if (data.music.enabled && !isPlayingMusic) {
-      const started = weddingMusic.toggle();
+      const started = weddingMusic.toggle(data.music);
       setIsPlayingMusic(started);
     }
     // Transition smoothly to next scene
@@ -103,7 +103,7 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
   };
 
   const toggleMusic = () => {
-    const state = weddingMusic.toggle();
+    const state = weddingMusic.toggle(data.music);
     setIsPlayingMusic(state);
   };
 
