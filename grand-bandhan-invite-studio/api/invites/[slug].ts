@@ -1,7 +1,7 @@
 // Vercel Serverless Function: GET /api/invites/[slug]
 // Returns published invitation data snapshot and Open Graph metadata from Neon Postgres
 
-import { getPublishedInvite } from '../_db';
+import { getPublishedInvite } from '../_db.js';
 
 export const config = {
   runtime: 'nodejs',

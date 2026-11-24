@@ -1,7 +1,7 @@
 // Vercel Serverless Function: POST /api/rsvp
 // Handles guest RSVP submissions with deduplication and durable persistence in Neon Postgres
 
-import { saveRsvp } from './_db';
+import { saveRsvp } from './_db.js';
 
 export const config = {
   runtime: 'nodejs',

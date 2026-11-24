@@ -1,7 +1,7 @@
 // Vercel Serverless Function: /api/publish
 // Handles publishing and unpublishing of invitations with Neon Postgres persistence
 
-import { savePublishedInvite, unpublishInvite } from './_db';
+import { savePublishedInvite, unpublishInvite } from './_db.js';
 
 export const config = {
   runtime: 'nodejs',
