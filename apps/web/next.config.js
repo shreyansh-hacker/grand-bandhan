@@ -16,6 +16,18 @@ const nextConfig = {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://grand-bandhan.onrender.com';
     return [
       {
+        source: '/invite-studio',
+        destination: '/invite-studio/index.html',
+      },
+      {
+        source: '/invite-studio/:path*',
+        destination: '/invite-studio/index.html',
+      },
+      {
+        source: '/i/:slug',
+        destination: '/invite-studio/index.html',
+      },
+      {
         source: '/api/:path*',
         destination: `${apiUrl}/api/:path*`,
       },
