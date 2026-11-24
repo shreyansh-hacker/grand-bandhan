@@ -42,7 +42,10 @@ export const CorporatePassScene: React.FC<CorporatePassSceneProps> = ({
         {/* FRONT SIDE OF PASS */}
         {/* ============================================================== */}
         <div
-          className="absolute inset-0 rounded-2xl p-6 flex flex-col justify-between items-center text-center shadow-2xl backface-hidden border-2"
+          aria-hidden={isFlipped}
+          className={`absolute inset-0 rounded-2xl p-6 flex flex-col justify-between items-center text-center shadow-2xl backface-hidden border-2 ${
+            isFlipped ? 'pointer-events-none' : 'pointer-events-auto'
+          }`}
           style={{
             backgroundColor: data.theme.coverColor || '#0f172a',
             borderColor: data.theme.coverAccentColor || '#c99a3e',
@@ -135,7 +138,10 @@ export const CorporatePassScene: React.FC<CorporatePassSceneProps> = ({
         {/* BACK SIDE OF PASS */}
         {/* ============================================================== */}
         <div
-          className="absolute inset-0 rounded-2xl p-6 flex flex-col justify-between items-center text-center shadow-2xl backface-hidden border-2 [transform:rotateY(180deg)]"
+          aria-hidden={!isFlipped}
+          className={`absolute inset-0 rounded-2xl p-6 flex flex-col justify-between items-center text-center shadow-2xl backface-hidden border-2 [transform:rotateY(180deg)] ${
+            !isFlipped ? 'pointer-events-none' : 'pointer-events-auto'
+          }`}
           style={{
             backgroundColor: '#ffffff',
             borderColor: data.theme.coverAccentColor || '#c99a3e',

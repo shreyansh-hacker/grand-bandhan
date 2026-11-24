@@ -10,6 +10,9 @@ import { ClosingScene } from './ClosingScene';
 import { BirthdayBoxScene } from './BirthdayBoxScene';
 import { CorporatePassScene } from './CorporatePassScene';
 import { CustomArchScene } from './CustomArchScene';
+import { BirthdayActivitiesScene } from './BirthdayActivitiesScene';
+import { CorporateAgendaScene } from './CorporateAgendaScene';
+import { CustomProgramScene } from './CustomProgramScene';
 import { RsvpScene } from './RsvpScene';
 import { Volume2, VolumeX, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { weddingMusic } from '../../services/sound';
@@ -183,9 +186,6 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
           />
         );
       case 'festivities':
-      case 'partyDetails':
-      case 'speakersAgenda':
-      case 'customDetails':
         return (
           <FestivitiesScene
             data={data}
@@ -193,6 +193,33 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
             onSelectElement={onSelectElement}
             selectedKey={selectedKey}
             onSelectFunction={onSelectFunction}
+          />
+        );
+      case 'partyDetails':
+        return (
+          <BirthdayActivitiesScene
+            data={data}
+            isEditor={isEditor}
+            onSelectElement={onSelectElement}
+            selectedKey={selectedKey}
+          />
+        );
+      case 'speakersAgenda':
+        return (
+          <CorporateAgendaScene
+            data={data}
+            isEditor={isEditor}
+            onSelectElement={onSelectElement}
+            selectedKey={selectedKey}
+          />
+        );
+      case 'customDetails':
+        return (
+          <CustomProgramScene
+            data={data}
+            isEditor={isEditor}
+            onSelectElement={onSelectElement}
+            selectedKey={selectedKey}
           />
         );
       case 'story':
@@ -254,6 +281,7 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
             disabled={currentSceneIndex === 0}
             className="p-1.5 rounded-full text-[#6e1f2f] hover:bg-[#faf7f2] disabled:opacity-30 disabled:pointer-events-none transition-all"
             title="Previous Scene"
+            aria-label="Previous scene"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -276,6 +304,7 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
                     : 'w-2 h-2 bg-[#d1c5b4] hover:bg-[#6e1f2f]/60'
                 }`}
                 title={s.titleEn}
+                aria-label={`Scene ${idx + 1}: ${s.titleEn}`}
               />
             ))}
           </div>
@@ -286,6 +315,7 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
             disabled={currentSceneIndex === visibleScenes.length - 1}
             className="p-1.5 rounded-full text-[#6e1f2f] hover:bg-[#faf7f2] disabled:opacity-30 disabled:pointer-events-none transition-all"
             title="Next Scene"
+            aria-label="Next scene"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -299,6 +329,7 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
               isPlayingMusic ? 'bg-[#6e1f2f] text-[#dfba6a]' : 'text-[#7d6a58] hover:bg-[#faf7f2]'
             }`}
             title="Background Audio"
+            aria-label="Toggle background audio"
           >
             {isPlayingMusic ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
@@ -308,6 +339,7 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
             onClick={handleReplay}
             className="p-1.5 rounded-full text-[#7d6a58] hover:text-[#6e1f2f] hover:bg-[#faf7f2] transition-all"
             title="Replay from Beginning"
+            aria-label="Replay invitation from beginning"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

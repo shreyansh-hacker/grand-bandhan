@@ -332,6 +332,9 @@ runTest('E.2: Birthday 3D Box scene initializes with lid, confetti & celebrant d
   assert.ok(bday.defaultScenes.some((s) => s.id === 'birthdayBox'), 'Missing birthdayBox scene');
   assert.ok(bday.defaultScenes.some((s) => s.id === 'partyDetails'), 'Missing partyDetails scene');
   assert.ok(bday.defaultScenes.some((s) => s.id === 'closing'), 'Missing closing scene');
+  assert.ok(bday.defaultData.activities && bday.defaultData.activities.length > 0, 'Expected birthday activities to be populated');
+  assert.ok(bday.defaultData.venueAddress.includes('Bengaluru'), 'Expected Bengaluru venue for birthday');
+  assert.strictEqual(bday.defaultData.venueLandmark, 'Near Indiranagar Metro Station · 100ft Road, Bengaluru');
 });
 
 runTest('E.3: Corporate 3D Pass scene initializes with double-sided badge flip & timetable', () => {
@@ -340,6 +343,11 @@ runTest('E.3: Corporate 3D Pass scene initializes with double-sided badge flip &
   assert.ok(corp.defaultScenes.some((s) => s.id === 'corporatePass'), 'Missing corporatePass scene');
   assert.ok(corp.defaultScenes.some((s) => s.id === 'speakersAgenda'), 'Missing speakersAgenda scene');
   assert.ok(corp.defaultScenes.some((s) => s.id === 'venue'), 'Missing venue scene');
+  assert.ok(corp.defaultData.speakers && corp.defaultData.speakers.length >= 2, 'Expected keynote speakers');
+  assert.ok(corp.defaultData.agenda && corp.defaultData.agenda.length >= 3, 'Expected agenda timetable');
+  assert.ok(corp.defaultData.onlineMeetingUrl, 'Expected onlineMeetingUrl for corporate summit');
+  assert.ok(corp.defaultData.venueAddress.includes('Mumbai'), 'Expected Mumbai venue for corporate');
+  assert.strictEqual(corp.defaultData.venueLandmark, 'Next to High Street Phoenix · Lower Parel, Mumbai');
 });
 
 runTest('E.4: Custom Event 3D Toran Arch scene initializes with opening doors & rituals', () => {
@@ -348,6 +356,9 @@ runTest('E.4: Custom Event 3D Toran Arch scene initializes with opening doors & 
   assert.ok(custom.defaultScenes.some((s) => s.id === 'customArch'), 'Missing customArch scene');
   assert.ok(custom.defaultScenes.some((s) => s.id === 'customDetails'), 'Missing customDetails scene');
   assert.ok(custom.defaultScenes.some((s) => s.id === 'venue'), 'Missing venue scene');
+  assert.ok(custom.defaultData.activities && custom.defaultData.activities.length > 0, 'Expected custom rituals');
+  assert.ok(custom.defaultData.venueAddress.includes('व्हाइटफ़ील्ड'), 'Expected Whitefield Bengaluru venue');
+  assert.strictEqual(custom.defaultData.venueLandmark, 'पाम मीडोज़ गेट नं 2 · व्हाइटफ़ील्ड, बेंगलुरु');
 });
 
 runTest('E.5: Audio policy enforcement: audio only plays after explicit guest interaction', () => {

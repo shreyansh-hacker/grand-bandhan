@@ -33,6 +33,7 @@ export const DEFAULT_BIRTHDAY_DATA: GenericInvitationData = {
 
   venueName: 'Planet Fun Galaxy Club & Cafe',
   venueAddress: '100ft Road, Near Metro Station, Indiranagar, Bengaluru - 560038',
+  venueLandmark: 'Near Indiranagar Metro Station · 100ft Road, Bengaluru',
   googleMapsUrl: 'https://maps.google.com/?q=Planet+Fun+Indiranagar+Bengaluru',
 
   closingBlessing: "Can't wait to blast off and celebrate with you!",

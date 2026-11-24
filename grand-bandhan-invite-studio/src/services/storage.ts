@@ -192,6 +192,15 @@ export function unpublishDraft(draftId: string): InvitationDraft | null {
     console.error('Error unpublishing:', err);
   }
 
+  // Also notify serverless endpoint
+  if (typeof window !== 'undefined') {
+    fetch('/api/publish', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: draft.slug }),
+    }).catch(() => {});
+  }
+
   return draft;
 }
 

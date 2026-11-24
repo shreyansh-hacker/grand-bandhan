@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RoyalWeddingData, CeremonyFunction } from '../../types/invitation';
-import { ChevronLeft, ChevronRight, Clock, MapPin, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MapPin, Sparkles, Plus } from 'lucide-react';
 
 interface FestivitiesSceneProps {
   data: RoyalWeddingData;
@@ -21,13 +21,16 @@ export const FestivitiesScene: React.FC<FestivitiesSceneProps> = ({
   const touchStartXRef = React.useRef<number>(0);
 
   const functions = data.functions && data.functions.length > 0 ? data.functions : [];
-  const currentFn = functions[currentIndex] || functions[0];
+  const safeIndex = functions.length > 0 ? Math.min(currentIndex, functions.length - 1) : 0;
+  const currentFn = functions[safeIndex];
 
   const handlePrev = () => {
+    if (functions.length <= 1) return;
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : functions.length - 1));
   };
 
   const handleNext = () => {
+    if (functions.length <= 1) return;
     setCurrentIndex((prev) => (prev < functions.length - 1 ? prev + 1 : 0));
   };
 
@@ -36,6 +39,7 @@ export const FestivitiesScene: React.FC<FestivitiesSceneProps> = ({
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (functions.length <= 1) return;
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartXRef.current - touchEndX;
     if (diff > 40) {
@@ -61,16 +65,35 @@ export const FestivitiesScene: React.FC<FestivitiesSceneProps> = ({
           WEDDING FESTIVITIES
         </span>
         <h3 className="text-lg font-devanagari text-[#6e1f2f] font-bold mt-0.5">
-          मांगलिक कार्यक्रम व रस्में
+          {data.invitationLanguage === 'en' ? 'Ceremonies & Functions' : 'मांगलिक कार्यक्रम व रस्में'}
         </h3>
-        <p className="text-[11px] font-sans text-[#7d6a58] mt-0.5">
-          स्वाइप करें या तीरों से आगे बढ़ें (कार्ड {currentIndex + 1} / {functions.length})
-        </p>
+        {functions.length > 1 && (
+          <p className="text-[11px] font-sans text-[#7d6a58] mt-0.5">
+            स्वाइप करें या तीरों से आगे बढ़ें (कार्ड {safeIndex + 1} / {functions.length})
+          </p>
+        )}
         <div className="w-12 h-0.5 mt-1 bg-gradient-to-r from-transparent via-[#c99a3e] to-transparent"></div>
       </div>
 
       {/* Function Card Centerpiece */}
-      {currentFn && (
+      {functions.length === 0 ? (
+        <div className="my-auto p-6 rounded-xl border-2 border-dashed border-[#e8decb] bg-white/70 max-w-[280px]">
+          <Sparkles className="w-8 h-8 text-[#c99a3e] mx-auto mb-2" />
+          <h4 className="text-sm font-bold text-stone-700">कोई रस्म नहीं जुड़ी है</h4>
+          <p className="text-xs text-stone-500 mt-1">
+            {isEditor ? 'प्रॉपर्टीज़ पैनल से नई रस्म जोड़ें।' : 'मांगलिक कार्यक्रमों का विवरण शीघ्र घोषित किया जाएगा।'}
+          </p>
+          {isEditor && onSelectElement && (
+            <button
+              onClick={() => onSelectElement('functions', 'मांगलिक रस्में (Wedding Ceremonies)')}
+              className="mt-3 px-3 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold inline-flex items-center gap-1 shadow hover:bg-[#541421]"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Ceremony</span>
+            </button>
+          )}
+        </div>
+      ) : currentFn ? (
         <div
           className={`relative w-full max-w-[310px] my-auto bg-white rounded-xl p-5 shadow-md border transition-all duration-300 ${
             selectedKey === 'functions'
@@ -143,43 +166,59 @@ export const FestivitiesScene: React.FC<FestivitiesSceneProps> = ({
               </span>
             </div>
           )}
-        </div>
-      )}
 
-      {/* Navigation Controls: Arrows and Dots */}
-      <div className="pb-2 w-full flex flex-col items-center gap-2.5 z-10">
-        <div className="flex items-center justify-between w-full max-w-[240px]">
-          <button
-            onClick={handlePrev}
-            className="w-8 h-8 rounded-full bg-[#6e1f2f] text-white flex items-center justify-center hover:bg-[#541421] active:scale-95 transition-all shadow"
-            title="पिछली रस्म"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          {/* Dot Indicators */}
-          <div className="flex items-center gap-1.5">
-            {functions.map((fn, idx) => (
+          {/* Carousel Arrows (only if multiple items) */}
+          {functions.length > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#e8decb]/60">
               <button
-                key={fn.id || idx}
-                onClick={() => setCurrentIndex(idx)}
-                className={`transition-all duration-300 rounded-full ${
-                  idx === currentIndex
-                    ? 'w-6 h-2 bg-[#6e1f2f]'
-                    : 'w-2 h-2 bg-[#d1c5b4] hover:bg-[#a89984]'
-                }`}
-              />
-            ))}
-          </div>
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrev();
+                }}
+                className="w-7 h-7 rounded-full bg-[#6e1f2f] text-white flex items-center justify-center hover:bg-[#541421] active:scale-95 transition-all shadow"
+                aria-label="पिछली रस्म"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
 
-          <button
-            onClick={handleNext}
-            className="w-8 h-8 rounded-full bg-[#6e1f2f] text-white flex items-center justify-center hover:bg-[#541421] active:scale-95 transition-all shadow"
-            title="अगली रस्म"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+              <div className="flex items-center gap-1.5">
+                {functions.map((fn, idx) => (
+                  <button
+                    key={fn.id || idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentIndex(idx);
+                    }}
+                    className={`transition-all duration-300 rounded-full ${
+                      idx === safeIndex
+                        ? 'w-5 h-2 bg-[#6e1f2f]'
+                        : 'w-2 h-2 bg-[#d1c5b4] hover:bg-[#a89984]'
+                    }`}
+                    aria-label={`रस्म ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNext();
+                }}
+                className="w-7 h-7 rounded-full bg-[#6e1f2f] text-white flex items-center justify-center hover:bg-[#541421] active:scale-95 transition-all shadow"
+                aria-label="अगली रस्म"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
+      ) : null}
+
+      {/* Bottom Hint */}
+      <div className="pb-2 z-10">
+        <span className="text-[11px] font-sans text-[#7d6a58]">
+          कृपया सभी कार्यक्रमों में समय पर पधारकर अनुग्रहीत करें।
+        </span>
       </div>
     </div>
   );

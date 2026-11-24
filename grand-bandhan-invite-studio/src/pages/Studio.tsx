@@ -313,8 +313,8 @@ export const Studio: React.FC<StudioProps> = ({
         <main className="flex-1 flex flex-col h-full bg-[#f2ede4] overflow-y-auto relative p-3 sm:p-6 items-center">
           {/* Canvas Viewport Controls */}
           <div className="w-full max-w-sm mb-3 flex items-center justify-between text-xs text-[#7d6a58] px-1">
-            <span className="font-heading font-medium text-[#6e1f2f]">
-              {t.clickToEditHint.slice(0, 32)}...
+            <span className="text-[11px] font-sans font-medium text-stone-700 bg-white/90 px-3 py-1 rounded-full border border-[#e8decb] shadow-xs">
+              💡 {t.clickToEditHint}
             </span>
             <div className="flex items-center gap-1 bg-white rounded-lg p-1 border border-[#e8decb] shadow-xs">
               <button

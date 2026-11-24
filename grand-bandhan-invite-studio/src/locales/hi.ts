@@ -169,6 +169,9 @@ export const HI_LOCALE = {
   guestNamePrompt: 'मेहमान का नाम (जैसे: श्री शर्मा जी):',
   downloadCsv: 'जवाब डाउनलोड करें (.csv)',
   migrateLocalDraft: 'ब्राउज़र के पुराने ड्राफ़्ट को खाते में जोड़ें',
+  legacyDraftFound: 'डिवाइस पर पुराना ड्राफ्ट उपलब्ध है',
+  legacyDraftFoundDesc: 'इस ब्राउज़र पर एक पुराना निमंत्रण ड्राफ्ट मिला है। आप इसे बिना कोई बदलाव खोए अपने वर्कस्पेस में जोड़ सकते हैं।',
+  migrateDraft: 'वर्कस्पेस में जोड़ें',
   noDraftsYet: 'अभी कोई ड्राफ़्ट नहीं है। शुरुआत करने के लिए टेम्पलेट चुनें!',
 
   // Modals & Confirmation

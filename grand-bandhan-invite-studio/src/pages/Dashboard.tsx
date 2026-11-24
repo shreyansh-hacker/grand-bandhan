@@ -26,6 +26,7 @@ import {
   ExternalLink,
   Plus,
   RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../locales';
 
@@ -33,12 +34,14 @@ interface DashboardProps {
   onBackToStudio: () => void;
   onOpenDraft: (draft: InvitationDraft) => void;
   onCreateNew: () => void;
+  onPreviewDraft?: (draft: InvitationDraft) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   onBackToStudio,
   onOpenDraft,
   onCreateNew,
+  onPreviewDraft,
 }) => {
   const { lang, t } = useLanguage();
   const [drafts, setDrafts] = useState<InvitationDraft[]>(() => getAllDrafts());
@@ -49,6 +52,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'invites' | 'rsvps'>('invites');
 
   const user = getUserAccount();
+
+  // Detect whether an unmigrated legacy v1 draft exists in localStorage
+  const hasLegacyDraft = (() => {
+    try {
+      const legacyRaw = localStorage.getItem('grand_bandhan_invite_draft_v1');
+      if (legacyRaw) {
+        const parsed = JSON.parse(legacyRaw);
+        return parsed && parsed.id && !drafts.some((d) => d.id === parsed.id);
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  })();
 
   // Metrics
   const totalDraftsCount = drafts.length;
@@ -119,17 +136,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* User Badge & Language Switcher */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-[#e8decb] text-xs text-stone-700">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span className="font-medium">{user.email}</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="hidden md:flex flex-col text-right">
+            <div className="flex items-center gap-1.5 justify-end text-stone-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="font-semibold text-xs">{user.name || user.email}</span>
+            </div>
+            <span className="text-[10px] text-stone-500 font-sans">
+              Local Workspace · Saved on this device
+            </span>
           </div>
 
           <LanguageSwitcher />
 
           <button
             onClick={onCreateNew}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold shadow hover:bg-[#541421] transition-all"
+            className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold shadow hover:bg-[#541421] transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t.createNew}</span>
@@ -179,6 +201,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+        {/* Legacy Migration Alert Banner (ONLY shown when an unmigrated legacy draft actually exists) */}
+        {hasLegacyDraft && (
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-amber-700 shrink-0" />
+              <div>
+                <h4 className="text-xs font-bold text-amber-900 font-sans">
+                  {t.legacyDraftFound}
+                </h4>
+                <p className="text-[11px] text-amber-800 font-sans mt-0.5">
+                  {t.legacyDraftFoundDesc}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleMigrateLegacy}
+              className="px-3.5 py-1.5 rounded-lg bg-amber-700 text-white text-xs font-semibold hover:bg-amber-800 transition-all shrink-0"
+            >
+              {t.migrateDraft}
+            </button>
+          </div>
+        )}
+
         {/* Dashboard Tabs */}
         <div className="flex items-center gap-2 border-b border-[#e8decb] pb-2">
           <button
@@ -227,7 +272,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               : 'bg-amber-100 text-amber-800'
                           }`}
                         >
-                          {d.isPublished ? t.publishedLive : 'Draft'}
+                          {d.isPublished ? t.publishedLive : 'Draft (Unpublished)'}
                         </span>
                       </div>
 
@@ -239,27 +284,46 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         {d.data.eventDateFormatted || 'No date set'}
                       </p>
 
-                      {/* Slug & Links */}
-                      <div className="my-3 p-2 bg-[#faf7f2] rounded-lg border border-[#e8decb] text-xs space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-stone-500 font-mono truncate max-w-[170px]">
-                            /i/{d.slug}
-                          </span>
-                          <button
-                            onClick={() => handleCopyLink(d.slug)}
-                            className="p-1 text-[#6e1f2f] hover:bg-[#f2ede4] rounded"
-                            title={t.copyLink}
-                          >
-                            {copiedSlug === d.slug ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-[#c99a3e]" />
-                            )}
-                          </button>
-                        </div>
-                        <div className="text-[10px] text-stone-600 font-sans">
-                          Responses: <strong>{rsvps.length}</strong>
-                        </div>
+                      {/* Slug & Links: Distinct behavior for published vs draft */}
+                      <div className="my-3 p-2.5 bg-[#faf7f2] rounded-lg border border-[#e8decb] text-xs space-y-1">
+                        {d.isPublished ? (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] text-emerald-800 font-mono font-semibold truncate max-w-[170px]">
+                                /i/{d.slug}
+                              </span>
+                              <button
+                                onClick={() => handleCopyLink(d.slug)}
+                                className="flex items-center gap-1 text-[11px] font-bold text-[#6e1f2f] hover:underline"
+                                title="Copy guest link"
+                              >
+                                {copiedSlug === d.slug ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span className="text-emerald-700">Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-[#c99a3e]" />
+                                    <span>Copy Link</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <div className="text-[10px] text-stone-500 font-sans">
+                              Public guest responses: <strong>{rsvps.length}</strong>
+                            </div>
+                          </>
+                        ) : (
+                          <div>
+                            <span className="text-[11px] text-stone-700 font-semibold block">
+                              Draft Preview Only
+                            </span>
+                            <span className="text-[10px] text-stone-500 font-sans block mt-0.5">
+                              Publish to generate a shareable live guest link.
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -270,18 +334,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           onClick={() => onOpenDraft(d)}
                           className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-[#6e1f2f] text-white text-xs font-semibold hover:bg-[#541421] transition-all"
                         >
-                          <Edit3 className="w-3 h-3 text-[#dfba6a]" />
+                          <Edit3 className="w-3.5 h-3.5 text-[#dfba6a]" />
                           <span>Edit</span>
                         </button>
-                        <a
-                          href={`/i/${d.slug}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-stone-100 text-stone-700 text-xs font-semibold hover:bg-stone-200 transition-all"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          <span>View</span>
-                        </a>
+
+                        {d.isPublished ? (
+                          <a
+                            href={`/i/${d.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-all"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>View Live</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              onOpenDraft(d);
+                              if (onPreviewDraft) {
+                                onPreviewDraft(d);
+                              } else {
+                                window.location.hash = '#/preview';
+                              }
+                            }}
+                            className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg bg-stone-100 text-stone-700 text-xs font-semibold hover:bg-stone-200 transition-all"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-stone-500" />
+                            <span>Preview draft</span>
+                          </button>
+                        )}
                       </div>
 
                       <button
@@ -289,7 +371,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
                           d.isPublished
                             ? 'border-rose-300 text-rose-700 hover:bg-rose-50'
-                            : 'border-emerald-300 text-emerald-800 hover:bg-emerald-50'
+                            : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                         }`}
                       >
                         {d.isPublished ? t.unpublish : t.publish}
@@ -299,47 +381,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 );
               })}
             </div>
-
-            {/* Migrate Legacy Draft Banner */}
-            <div className="p-4 rounded-xl bg-white border border-dashed border-[#c99a3e] flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h4 className="text-xs font-bold text-[#6e1f2f] flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#c99a3e]" />
-                  <span>Legacy Draft Recovery &amp; Migration</span>
-                </h4>
-                <p className="text-[11px] text-stone-600 font-sans mt-0.5">
-                  Have an older draft saved in your browser from Milestone 1? Import it into your active projects list safely without overwriting.
-                </p>
-              </div>
-              <button
-                onClick={handleMigrateLegacy}
-                className="px-3 py-1.5 rounded-lg bg-[#faf7f2] border border-[#dfba6a] text-[#6e1f2f] text-xs font-semibold hover:bg-[#f2ede4] transition-all"
-              >
-                {t.migrateLocalDraft}
-              </button>
-            </div>
           </div>
         )}
 
         {/* TAB 2: Guest Responses & RSVP Analytics */}
         {activeTab === 'rsvps' && (
           <div className="space-y-4">
-            {/* Event Selector for RSVPs */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#e8decb]">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#6e1f2f]" />
-                <div>
+            <div className="p-4 rounded-xl bg-white border border-[#e8decb] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Users className="w-5 h-5 text-[#6e1f2f] shrink-0" />
+                <div className="w-full sm:w-auto">
                   <span className="text-xs font-bold text-[#2c2523] block">
                     Select Event:
                   </span>
                   <select
                     value={selectedRsvpSlug}
                     onChange={(e) => setSelectedRsvpSlug(e.target.value)}
-                    className="mt-1 px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-semibold bg-white outline-none"
+                    className="mt-1 px-3 py-1.5 text-xs rounded-lg border border-[#e8decb] bg-white font-sans w-full sm:w-64"
                   >
                     {drafts.map((d) => (
                       <option key={d.slug} value={d.slug}>
-                        {d.name || d.data.title} (/i/{d.slug})
+                        {d.name || d.data.title} {d.isPublished ? '(/i/' + d.slug + ')' : '(Draft)'}
                       </option>
                     ))}
                   </select>
@@ -357,14 +419,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
               )}
             </div>
 
-            {/* Responses Table */}
+            {/* Responses Table or Publication-Dependent Empty State */}
             {currentRsvps.length === 0 ? (
               <div className="p-8 text-center bg-white rounded-xl border border-[#e8decb]">
                 <Clock className="w-8 h-8 mx-auto text-stone-400 mb-2" />
-                <h4 className="text-sm font-bold text-stone-700">No RSVPs received yet</h4>
-                <p className="text-xs text-stone-500 mt-1">
-                  Share your link <code>/i/{selectedRsvpSlug}</code> with guests to collect responses.
-                </p>
+                {currentEvent?.isPublished ? (
+                  <>
+                    <h4 className="text-sm font-bold text-stone-700">No RSVPs received yet</h4>
+                    <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+                      Share your live guest link <code>/i/{selectedRsvpSlug}</code> with your attendees to collect responses.
+                    </p>
+                    <button
+                      onClick={() => handleCopyLink(selectedRsvpSlug)}
+                      className="mt-3 px-3.5 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold inline-flex items-center gap-1.5 shadow"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Guest Link</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="text-sm font-bold text-amber-900">
+                      This invitation is an unpublished draft
+                    </h4>
+                    <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+                      Publish this invitation to generate an active public link and start collecting guest RSVP responses.
+                    </p>
+                    {currentEvent && (
+                      <button
+                        onClick={() => handleTogglePublish(currentEvent)}
+                        className="mt-3 px-4 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow hover:bg-emerald-800"
+                      >
+                        <Send className="w-3.5 h-3.5 text-[#ffd166]" />
+                        <span>Publish This Invitation</span>
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-[#e8decb] overflow-x-auto shadow-xs">
@@ -412,8 +503,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className="max-w-6xl mx-auto w-full pt-6 border-t border-[#e8decb] text-center text-xs text-[#7d6a58] font-sans">
-        <p>Grand Bandhan Invite Studio · Secure Organizer Dashboard</p>
+      <footer className="max-w-6xl mx-auto w-full pt-6 border-t border-[#e8decb] text-center text-xs text-stone-500 font-sans">
+        © {new Date().getFullYear()} {BRAND_CONFIG.name} · {BRAND_CONFIG.tagline}
       </footer>
     </div>
   );

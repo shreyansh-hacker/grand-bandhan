@@ -32,6 +32,7 @@ export const DEFAULT_CORPORATE_DATA: GenericInvitationData = {
 
   venueName: 'The Grand St. Regis Ballroom & Virtual Stage',
   venueAddress: 'Senapati Bapat Marg, Lower Parel, Mumbai, Maharashtra - 400013',
+  venueLandmark: 'Next to High Street Phoenix · Lower Parel, Mumbai',
   googleMapsUrl: 'https://maps.google.com/?q=St+Regis+Lower+Parel+Mumbai',
   onlineMeetingUrl: 'https://meet.grandbandhan.com/summit-2027',
 

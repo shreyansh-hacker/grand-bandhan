@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { RoyalWeddingData } from '../../types/invitation';
-import { MapPin, Navigation, Copy, Check } from 'lucide-react';
+import { GenericInvitationData } from '../../types/invitation';
+import { MapPin, Navigation, Copy, Check, Video, Globe, ExternalLink } from 'lucide-react';
 
 interface VenueSceneProps {
-  data: RoyalWeddingData;
+  data: GenericInvitationData;
   isEditor?: boolean;
-  onSelectElement?: (fieldKey: keyof RoyalWeddingData, label: string) => void;
+  onSelectElement?: (fieldKey: keyof GenericInvitationData, label: string) => void;
   selectedKey?: string;
 }
 
@@ -17,18 +17,35 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
-  const isSelected = (key: keyof RoyalWeddingData) => selectedKey === key;
+  const isSelected = (key: keyof GenericInvitationData) => selectedKey === key;
 
   const handleCopyAddress = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(`${data.venueName}\n${data.venueAddress}`);
+    const textToCopy = [
+      data.venueName,
+      data.venueAddress,
+      data.venueLandmark ? `Landmark: ${data.venueLandmark}` : '',
+      data.onlineMeetingUrl ? `Virtual Link: ${data.onlineMeetingUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
 
   const handleOpenMaps = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(data.googleMapsUrl || 'https://maps.google.com', '_blank');
+    const dest = data.googleMapsUrl || `https://maps.google.com/?q=${encodeURIComponent(`${data.venueName} ${data.venueAddress}`)}`;
+    window.open(dest, '_blank');
+  };
+
+  const handleOpenMeeting = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data.onlineMeetingUrl) {
+      window.open(data.onlineMeetingUrl, '_blank');
+    }
   };
 
   return (
@@ -41,11 +58,14 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
     >
       {/* Top Banner */}
       <div className="pt-2 z-10 w-full flex flex-col items-center">
-        <span className="text-xs uppercase tracking-[0.25em] font-cinzel text-[#852b3d] font-bold">
-          VENUE &amp; DIRECTIONS
+        <span
+          className="text-xs uppercase tracking-[0.25em] font-cinzel font-bold"
+          style={{ color: data.theme.coverAccentColor || '#c99a3e' }}
+        >
+          {data.category === 'corporate' && data.onlineMeetingUrl ? 'VENUE & VIRTUAL ACCESS' : 'VENUE & DIRECTIONS'}
         </span>
-        <h3 className="text-lg font-devanagari text-[#6e1f2f] font-bold mt-0.5">
-          स्थान व मार्ग दर्शन
+        <h3 className="text-lg font-heading text-[#2c2523] font-bold mt-0.5">
+          {data.invitationLanguage === 'hi' ? 'स्थान व मार्ग दर्शन' : 'Location & Access'}
         </h3>
         <div className="w-12 h-0.5 mt-1 bg-gradient-to-r from-transparent via-[#c99a3e] to-transparent"></div>
       </div>
@@ -54,7 +74,10 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
       <div className="relative w-full max-w-[310px] my-auto bg-white rounded-xl p-5 shadow-md border border-[#e8decb] flex flex-col items-center">
         {/* Animated Map Icon / Compass Pin */}
         <div className="relative w-16 h-16 rounded-full bg-[#fdf8f0] border-2 border-[#dfba6a] flex items-center justify-center mb-3 shadow-inner">
-          <MapPin className="w-8 h-8 text-[#6e1f2f] animate-bounce" />
+          <MapPin
+            className="w-8 h-8 animate-bounce"
+            style={{ color: data.theme.coverColor || '#6e1f2f' }}
+          />
           <div className="absolute -bottom-1 w-6 h-2 bg-black/10 rounded-full blur-[1px]"></div>
         </div>
 
@@ -73,7 +96,10 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
             }
           }}
         >
-          <h4 className="text-lg font-devanagari font-bold text-[#6e1f2f]">
+          <h4
+            className="text-lg font-heading font-bold"
+            style={{ color: data.theme.coverColor || '#6e1f2f' }}
+          >
             {data.venueName}
           </h4>
         </div>
@@ -93,16 +119,62 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
             }
           }}
         >
-          <p className="text-xs font-devanagari text-[#5c4f4a] leading-relaxed">
+          <p className="text-xs font-sans text-stone-600 leading-relaxed">
             {data.venueAddress}
           </p>
         </div>
 
+        {/* Optional Online Stream / Meeting Link for Corporate/Hybrid */}
+        {data.onlineMeetingUrl && (
+          <div
+            className={`mt-3 p-2 rounded-lg bg-sky-50 border border-sky-200 w-full flex items-center justify-between cursor-pointer ${
+              isSelected('onlineMeetingUrl') ? 'ring-2 ring-sky-500' : ''
+            }`}
+            onClick={() => {
+              if (isEditor && onSelectElement) {
+                onSelectElement('onlineMeetingUrl', 'ऑनलाइन मीटिंग लिंक (Virtual Link)');
+              }
+            }}
+          >
+            <div className="flex items-center gap-2 text-left">
+              <Video className="w-4 h-4 text-sky-700 shrink-0" />
+              <div className="overflow-hidden">
+                <span className="block text-[10px] font-bold text-sky-900 uppercase font-sans">
+                  Virtual Stream Access
+                </span>
+                <span className="block text-[11px] text-sky-700 truncate font-mono max-w-[190px]">
+                  {data.onlineMeetingUrl}
+                </span>
+              </div>
+            </div>
+            {!isEditor && (
+              <button
+                onClick={handleOpenMeeting}
+                className="p-1 rounded text-sky-800 hover:bg-sky-100 shrink-0"
+                title="Open meeting"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons: Get Directions & Copy Address */}
-        <div className="mt-5 w-full flex flex-col gap-2.5">
+        <div className="mt-4 w-full flex flex-col gap-2">
+          {data.onlineMeetingUrl && (
+            <button
+              onClick={handleOpenMeeting}
+              className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-sky-700 text-white text-xs font-semibold rounded-lg shadow hover:bg-sky-800 active:scale-98 transition-all"
+            >
+              <Video className="w-4 h-4 text-sky-200" />
+              <span>वर्चुअल लाइव स्ट्रीम से जुड़ें (Join Stream)</span>
+            </button>
+          )}
+
           <button
             onClick={handleOpenMaps}
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#6e1f2f] text-white text-xs font-semibold rounded-lg shadow hover:bg-[#541421] active:scale-98 transition-all"
+            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-white text-xs font-semibold rounded-lg shadow active:scale-98 transition-all hover:opacity-90"
+            style={{ backgroundColor: data.theme.coverColor || '#6e1f2f' }}
           >
             <Navigation className="w-4 h-4 text-[#dfba6a]" />
             <span>गूगल मैप्स में देखें (Get Directions)</span>
@@ -110,7 +182,8 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
 
           <button
             onClick={handleCopyAddress}
-            className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#faf7f2] border border-[#dfba6a] text-[#6e1f2f] text-xs font-medium rounded-lg hover:bg-[#f2ede4] active:scale-98 transition-all"
+            className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#faf7f2] border border-[#dfba6a] text-xs font-medium rounded-lg hover:bg-[#f2ede4] active:scale-98 transition-all"
+            style={{ color: data.theme.coverColor || '#6e1f2f' }}
           >
             {copied ? (
               <>
@@ -127,11 +200,35 @@ export const VenueScene: React.FC<VenueSceneProps> = ({
         </div>
       </div>
 
-      {/* Bottom hint */}
-      <div className="pb-2 z-10">
-        <span className="text-[11px] font-sans text-[#7d6a58]">
-          जल महल के सामने · जयपुर, राजस्थान
-        </span>
+      {/* Bottom Landmark Caption (Only rendered when landmark exists or in editor) */}
+      <div className="pb-2 z-10 min-h-[22px]">
+        {data.venueLandmark ? (
+          <div
+            className={`cursor-pointer px-2 py-0.5 rounded ${
+              isSelected('venueLandmark') ? 'ring-2 ring-[#c99a3e] bg-amber-100/60' : ''
+            }`}
+            onClick={() => {
+              if (isEditor && onSelectElement) {
+                onSelectElement('venueLandmark', 'लैंडमार्क / विशेष पता (Landmark Caption)');
+              }
+            }}
+          >
+            <span className="text-[11px] font-sans text-stone-600">
+              {data.venueLandmark}
+            </span>
+          </div>
+        ) : isEditor ? (
+          <button
+            onClick={() => {
+              if (onSelectElement) {
+                onSelectElement('venueLandmark', 'लैंडमार्क / विशेष पता (Landmark Caption)');
+              }
+            }}
+            className="text-[10px] text-stone-400 hover:text-stone-700 font-sans italic"
+          >
+            + Add optional landmark / caption
+          </button>
+        ) : null}
       </div>
     </div>
   );

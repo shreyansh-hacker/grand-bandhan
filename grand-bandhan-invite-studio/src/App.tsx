@@ -178,6 +178,11 @@ export const AppContent: React.FC = () => {
             navigateTo('studio');
           }}
           onCreateNew={() => navigateTo('events')}
+          onPreviewDraft={(d) => {
+            setCurrentDraft(d);
+            saveDraft(d);
+            navigateTo('preview');
+          }}
         />
       )}
 

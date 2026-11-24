@@ -1,6 +1,18 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { InvitationDraft } from '../../types/invitation';
-import { ArrowLeft, Check, Download, Eye, RotateCcw, RotateCw, Upload, RefreshCw, Send, LayoutDashboard } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  Download,
+  Eye,
+  RotateCcw,
+  RotateCw,
+  Upload,
+  RefreshCw,
+  Send,
+  LayoutDashboard,
+  MoreVertical,
+} from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../../locales';
 
 interface EditorToolbarProps {
@@ -36,6 +48,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 }) => {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,7 +90,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xs sm:text-sm font-bold font-heading text-[#2c2523] truncate max-w-[140px] xs:max-w-[190px] sm:max-w-[260px]">
+            <h2 className="text-xs sm:text-sm font-bold font-heading text-[#2c2523] truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[240px]">
               {draft.name || t.myDraft}
             </h2>
             {draft.isPublished && (
@@ -100,8 +113,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         </div>
       </div>
 
-      {/* Right Actions: Switcher, Undo/Redo, Publish, Preview */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      {/* Right Actions: Switcher, Undo/Redo, Overflow Menu, Publish, Preview */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Language Switcher (Always visible down to 360px) */}
         <LanguageSwitcher />
 
@@ -111,6 +124,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           disabled={!canUndo}
           className="p-1.5 rounded-lg text-[#5c4f4a] hover:bg-[#faf7f2] disabled:opacity-25 disabled:pointer-events-none transition-all hidden xs:block"
           title={t.undo}
+          aria-label={t.undo}
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -121,29 +135,62 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           disabled={!canRedo}
           className="p-1.5 rounded-lg text-[#5c4f4a] hover:bg-[#faf7f2] disabled:opacity-25 disabled:pointer-events-none transition-all hidden xs:block"
           title={t.redo}
+          aria-label={t.redo}
         >
           <RotateCw className="w-4 h-4" />
         </button>
 
-        {/* Export JSON */}
-        <button
-          onClick={onExport}
-          className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#5c4f4a] hover:bg-[#faf7f2] border border-[#e8decb] transition-all"
-          title={t.exportJson}
-        >
-          <Download className="w-3.5 h-3.5 text-[#c99a3e]" />
-          <span>{t.exportJson}</span>
-        </button>
+        {/* Overflow Menu: Backup / Import / Reset */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className="p-1.5 rounded-lg text-stone-600 hover:bg-[#faf7f2] border border-[#e8decb] transition-all"
+            title="More draft actions"
+            aria-label="More draft actions"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
 
-        {/* Import JSON */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#5c4f4a] hover:bg-[#faf7f2] border border-[#e8decb] transition-all"
-          title={t.importJson}
-        >
-          <Upload className="w-3.5 h-3.5 text-[#c99a3e]" />
-          <span>{t.importJson}</span>
-        </button>
+          {showMoreMenu && (
+            <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-[#e8decb] py-1.5 z-50 text-xs">
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  onExport();
+                }}
+                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-[#faf7f2] text-stone-700 font-medium"
+              >
+                <Download className="w-3.5 h-3.5 text-[#c99a3e]" />
+                <span>{t.exportJson}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  fileInputRef.current?.click();
+                }}
+                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-[#faf7f2] text-stone-700 font-medium"
+              >
+                <Upload className="w-3.5 h-3.5 text-[#c99a3e]" />
+                <span>{t.importJson}</span>
+              </button>
+
+              <div className="my-1 border-t border-stone-100" />
+
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  onReset();
+                }}
+                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-rose-50 text-rose-700 font-medium"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{t.resetDefault}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         <input
           type="file"
           ref={fileInputRef}
@@ -152,36 +199,27 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           className="hidden"
         />
 
-        {/* Reset to template defaults */}
-        <button
-          onClick={onReset}
-          className="p-1.5 rounded-lg text-[#852b3d] hover:bg-rose-50 transition-all hidden sm:block"
-          title={t.resetDefault}
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
-
-        {/* Publish / Publish Update Button */}
+        {/* Publish / Publish Update Button (Never truncated to "Pub") */}
         <button
           onClick={onPublish}
-          className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-semibold shadow hover:bg-emerald-800 active:scale-95 transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-semibold shadow hover:bg-emerald-800 active:scale-95 transition-all"
+          title={draft.isPublished ? t.publishUpdate : t.publish}
         >
           <Send className="w-3.5 h-3.5 text-[#ffd166]" />
-          <span className="hidden xs:inline">
+          <span>
             {draft.isPublished ? t.publishUpdate : t.publish}
-          </span>
-          <span className="xs:hidden">
-            {draft.isPublished ? 'Update' : 'Pub'}
           </span>
         </button>
 
-        {/* Guest Preview Button */}
+        {/* Guest Preview Button with accessible name and visible label */}
         <button
           onClick={onOpenPreview}
-          className="flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold shadow-md hover:bg-[#541421] active:scale-95 transition-all"
+          className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-lg bg-[#6e1f2f] text-[#dfba6a] text-xs font-bold shadow-md hover:bg-[#541421] active:scale-95 transition-all"
+          title={t.guestPreview}
+          aria-label={t.guestPreview}
         >
           <Eye className="w-4 h-4 text-[#dfba6a]" />
-          <span className="hidden xs:inline">{t.guestPreview}</span>
+          <span className="hidden sm:inline">{t.guestPreview}</span>
         </button>
       </div>
     </header>

@@ -100,6 +100,7 @@ export interface GenericInvitationData {
   // Venue and directions
   venueName: string;
   venueAddress: string;
+  venueLandmark?: string;
   googleMapsUrl: string;
   onlineMeetingUrl?: string;
 

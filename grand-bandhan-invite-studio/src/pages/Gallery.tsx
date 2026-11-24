@@ -34,7 +34,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   const templates = TEMPLATE_CATALOG.filter((t) => t.category === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-[#faf7f2] flex flex-col justify-between p-4 sm:p-8">
+    <div className="min-h-screen bg-[#faf7f2] flex flex-col justify-between p-4 sm:p-8 select-none">
       {/* Brand Header */}
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between pb-5 border-b border-[#e8decb]">
         <div className="flex items-center gap-3">
@@ -107,7 +107,7 @@ export const Gallery: React.FC<GalleryProps> = ({
             >
               {/* Card Top Visual Preview */}
               <div
-                className="relative h-60 p-6 flex flex-col items-center justify-center text-center overflow-hidden"
+                className="relative h-56 p-6 flex flex-col items-center justify-center text-center overflow-hidden"
                 style={{
                   background:
                     tmpl.category === 'birthday'
@@ -125,21 +125,18 @@ export const Gallery: React.FC<GalleryProps> = ({
                 <img
                   src={tmpl.previewThumbnail}
                   alt={tmpl.nameEn}
-                  className="w-16 h-16 object-contain mb-2 drop-shadow-md"
+                  className="w-16 h-16 object-contain mb-3 drop-shadow-md"
                 />
 
                 <span className="text-[11px] uppercase tracking-[0.25em] font-cinzel text-[#dfba6a] font-bold">
-                  {tmpl.nameEn}
+                  {tmpl.category.toUpperCase()} EDITION
                 </span>
-                <h3 className="text-2xl font-heading font-bold text-white mt-1">
-                  {lang === 'hi' ? tmpl.nameHi : tmpl.nameEn}
-                </h3>
                 <span className="text-xs italic text-[#ecd599] font-heading mt-1">
                   {tmpl.defaultData.celebrantOrCouple}
                 </span>
 
                 {/* Badge */}
-                <div className="absolute top-4 right-4 bg-[#dfba6a] text-[#420f1b] text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                <div className="absolute top-4 right-4 bg-[#dfba6a] text-[#420f1b] text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">
                   {lang === 'hi' ? tmpl.badgeHi : tmpl.badgeEn}
                 </div>
               </div>
@@ -147,9 +144,10 @@ export const Gallery: React.FC<GalleryProps> = ({
               {/* Card Info & Actions */}
               <div className="p-5 flex-1 flex flex-col justify-between">
                 <div>
-                  <h4 className="text-lg font-heading font-bold text-[#2c2523] mb-1">
+                  {/* Single Clean Title */}
+                  <h3 className="text-xl font-heading font-bold text-[#2c2523] mb-1">
                     {lang === 'hi' ? tmpl.nameHi : tmpl.nameEn}
-                  </h4>
+                  </h3>
                   <p className="text-xs font-sans text-[#5c4f4a] leading-relaxed mb-6">
                     {lang === 'hi' ? tmpl.descriptionHi : tmpl.descriptionEn}
                   </p>
@@ -181,7 +179,7 @@ export const Gallery: React.FC<GalleryProps> = ({
 
       {/* Footer */}
       <footer className="max-w-6xl mx-auto w-full pt-6 border-t border-[#e8decb] text-center text-xs text-[#7d6a58] font-sans">
-        <p>Grand Bandhan Invite Studio · {t.brandTagline}</p>
+        <p>© {new Date().getFullYear()} Grand Bandhan Invite Studio · {t.brandTagline}</p>
       </footer>
     </div>
   );

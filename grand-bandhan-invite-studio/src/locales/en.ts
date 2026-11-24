@@ -169,6 +169,9 @@ export const EN_LOCALE = {
   guestNamePrompt: 'Guest Name (e.g., Mr. Sharma):',
   downloadCsv: 'Download RSVPs (.csv)',
   migrateLocalDraft: 'Import Legacy Local Draft into Account',
+  legacyDraftFound: 'Legacy Browser Draft Found',
+  legacyDraftFoundDesc: 'An older invitation draft was detected on this device. You can import it into your workspace without losing any changes.',
+  migrateDraft: 'Import to Workspace',
   noDraftsYet: 'No saved drafts yet. Choose a template to get started!',
 
   // Modals & Confirmation

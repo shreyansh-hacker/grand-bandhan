@@ -46,6 +46,7 @@ export const DEFAULT_ROYAL_WEDDING_DATA: GenericInvitationData = {
   // Venue & Location
   venueName: 'राज विलास पैलेस (The Raj Vilas Palace)',
   venueAddress: 'आमेर रोड, जल महल के सामने, जयपुर, राजस्थान - 302002',
+  venueLandmark: 'जल महल के सामने · आमेर रोड, जयपुर',
   googleMapsUrl: 'https://maps.google.com/?q=Raj+Vilas+Palace+Amer+Road+Jaipur',
 
   // Closing

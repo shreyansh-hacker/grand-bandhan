@@ -1,7 +1,29 @@
 import React from 'react';
-import { GenericInvitationData, CeremonyFunction, SelectedElement, InvitationLanguage } from '../../types/invitation';
+import {
+  GenericInvitationData,
+  CeremonyFunction,
+  ActivityItem,
+  AgendaItem,
+  SpeakerItem,
+  SelectedElement,
+  InvitationLanguage,
+} from '../../types/invitation';
 import { DESIGN_TOKENS } from '../../styles/tokens';
-import { Sparkles, Sliders, Trash2, Plus, Globe, CheckSquare } from 'lucide-react';
+import {
+  Sparkles,
+  Sliders,
+  Trash2,
+  Plus,
+  Globe,
+  CheckSquare,
+  MapPin,
+  Calendar,
+  Clock,
+  Video,
+  Image,
+  User,
+  Building,
+} from 'lucide-react';
 import { useLanguage } from '../../locales';
 
 interface PropertiesPanelProps {
@@ -25,7 +47,128 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   onRemoveFunction,
   onClearSelection,
 }) => {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+
+  // Helper for array field updates (activities, agenda, speakers)
+  const handleUpdateActivity = (index: number, updated: Partial<ActivityItem>) => {
+    const list = [...(data.activities || [])];
+    if (list[index]) {
+      list[index] = { ...list[index], ...updated };
+      onUpdateField('activities', list);
+    }
+  };
+
+  const handleAddActivity = () => {
+    const list = [...(data.activities || [])];
+    const newId = `act-${Date.now()}`;
+    if (data.category === 'birthday') {
+      list.push({
+        id: newId,
+        time: '05:00 PM',
+        title: 'New Fun Activity',
+        description: 'Exciting games, music, and fun for all guests.',
+        icon: 'Sparkles',
+      });
+    } else {
+      list.push({
+        id: newId,
+        time: '11:00 AM',
+        title: 'नया पावन अनुष्ठान (New Ritual)',
+        description: 'पारंपरिक विधि-विधान व मंगल आरती।',
+        icon: 'Sparkles',
+      });
+    }
+    onUpdateField('activities', list);
+  };
+
+  const handleRemoveActivity = (index: number) => {
+    const list = [...(data.activities || [])];
+    list.splice(index, 1);
+    onUpdateField('activities', list);
+  };
+
+  const handleUpdateAgenda = (index: number, updated: Partial<AgendaItem>) => {
+    const list = [...(data.agenda || [])];
+    if (list[index]) {
+      list[index] = { ...list[index], ...updated };
+      onUpdateField('agenda', list);
+    }
+  };
+
+  const handleAddAgenda = () => {
+    const list = [...(data.agenda || [])];
+    list.push({
+      id: `ag-${Date.now()}`,
+      time: '03:00 PM - 04:00 PM',
+      title: 'New Conference Session',
+      description: 'Keynote presentation and interactive Q&A panel.',
+      locationOrRoom: 'Main Hall',
+    });
+    onUpdateField('agenda', list);
+  };
+
+  const handleRemoveAgenda = (index: number) => {
+    const list = [...(data.agenda || [])];
+    list.splice(index, 1);
+    onUpdateField('agenda', list);
+  };
+
+  const handleUpdateSpeaker = (index: number, updated: Partial<SpeakerItem>) => {
+    const list = [...(data.speakers || [])];
+    if (list[index]) {
+      list[index] = { ...list[index], ...updated };
+      onUpdateField('speakers', list);
+    }
+  };
+
+  const handleAddSpeaker = () => {
+    const list = [...(data.speakers || [])];
+    list.push({
+      id: `spk-${Date.now()}`,
+      name: 'Guest Speaker',
+      role: 'Industry Leader',
+      company: 'Innovations Lab',
+      topic: 'Strategic Transformation & Growth',
+      photoUrl: '/assets/templates/royal-wedding-book/illustrations/reception.svg',
+    });
+    onUpdateField('speakers', list);
+  };
+
+  const handleRemoveSpeaker = (index: number) => {
+    const list = [...(data.speakers || [])];
+    list.splice(index, 1);
+    onUpdateField('speakers', list);
+  };
+
+  // Category-specific presets for Cover Title
+  const getCoverTitlePresets = () => {
+    switch (data.category) {
+      case 'birthday':
+        return ['SURPRISE GIFT BOX', 'Happy Birthday!', "Aarav's 7th Birthday", 'Space Mission 🚀'];
+      case 'corporate':
+        return ['VIP DELEGATE PASS', 'Global Tech Summit 2027', 'Executive Leadership Pass', 'Symposium 2027'];
+      case 'custom':
+        return ['शुभ गृहप्रवेश', 'सिल्वर जुबली (25 वर्ष)', 'Auspicious Milestone', 'आनंद उत्सव'];
+      case 'wedding':
+      default:
+        return ['शुभ विवाह', 'मंगल परिणय', 'Royal Wedding Book', 'स्नेहिल आमंत्रण'];
+    }
+  };
+
+  // Category-specific presets for Opening Blessing
+  const getBlessingPresets = () => {
+    switch (data.category) {
+      case 'birthday':
+        return ['Blast Off into Fun! 🚀', 'Happy Birthday!', 'Hip Hip Hurray! 🎉', "You're Invited!"];
+      case 'corporate':
+        return ['Official Delegate Invitation', 'Executive Summit Access', 'VIP Invitation', 'Welcome to Summit'];
+      case 'custom':
+        return ['॥ ॐ नमो भगवते वासुदेवाय नमः ॥', '॥ श्री गणेशाय नमः ॥', 'स्नेहिल आमंत्रण', 'शुभ गृहप्रवेश'];
+      case 'wedding':
+      default:
+        return ['॥ श्री गणेशाय नमः ॥', 'स्नेहिल आमंत्रण', 'मंगल परिणय', '॥ ॐ श्री गणेशाय नमः ॥'];
+    }
+  };
 
   return (
     <aside className="w-full md:w-80 bg-white border-l border-[#e8decb] flex flex-col h-full overflow-y-auto select-none">
@@ -38,7 +181,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               {selectedElement ? t.selectedElement : t.styleTab}
             </h3>
             <p className="text-[10px] text-[#7d6a58] font-sans">
-              {selectedElement ? selectedElement.label : 'Style & Settings'}
+              {selectedElement ? selectedElement.label : 'Style, Fonts & RSVP'}
             </p>
           </div>
         </div>
@@ -54,7 +197,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
       <div className="p-4 space-y-5 flex-1 text-xs">
         {/* ============================================================== */}
-        {/* 1. If an Element is Selected */}
+        {/* 1. IF AN ELEMENT IS SELECTED FOR DIRECT EDITING */}
         {/* ============================================================== */}
         {selectedElement ? (
           <div className="space-y-4">
@@ -67,7 +210,68 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </p>
             </div>
 
-            {/* A. Opening Blessing / Greeting */}
+            {/* A. COVER TITLE & SUBTITLE */}
+            {(selectedElement.fieldKey === 'coverTitle' ||
+              selectedElement.fieldKey === 'coverSubtitle' ||
+              selectedElement.fieldKey === 'title' ||
+              selectedElement.fieldKey === 'subtitle') && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#2c2523] mb-1">
+                    Cover Title (कवर शीर्षक):
+                  </label>
+                  <input
+                    type="text"
+                    value={data.coverTitle || data.title}
+                    onChange={(e) => {
+                      onUpdateField('coverTitle', e.target.value);
+                      if (!data.title) onUpdateField('title', e.target.value);
+                    }}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-[#e8decb] focus:ring-2 focus:ring-[#c99a3e] outline-none font-bold"
+                    placeholder="e.g. शुभ विवाह or SURPRISE GIFT BOX"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {getCoverTitlePresets().map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => onUpdateField('coverTitle', preset)}
+                        className="text-[10px] px-2 py-1 rounded bg-[#faf7f2] hover:bg-[#f2ede4] border border-[#e8decb] text-[#6e1f2f]"
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#2c2523] mb-1">
+                    Cover Subtitle (उपशीर्षक):
+                  </label>
+                  <input
+                    type="text"
+                    value={data.coverSubtitle || data.subtitle}
+                    onChange={(e) => onUpdateField('coverSubtitle', e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-[#e8decb] outline-none"
+                    placeholder="e.g. ROYAL WEDDING INVITATION"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#2c2523] mb-1">
+                    Cover Button Text (बटन टेक्स्ट):
+                  </label>
+                  <input
+                    type="text"
+                    value={data.coverButtonText}
+                    onChange={(e) => onUpdateField('coverButtonText', e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-[#e8decb] outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* B. OPENING BLESSING / GREETING */}
             {selectedElement.fieldKey === 'openingBlessing' && (
               <div className="space-y-4">
                 <div>
@@ -78,11 +282,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     type="text"
                     value={data.openingBlessing}
                     onChange={(e) => onUpdateField('openingBlessing', e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-[#e8decb] focus:ring-2 focus:ring-[#c99a3e] outline-none"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-[#e8decb] focus:ring-2 focus:ring-[#c99a3e] outline-none font-devanagari"
                     placeholder="e.g. ॥ श्री गणेशाय नमः ॥ or स्नेहिल आमंत्रण"
                   />
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {['॥ श्री गणेशाय नमः ॥', 'स्नेहिल आमंत्रण', 'मंगल परिणय', 'Blast Off! 🚀', 'VIP Pass'].map((preset) => (
+                    {getBlessingPresets().map((preset) => (
                       <button
                         key={preset}
                         type="button"
@@ -167,14 +371,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             )}
 
-            {/* B. Celebrant, Couple or Host Names */}
+            {/* C. CELEBRANT, COUPLE OR HOST NAMES */}
             {(selectedElement.fieldKey === 'celebrantOrCouple' ||
               selectedElement.fieldKey === 'groomName' ||
               selectedElement.fieldKey === 'brideName') && (
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-[#2c2523] mb-1">
-                    Primary Name / Celebrant:
+                    Primary Celebrant / Title:
                   </label>
                   <input
                     type="text"
@@ -202,7 +406,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                   <>
                     <div className="pt-2 border-t border-[#e8decb]">
                       <label className="block text-xs font-medium text-[#2c2523] mb-1">
-                        Groom Name:
+                        Groom Name (वर):
                       </label>
                       <input
                         type="text"
@@ -213,7 +417,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-[#2c2523] mb-1">
-                        Bride Name:
+                        Bride Name (वधू):
                       </label>
                       <input
                         type="text"
@@ -227,7 +431,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             )}
 
-            {/* C. Invitation Message */}
+            {/* D. INVITATION MESSAGE */}
             {selectedElement.fieldKey === 'invitationText' && (
               <div>
                 <label className="block text-xs font-medium text-[#2c2523] mb-1">
@@ -242,10 +446,12 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             )}
 
-            {/* D. Date & Venue */}
+            {/* E. DATE, VENUE & LANDMARK */}
             {(selectedElement.fieldKey === 'eventDateFormatted' ||
               selectedElement.fieldKey === 'venueName' ||
-              selectedElement.fieldKey === 'venueAddress') && (
+              selectedElement.fieldKey === 'venueAddress' ||
+              selectedElement.fieldKey === 'venueLandmark' ||
+              selectedElement.fieldKey === 'onlineMeetingUrl') && (
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-[#2c2523] mb-1">
@@ -282,19 +488,43 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-[#2c2523] mb-1">
+                    Landmark / Caption (Optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={data.venueLandmark || ''}
+                    onChange={(e) => onUpdateField('venueLandmark', e.target.value)}
+                    placeholder="e.g. Near Metro Station · Indiranagar"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#e8decb] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#2c2523] mb-1">
                     Google Maps Link:
                   </label>
                   <input
                     type="url"
                     value={data.googleMapsUrl}
                     onChange={(e) => onUpdateField('googleMapsUrl', e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#e8decb] outline-none"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#e8decb] outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#2c2523] mb-1">
+                    Virtual Meeting / Stream Link (Optional):
+                  </label>
+                  <input
+                    type="url"
+                    value={data.onlineMeetingUrl || ''}
+                    onChange={(e) => onUpdateField('onlineMeetingUrl', e.target.value)}
+                    placeholder="https://meet.grandbandhan.com/..."
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#e8decb] outline-none font-mono"
                   />
                 </div>
               </div>
             )}
 
-            {/* E. Ceremonies & Functions */}
+            {/* F. WEDDING CEREMONIES */}
             {selectedElement.fieldKey === 'functions' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -306,7 +536,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     className="flex items-center gap-1 text-[11px] font-semibold text-[#6e1f2f] hover:underline"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    {t.addFunction}
+                    <span>Add Ceremony</span>
                   </button>
                 </div>
 
@@ -369,105 +599,259 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 </div>
               </div>
             )}
+
+            {/* G. BIRTHDAY ACTIVITIES OR CUSTOM RITUALS */}
+            {selectedElement.fieldKey === 'activities' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#6e1f2f]">
+                    {data.category === 'birthday' ? 'Activities' : 'Program Items'} ({(data.activities || []).length}):
+                  </span>
+                  <button
+                    onClick={handleAddActivity}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-[#6e1f2f] hover:underline"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{data.category === 'birthday' ? 'Add Activity' : 'Add Program Item'}</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                  {(data.activities || []).map((act, i) => (
+                    <div
+                      key={act.id || i}
+                      className="p-3 rounded-lg border border-[#e8decb] bg-[#faf7f2]/70 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <input
+                          type="text"
+                          value={act.title}
+                          onChange={(e) => handleUpdateActivity(i, { title: e.target.value })}
+                          className="font-bold text-xs bg-white px-2 py-1 rounded border border-[#e8decb] w-3/4"
+                          placeholder="Activity Title"
+                        />
+                        <button
+                          onClick={() => handleRemoveActivity(i)}
+                          className="text-stone-400 hover:text-rose-600 p-1"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={act.time}
+                        onChange={(e) => handleUpdateActivity(i, { time: e.target.value })}
+                        placeholder="Time (e.g. 05:00 PM)"
+                        className="w-full text-[11px] bg-white px-2 py-1 rounded border border-[#e8decb]"
+                      />
+
+                      <textarea
+                        rows={2}
+                        value={act.description}
+                        onChange={(e) => handleUpdateActivity(i, { description: e.target.value })}
+                        placeholder="Description"
+                        className="w-full text-[11px] bg-white px-2 py-1 rounded border border-[#e8decb]"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* H. CORPORATE AGENDA SESSIONS */}
+            {selectedElement.fieldKey === 'agenda' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0f172a]">
+                    Agenda Sessions ({(data.agenda || []).length}):
+                  </span>
+                  <button
+                    onClick={handleAddAgenda}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-[#c99a3e] hover:underline"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Session</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                  {(data.agenda || []).map((ag, i) => (
+                    <div
+                      key={ag.id || i}
+                      className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <input
+                          type="text"
+                          value={ag.title}
+                          onChange={(e) => handleUpdateAgenda(i, { title: e.target.value })}
+                          className="font-bold text-xs bg-white px-2 py-1 rounded border border-stone-200 w-3/4"
+                          placeholder="Session Title"
+                        />
+                        <button
+                          onClick={() => handleRemoveAgenda(i)}
+                          className="text-stone-400 hover:text-rose-600 p-1"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <input
+                          type="text"
+                          value={ag.time}
+                          onChange={(e) => handleUpdateAgenda(i, { time: e.target.value })}
+                          placeholder="Time Window"
+                          className="text-[11px] bg-white px-2 py-1 rounded border border-stone-200"
+                        />
+                        <input
+                          type="text"
+                          value={ag.locationOrRoom || ''}
+                          onChange={(e) => handleUpdateAgenda(i, { locationOrRoom: e.target.value })}
+                          placeholder="Hall / Room"
+                          className="text-[11px] bg-white px-2 py-1 rounded border border-stone-200"
+                        />
+                      </div>
+
+                      <textarea
+                        rows={2}
+                        value={ag.description}
+                        onChange={(e) => handleUpdateAgenda(i, { description: e.target.value })}
+                        placeholder="Session Details"
+                        className="w-full text-[11px] bg-white px-2 py-1 rounded border border-stone-200"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* I. CORPORATE KEYNOTE SPEAKERS */}
+            {selectedElement.fieldKey === 'speakers' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0f172a]">
+                    Keynote Speakers ({(data.speakers || []).length}):
+                  </span>
+                  <button
+                    onClick={handleAddSpeaker}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-[#c99a3e] hover:underline"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Speaker</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                  {(data.speakers || []).map((spk, i) => (
+                    <div
+                      key={spk.id || i}
+                      className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <input
+                          type="text"
+                          value={spk.name}
+                          onChange={(e) => handleUpdateSpeaker(i, { name: e.target.value })}
+                          className="font-bold text-xs bg-white px-2 py-1 rounded border border-stone-200 w-3/4"
+                          placeholder="Speaker Name"
+                        />
+                        <button
+                          onClick={() => handleRemoveSpeaker(i)}
+                          className="text-stone-400 hover:text-rose-600 p-1"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <input
+                          type="text"
+                          value={spk.role}
+                          onChange={(e) => handleUpdateSpeaker(i, { role: e.target.value })}
+                          placeholder="Role / Title"
+                          className="text-[11px] bg-white px-2 py-1 rounded border border-stone-200"
+                        />
+                        <input
+                          type="text"
+                          value={spk.company}
+                          onChange={(e) => handleUpdateSpeaker(i, { company: e.target.value })}
+                          placeholder="Company"
+                          className="text-[11px] bg-white px-2 py-1 rounded border border-stone-200"
+                        />
+                      </div>
+
+                      <input
+                        type="text"
+                        value={spk.topic}
+                        onChange={(e) => handleUpdateSpeaker(i, { topic: e.target.value })}
+                        placeholder="Keynote Topic"
+                        className="w-full text-[11px] bg-white px-2 py-1 rounded border border-stone-200"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* ============================================================== */
-          /* 2. Global Theme, Language & RSVP Settings */
+          /* 2. GLOBAL THEME, INDEPENDENT INVITATION LANGUAGE & RSVP */
           /* ============================================================== */
           <div className="space-y-5">
             {/* Click to edit helper banner */}
             <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-left">
               <span className="text-xs font-bold text-amber-900 block mb-0.5">
-                💡 Direct Interactive Canvas Editing:
+                💡 Direct Editing Active
               </span>
-              <p className="text-[11px] text-amber-800 leading-relaxed">
-                {t.clickToEditHint}
+              <p className="text-[11px] text-amber-800 leading-relaxed font-sans">
+                Click any title, greeting, ceremony, or address directly on the live card to customize its wording and styling.
               </p>
             </div>
 
-            {/* Independent Invitation Content Language Choice */}
-            <div className="space-y-2">
-              <span className="block text-xs font-cinzel font-bold text-[#6e1f2f] uppercase">
-                {t.invitationLanguage}
-              </span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['en', 'hi', 'bilingual'] as const).map((l) => (
+            {/* Independent Invitation Language Control */}
+            <div className="p-3 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#6e1f2f]">
+                <Globe className="w-4 h-4 text-[#c99a3e]" />
+                <span>Invitation Content Language:</span>
+              </div>
+              <p className="text-[10px] text-stone-500 font-sans leading-normal">
+                Choose the language of your written invitation card (independent of your Studio interface language).
+              </p>
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                {(['en', 'hi', 'bilingual'] as InvitationLanguage[]).map((ilang) => (
                   <button
-                    key={l}
+                    key={ilang}
                     type="button"
-                    onClick={() => onUpdateField('invitationLanguage', l)}
-                    className={`py-1.5 text-xs rounded border transition-all ${
-                      data.invitationLanguage === l
-                        ? 'bg-[#6e1f2f] text-white border-[#6e1f2f] font-semibold'
-                        : 'bg-white text-stone-700 border-[#e8decb] hover:bg-[#faf7f2]'
+                    onClick={() => onUpdateField('invitationLanguage', ilang)}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-semibold capitalize border transition-all ${
+                      data.invitationLanguage === ilang
+                        ? 'bg-[#6e1f2f] text-white border-[#6e1f2f] shadow-xs'
+                        : 'bg-[#faf7f2] text-stone-700 border-[#e8decb] hover:bg-[#f2ede4]'
                     }`}
                   >
-                    {l === 'en' ? t.langEnglish : l === 'hi' ? t.langHindi : 'Bilingual'}
+                    {ilang === 'en' ? 'English' : ilang === 'hi' ? 'हिन्दी' : 'Bilingual'}
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-stone-500">
-                Studio UI and Invitation copy are independent.
-              </p>
             </div>
 
-            {/* RSVP Settings */}
-            <div className="space-y-3 pt-2 border-t border-[#e8decb]">
-              <span className="block text-xs font-cinzel font-bold text-[#6e1f2f] uppercase">
-                RSVP &amp; Guest Responses
+            {/* Color Presets Palette */}
+            <div>
+              <span className="text-xs font-bold text-[#6e1f2f] block mb-2 font-cinzel">
+                Theme Color Presets:
               </span>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={data.rsvp?.enabled ?? true}
-                  onChange={(e) =>
-                    onUpdateField('rsvp', { ...data.rsvp, enabled: e.target.checked })
-                  }
-                  className="accent-[#6e1f2f]"
-                />
-                <span className="text-xs font-medium text-stone-800">
-                  Enable RSVP form on invitation
-                </span>
-              </label>
-
-              {data.rsvp?.enabled && (
-                <div className="space-y-2 pl-4 border-l-2 border-[#dfba6a]">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={data.rsvp.allowPartySize}
-                      onChange={(e) =>
-                        onUpdateField('rsvp', { ...data.rsvp, allowPartySize: e.target.checked })
-                      }
-                      className="accent-[#6e1f2f]"
-                    />
-                    <span className="text-[11px] text-stone-700">Allow specifying guest count</span>
-                  </label>
-
-                  <div>
-                    <label className="block text-[11px] text-stone-600 mb-0.5">RSVP Deadline:</label>
-                    <input
-                      type="text"
-                      value={data.rsvp.deadlineFormatted || ''}
-                      onChange={(e) =>
-                        onUpdateField('rsvp', { ...data.rsvp, deadlineFormatted: e.target.value })
-                      }
-                      placeholder="e.g. Feb 05, 2027"
-                      className="w-full px-2 py-1 text-xs rounded border border-stone-300"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Color Palette Presets */}
-            <div className="space-y-2 pt-2 border-t border-[#e8decb]">
-              <span className="block text-xs font-cinzel font-bold text-[#6e1f2f] uppercase">
-                Royal Color Presets
-              </span>
-              <div className="space-y-1.5">
-                {DESIGN_TOKENS.presetPalettes.map((p) => (
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { name: 'Royal Wine & Gold', cover: '#6e1f2f', accent: '#dfba6a', paper: '#faf7f2' },
+                  { name: 'Emerald & Ivory', cover: '#1b4332', accent: '#ecd599', paper: '#fbf9f4' },
+                  { name: 'Cosmic Space Navy', cover: '#1d3557', accent: '#ffd166', paper: '#fdfbf7' },
+                  { name: 'Executive Slate', cover: '#0f172a', accent: '#c99a3e', paper: '#f8fafc' },
+                ].map((p) => (
                   <button
                     key={p.name}
                     type="button"
@@ -476,72 +860,72 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                       onUpdateTheme('coverAccentColor', p.accent);
                       onUpdateTheme('paperColor', p.paper);
                     }}
-                    className="w-full flex items-center justify-between p-2 rounded-lg border border-[#e8decb] hover:bg-[#faf7f2] transition-all text-left"
+                    className="p-2 rounded-lg border border-[#e8decb] bg-white hover:shadow-sm text-left flex items-center gap-2 transition-all"
+                    aria-label={`Select ${p.name} theme`}
                   >
-                    <span className="text-xs font-medium text-[#2c2523] truncate max-w-[180px]">
+                    <div
+                      className="w-5 h-5 rounded-full border border-stone-200 shrink-0"
+                      style={{ backgroundColor: p.cover }}
+                    />
+                    <span className="text-[10px] font-medium text-stone-700 truncate">
                       {p.name}
                     </span>
-                    <div className="flex items-center gap-1">
-                      <div className="w-4 h-4 rounded-full border border-white shadow-xs" style={{ backgroundColor: p.cover }} />
-                      <div className="w-4 h-4 rounded-full border border-white shadow-xs" style={{ backgroundColor: p.accent }} />
-                    </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Custom Theme Colors */}
-            <div className="space-y-3 pt-2 border-t border-[#e8decb]">
-              <span className="block text-xs font-cinzel font-bold text-[#6e1f2f] uppercase">
-                Custom Colors
-              </span>
+            {/* Guest RSVP Settings */}
+            <div className="p-3 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[#2c2523]">Primary Cover Color:</span>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="color"
-                    value={data.theme.coverColor}
-                    onChange={(e) => onUpdateTheme('coverColor', e.target.value)}
-                    className="w-7 h-7 rounded border border-[#e8decb] cursor-pointer"
-                  />
-                  <span className="text-[10px] font-mono">{data.theme.coverColor}</span>
-                </div>
+                <span className="text-xs font-bold text-[#6e1f2f]">
+                  Guest RSVP Enabled:
+                </span>
+                <input
+                  type="checkbox"
+                  checked={data.rsvp?.enabled ?? true}
+                  onChange={(e) =>
+                    onUpdateField('rsvp', { ...data.rsvp, enabled: e.target.checked })
+                  }
+                  className="w-4 h-4 accent-[#6e1f2f] rounded"
+                />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-[#2c2523]">Accent Gold / Ribbon:</span>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="color"
-                    value={data.theme.coverAccentColor}
-                    onChange={(e) => onUpdateTheme('coverAccentColor', e.target.value)}
-                    className="w-7 h-7 rounded border border-[#e8decb] cursor-pointer"
-                  />
-                  <span className="text-[10px] font-mono">{data.theme.coverAccentColor}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Motion Speed */}
-            <div className="space-y-2 pt-2 border-t border-[#e8decb]">
-              <span className="block text-xs font-cinzel font-bold text-[#6e1f2f] uppercase">
-                {t.speed}
-              </span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['slow', 'normal', 'fast'] as const).map((spd) => (
-                  <button
-                    key={spd}
-                    type="button"
-                    onClick={() => onUpdateTheme('animationSpeed', spd)}
-                    className={`py-1.5 text-xs rounded border transition-all ${
-                      data.theme.animationSpeed === spd
-                        ? 'bg-[#6e1f2f] text-white border-[#6e1f2f] font-semibold'
-                        : 'bg-white text-[#2c2523] border-[#e8decb] hover:bg-[#faf7f2]'
-                    }`}
-                  >
-                    {spd === 'slow' ? t.speedSlow : spd === 'normal' ? t.speedNormal : t.speedFast}
-                  </button>
-                ))}
-              </div>
+              {data.rsvp?.enabled && (
+                <div className="space-y-2.5 pt-2 border-t border-[#e8decb]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-stone-700">Allow Party Size:</span>
+                    <input
+                      type="checkbox"
+                      checked={data.rsvp?.allowPartySize ?? true}
+                      onChange={(e) =>
+                        onUpdateField('rsvp', {
+                          ...data.rsvp,
+                          allowPartySize: e.target.checked,
+                        })
+                      }
+                      className="w-4 h-4 accent-[#6e1f2f] rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-stone-600 mb-1">
+                      RSVP Deadline:
+                    </label>
+                    <input
+                      type="text"
+                      value={data.rsvp?.deadlineFormatted || 'Prior to event'}
+                      onChange={(e) =>
+                        onUpdateField('rsvp', {
+                          ...data.rsvp,
+                          deadlineFormatted: e.target.value,
+                        })
+                      }
+                      className="w-full px-2.5 py-1 text-xs rounded border border-[#e8decb]"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

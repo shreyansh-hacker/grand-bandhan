@@ -32,6 +32,7 @@ export const DEFAULT_CUSTOM_DATA: GenericInvitationData = {
 
   venueName: 'आनंद निलयम (Anand Nilayam, Villa 108)',
   venueAddress: 'पाम मीडोज़, व्हाइटफ़ील्ड, बेंगलुरु, कर्नाटक - 560066',
+  venueLandmark: 'पाम मीडोज़ गेट नं 2 · व्हाइटफ़ील्ड, बेंगलुरु',
   googleMapsUrl: 'https://maps.google.com/?q=Whitefield+Bengaluru',
 
   closingBlessing: 'आपकी उपस्थिति ही हमारे नए घर की शोभा बढ़ाएगी।',
