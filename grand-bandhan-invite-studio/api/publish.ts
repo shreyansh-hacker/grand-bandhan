@@ -1,42 +1,23 @@
 // Vercel Serverless Function: /api/publish
-// Handles publishing and unpublishing of invitations with server-side snapshot persistence
+// Handles publishing and unpublishing of invitations with Neon Postgres persistence
 
-import fs from 'fs';
-import path from 'path';
+import { savePublishedInvite, unpublishInvite } from './_db';
 
 export const config = {
   runtime: 'nodejs',
 };
 
-const TMP_FILE = path.join('/tmp', 'gb_published_invites.json');
-
-function getStore(): Record<string, any> {
-  try {
-    if (fs.existsSync(TMP_FILE)) {
-      const raw = fs.readFileSync(TMP_FILE, 'utf-8');
-      return JSON.parse(raw);
-    }
-  } catch (err) {
-    console.warn('Error reading /tmp/gb_published_invites.json:', err);
-  }
-  return {};
-}
-
-function saveStore(store: Record<string, any>): void {
-  try {
-    fs.writeFileSync(TMP_FILE, JSON.stringify(store), 'utf-8');
-  } catch (err) {
-    console.warn('Error writing /tmp/gb_published_invites.json:', err);
-  }
-}
-
 export default async function handler(req: any, res: any) {
-  const store = getStore();
-
-  // POST: Publish a draft snapshot
+  // POST: Publish or update a draft snapshot
   if (req.method === 'POST') {
     try {
-      const { draft } = req.body || {};
+      let body = req.body;
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch {}
+      }
+      const { draft } = body || {};
       if (!draft || !draft.slug) {
         return res.status(400).json({ error: 'Missing draft or slug' });
       }
@@ -48,8 +29,7 @@ export default async function handler(req: any, res: any) {
         publishedData: JSON.parse(JSON.stringify(draft.publishedData || draft.data)),
       };
 
-      store[draft.slug] = publishedSnapshot;
-      saveStore(store);
+      await savePublishedInvite(draft.slug, publishedSnapshot);
 
       return res.status(200).json({
         success: true,
@@ -65,16 +45,18 @@ export default async function handler(req: any, res: any) {
   // DELETE: Unpublish an invitation
   if (req.method === 'DELETE') {
     try {
-      const { slug } = req.body || req.query || {};
+      let body = req.body;
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch {}
+      }
+      const { slug } = body || req.query || {};
       if (!slug) {
         return res.status(400).json({ error: 'Missing slug' });
       }
 
-      if (store[slug]) {
-        store[slug].isPublished = false;
-        store[slug].publishedData = null;
-        saveStore(store);
-      }
+      await unpublishInvite(slug);
 
       return res.status(200).json({
         success: true,

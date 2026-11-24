@@ -1,5 +1,7 @@
 // Vercel Serverless Function: POST /api/rsvp
-// Handles guest RSVP submissions with deduplication and durable persistence
+// Handles guest RSVP submissions with deduplication and durable persistence in Neon Postgres
+
+import { saveRsvp } from './_db';
 
 export const config = {
   runtime: 'nodejs',
@@ -18,7 +20,13 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'POST') {
     try {
-      const { slug, rsvp } = req.body || {};
+      let body = req.body;
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch {}
+      }
+      const { slug, rsvp } = body || {};
       if (!slug || !rsvp || !rsvp.guestName) {
         return res.status(400).json({ error: 'Invalid RSVP payload' });
       }
@@ -35,6 +43,7 @@ export default async function handler(req: any, res: any) {
 
       const savedRecord = {
         ...rsvp,
+        slug,
         guestToken: token,
         updatedAt: Date.now(),
       };
@@ -45,11 +54,13 @@ export default async function handler(req: any, res: any) {
         rsvpStore[slug].push(savedRecord);
       }
 
+      // Persist to Neon Postgres
+      await saveRsvp(savedRecord);
+
       return res.status(200).json({
         success: true,
         message: 'RSVP recorded successfully',
-        rsvp: savedRecord,
-        totalForEvent: rsvpStore[slug].length,
+        record: savedRecord,
       });
     } catch (err: any) {
       return res.status(500).json({ error: 'Failed to record RSVP', message: err.message });

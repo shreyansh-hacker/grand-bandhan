@@ -1,26 +1,11 @@
 // Vercel Serverless Function: GET /api/invites/[slug]
-// Returns published invitation data snapshot and Open Graph metadata for social unfurling
+// Returns published invitation data snapshot and Open Graph metadata from Neon Postgres
 
-import fs from 'fs';
-import path from 'path';
+import { getPublishedInvite } from '../_db';
 
 export const config = {
   runtime: 'nodejs',
 };
-
-const TMP_FILE = path.join('/tmp', 'gb_published_invites.json');
-
-function getStore(): Record<string, any> {
-  try {
-    if (fs.existsSync(TMP_FILE)) {
-      const raw = fs.readFileSync(TMP_FILE, 'utf-8');
-      return JSON.parse(raw);
-    }
-  } catch (err) {
-    console.warn('Error reading /tmp/gb_published_invites.json:', err);
-  }
-  return {};
-}
 
 export default async function handler(req: any, res: any) {
   const { slug } = req.query;
@@ -28,8 +13,7 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Missing slug' });
   }
 
-  const store = getStore();
-  const invite = store[slug];
+  const invite = await getPublishedInvite(slug);
 
   if (!invite || !invite.isPublished) {
     return res.status(404).json({
