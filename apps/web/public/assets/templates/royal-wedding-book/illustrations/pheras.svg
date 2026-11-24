@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <circle cx="60" cy="60" r="54" fill="#fdf0f0" stroke="#d90429" stroke-width="2"/>
+  <g transform="translate(60, 60)">
+    <!-- Mandap Pillars -->
+    <rect x="-30" y="-30" width="4" height="40" rx="2" fill="#d4af37"/>
+    <rect x="26" y="-30" width="4" height="40" rx="2" fill="#d4af37"/>
+    <path d="M-34 -30 C-10 -38 10 -38 34 -30" stroke="#d4af37" stroke-width="3" fill="none"/>
+    <!-- Toran flowers -->
+    <circle cx="-16" cy="-30" r="3" fill="#e63946"/>
+    <circle cx="0" cy="-31" r="3" fill="#ffb703"/>
+    <circle cx="16" cy="-30" r="3" fill="#e63946"/>
+    <!-- Havan Kund / Fire altar -->
+    <path d="M-18 10 L-14 24 L14 24 L18 10 Z" fill="#6c1d1a"/>
+    <rect x="-22" y="8" width="44" height="4" fill="#d4af37"/>
+    <!-- Holy Flame -->
+    <path d="M0 6 C-8 0 -4 -16 0 -22 C4 -16 8 0 0 6 Z" fill="#ffb703"/>
+    <path d="M0 6 C-4 2 -2 -8 0 -14 C2 -8 4 2 0 6 Z" fill="#d90429"/>
+  </g>
+</svg>

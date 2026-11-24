@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" width="400" height="480" fill="none">
+  <defs>
+    <linearGradient id="bgArtsy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a1520"/>
+      <stop offset="50%" stop-color="#2a0a12"/>
+      <stop offset="100%" stop-color="#140408"/>
+    </linearGradient>
+    <linearGradient id="coupleGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff5d9"/>
+      <stop offset="50%" stop-color="#dfba6a"/>
+      <stop offset="100%" stop-color="#ab7a22"/>
+    </linearGradient>
+  </defs>
+  <!-- Background with subtle royal arch -->
+  <rect width="400" height="480" rx="16" fill="url(#bgArtsy)"/>
+  <rect x="12" y="12" width="376" height="456" rx="12" stroke="url(#coupleGold)" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <!-- Mughal Arch Silhouette -->
+  <path d="M40 456 L40 180 C40 90 200 40 200 40 C200 40 360 90 360 180 L360 456 Z" stroke="url(#coupleGold)" stroke-width="2" fill="none" opacity="0.4"/>
+  
+  <!-- Artistic Royal Couple Silhouette -->
+  <g transform="translate(200, 270) scale(1.1)">
+    <!-- Groom (Turban / Sherwani) -->
+    <path d="M-55 70 C-55 20 -40 -15 -25 -25 C-15 -32 -5 -30 0 -15 C-15 10 -25 40 -25 70 Z" fill="url(#coupleGold)" opacity="0.85"/>
+    <circle cx="-15" cy="-35" r="14" fill="url(#coupleGold)"/>
+    <!-- Safa / Kalgi feather -->
+    <path d="M-15 -48 C-10 -65 -18 -75 -24 -82 C-16 -70 -12 -58 -14 -48 Z" fill="#dfba6a"/>
+
+    <!-- Bride (Veil / Dupatta / Lehanga) -->
+    <path d="M25 70 C25 25 15 -10 5 -20 C18 -26 30 -10 35 15 C45 40 45 70 45 70 Z" fill="url(#coupleGold)" opacity="0.95"/>
+    <circle cx="18" cy="-30" r="12" fill="url(#coupleGold)"/>
+    <!-- Maang Tikka & Dupatta drape -->
+    <path d="M6 -38 C14 -48 34 -44 38 -20 C42 5 44 45 48 70" stroke="url(#coupleGold)" stroke-width="2" fill="none"/>
+    <circle cx="14" cy="-40" r="2" fill="#fff"/>
+  </g>
+
+  <!-- Golden Stars & Floral Sprinkles -->
+  <circle cx="100" cy="140" r="2" fill="#dfba6a"/>
+  <circle cx="310" cy="130" r="1.5" fill="#dfba6a"/>
+  <circle cx="200" cy="90" r="2.5" fill="#dfba6a"/>
+  <text x="200" y="420" font-family="'Playfair Display', Georgia, serif" font-size="20" font-style="italic" fill="url(#coupleGold)" text-anchor="middle">
+    A Lifetime of Love &amp; Togetherness
+  </text>
+</svg>

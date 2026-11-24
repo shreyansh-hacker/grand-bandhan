@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <circle cx="60" cy="60" r="54" fill="#fdf8e8" stroke="#f5c242" stroke-width="2"/>
+  <!-- Marigold Petals Cluster -->
+  <g transform="translate(60, 60)">
+    <circle cx="0" cy="0" r="32" fill="#ffb703" opacity="0.3"/>
+    <!-- Outer Marigold Flowers -->
+    <circle cx="-16" cy="-14" r="14" fill="#fb8500"/>
+    <circle cx="-16" cy="-14" r="10" fill="#ffb703"/>
+    <circle cx="16" cy="-12" r="15" fill="#f77f00"/>
+    <circle cx="16" cy="-12" r="11" fill="#fcbf49"/>
+    <!-- Traditional Brass Bowl / Urli -->
+    <path d="M-28 8 C-28 26 28 26 28 8 Z" fill="#d4af37"/>
+    <ellipse cx="0" cy="8" rx="28" ry="8" fill="#ffd166"/>
+    <ellipse cx="0" cy="8" rx="22" ry="5" fill="#f4a261"/>
+    <!-- Turmeric Paste mound -->
+    <ellipse cx="0" cy="6" rx="14" ry="4" fill="#e76f51"/>
+  </g>
+</svg>

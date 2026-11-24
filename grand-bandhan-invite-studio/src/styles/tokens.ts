@@ -1,0 +1,33 @@
+export const DESIGN_TOKENS = {
+  colors: {
+    wine: '#6e1f2f',
+    wineDark: '#4b121e',
+    wineDeep: '#350a13',
+    wineSoft: '#852b3d',
+    gold: '#c99a3e',
+    goldLight: '#dfba6a',
+    goldChampagne: '#ecd599',
+    goldPale: '#fff6dd',
+    paper: '#faf7f2',
+    paperWarm: '#fdfbf7',
+    paperBorder: '#e8decb',
+    textMain: '#2c2523',
+    textMuted: '#6e615c',
+    emerald: '#1b4332',
+    navy: '#1d2a44',
+  },
+  fontOptions: [
+    { label: 'Playfair Display (Royal Serif)', value: 'Playfair Display' },
+    { label: 'Noto Serif Devanagari (देवनागरी)', value: 'Noto Serif Devanagari' },
+    { label: 'Rozha One (Traditional Bold)', value: 'Rozha One' },
+    { label: 'Cinzel (Classical Capital)', value: 'Cinzel' },
+    { label: 'Montserrat (Clean Modern)', value: 'Montserrat' },
+    { label: 'Great Vibes (Calligraphy Script)', value: 'Great Vibes' },
+  ],
+  presetPalettes: [
+    { name: 'शाही वाइन व स्वर्ण (Royal Wine & Gold)', cover: '#6e1f2f', accent: '#dfba6a', paper: '#faf7f2' },
+    { name: 'शाही पन्ना व आइवरी (Royal Emerald & Ivory)', cover: '#1b4332', accent: '#ecd599', paper: '#fbf9f4' },
+    { name: 'गहरा इंडिगो व शैम्पेन (Deep Indigo & Champagne)', cover: '#1d2a44', accent: '#dfba6a', paper: '#f8f7f5' },
+    { name: 'गुलाबी मखमली (Blush Rose & Gold)', cover: '#8c2d46', accent: '#f7d8a8', paper: '#fdf8f7' },
+  ],
+};

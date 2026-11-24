@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" fill="none">
+  <defs>
+    <radialGradient id="rosePetal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e26d80"/>
+      <stop offset="60%" stop-color="#b02a42"/>
+      <stop offset="100%" stop-color="#5a1020"/>
+    </radialGradient>
+    <linearGradient id="goldStem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf3cd"/>
+      <stop offset="100%" stop-color="#c99a3e"/>
+    </linearGradient>
+  </defs>
+  <!-- Foliage Tendrils -->
+  <path d="M10 90 Q 20 40 70 20" stroke="url(#goldStem)" stroke-width="2" fill="none"/>
+  <path d="M15 80 Q 40 70 50 45" stroke="url(#goldStem)" stroke-width="1.5" fill="none"/>
+  <!-- Gold Leaf accents -->
+  <path d="M30 50 C25 40 40 35 42 45 Z" fill="url(#goldStem)"/>
+  <path d="M50 35 C45 25 60 22 62 30 Z" fill="url(#goldStem)"/>
+  <!-- 3D Blooming Rose in Wine / Velvet Red -->
+  <g transform="translate(65, 25)">
+    <circle cx="0" cy="0" r="18" fill="url(#rosePetal)"/>
+    <path d="M-12 -6 C-6 -16 10 -14 12 -4 C14 8 2 14 -8 10 Z" fill="#992237" opacity="0.9"/>
+    <path d="M-8 -4 C-3 -10 7 -8 8 -2 C9 5 2 8 -4 6 Z" fill="#b02a42"/>
+    <circle cx="0" cy="0" r="4" fill="#dfba6a"/>
+  </g>
+</svg>

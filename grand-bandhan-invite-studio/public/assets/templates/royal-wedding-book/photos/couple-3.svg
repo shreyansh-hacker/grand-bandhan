@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 400" width="320" height="400" fill="none">
+  <rect width="320" height="400" rx="12" fill="#201015"/>
+  <rect x="10" y="10" width="300" height="380" rx="8" stroke="#dfba6a" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="160" cy="180" r="70" fill="#321820" stroke="#dfba6a" stroke-width="1"/>
+  <!-- Holding Hands Motif -->
+  <path d="M120 180 C140 160 150 180 160 175 C170 170 180 190 200 175" stroke="#dfba6a" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <text x="160" y="280" font-family="'Cinzel', serif" font-size="14" fill="#dfba6a" text-anchor="middle" letter-spacing="2">TWO FAMILIES, ONE HEARTH</text>
+  <text x="160" y="305" font-family="'Montserrat', sans-serif" font-size="11" fill="#fff" opacity="0.8" text-anchor="middle">Ready to embark on a sacred journey</text>
+</svg>

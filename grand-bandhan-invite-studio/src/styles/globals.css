@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+  .perspective-1400 {
+    perspective: 1400px;
+  }
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-0 {
+    transform: rotateY(0deg);
+  }
+  .-rotate-y-140 {
+    transform: rotateY(-140deg);
+  }
+  .-rotate-y-180 {
+    transform: rotateY(-180deg);
+  }
+}
+
+/* Custom Scrollbar for Luxury Editorial feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #faf7f2;
+}
+::-webkit-scrollbar-thumb {
+  background: #d8cdbe;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c4b5a2;
+}
+
+/* Selection Color */
+::selection {
+  background-color: #6e1f2f;
+  color: #faf7f2;
+}

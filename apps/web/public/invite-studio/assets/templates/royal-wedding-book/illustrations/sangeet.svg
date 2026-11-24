@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <circle cx="60" cy="60" r="54" fill="#f6eefc" stroke="#7209b7" stroke-width="2"/>
+  <g transform="translate(60, 60)">
+    <!-- Musical Dholak Body -->
+    <ellipse cx="0" cy="0" rx="28" ry="16" fill="#b5179e"/>
+    <ellipse cx="-24" cy="0" rx="5" ry="14" fill="#480ca8"/>
+    <ellipse cx="24" cy="0" rx="5" ry="14" fill="#480ca8"/>
+    <!-- Bracing Ropes -->
+    <path d="M-20 -10 L0 14 L20 -10" stroke="#f72585" stroke-width="2"/>
+    <path d="M-20 10 L0 -14 L20 10" stroke="#f72585" stroke-width="2"/>
+    <!-- Sparkles and Notes -->
+    <path d="M-18 -26 L-14 -22 L-18 -18 L-22 -22 Z" fill="#ffd166"/>
+    <path d="M18 -24 L22 -20 L18 -16 L14 -20 Z" fill="#ffd166"/>
+    <circle cx="0" cy="-28" r="3" fill="#7209b7"/>
+  </g>
+</svg>

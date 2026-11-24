@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160" fill="none">
+  <defs>
+    <linearGradient id="emblemGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff5d6"/>
+      <stop offset="35%" stop-color="#ecc771"/>
+      <stop offset="70%" stop-color="#c99738"/>
+      <stop offset="100%" stop-color="#8a5e19"/>
+    </linearGradient>
+    <filter id="medallionShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#2d0810" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#medallionShadow)">
+    <!-- Medallion Rim -->
+    <circle cx="80" cy="80" r="74" fill="#581423" stroke="url(#emblemGold)" stroke-width="2.5"/>
+    <circle cx="80" cy="80" r="68" stroke="url(#emblemGold)" stroke-width="1" stroke-dasharray="3 3"/>
+    <circle cx="80" cy="80" r="64" fill="#6e1f2f"/>
+
+    <!-- Decorative Corner Dots -->
+    <circle cx="80" cy="18" r="2.5" fill="url(#emblemGold)"/>
+    <circle cx="80" cy="142" r="2.5" fill="url(#emblemGold)"/>
+    <circle cx="18" cy="80" r="2.5" fill="url(#emblemGold)"/>
+    <circle cx="142" cy="80" r="2.5" fill="url(#emblemGold)"/>
+
+    <!-- Sacred Ganesha Silhouette in Ornate Gold -->
+    <g transform="translate(42, 38) scale(0.95)">
+      <!-- Crown / Mukut -->
+      <path d="M40 8 L32 24 L48 24 Z" fill="url(#emblemGold)"/>
+      <circle cx="40" cy="6" r="2.5" fill="url(#emblemGold)"/>
+      <rect x="28" y="24" width="24" height="4" rx="2" fill="url(#emblemGold)"/>
+
+      <!-- Tilak / Trishul mark -->
+      <path d="M37 32 C37 28 43 28 43 32 L40 40 Z" fill="url(#emblemGold)"/>
+      <circle cx="40" cy="31" r="1.5" fill="#581423"/>
+
+      <!-- Head & Ears -->
+      <path d="M22 36 C10 38 10 52 24 55 C26 48 28 42 32 38 Z" fill="url(#emblemGold)"/>
+      <path d="M58 36 C70 38 70 52 56 55 C54 48 52 42 48 38 Z" fill="url(#emblemGold)"/>
+
+      <!-- Trunk (Vakratunda) curving rightwards -->
+      <path d="M36 38 C34 50 35 64 42 72 C48 78 58 76 56 68 C55 64 50 64 48 68 C45 71 40 68 40 60 C40 52 42 46 44 38 Z" fill="url(#emblemGold)"/>
+      
+      <!-- Modak in hand / blessing -->
+      <circle cx="62" cy="64" r="4.5" fill="url(#emblemGold)"/>
+
+      <!-- Om / Floral accent curve -->
+      <path d="M26 68 C22 74 30 82 40 82 C52 82 60 74 58 66" stroke="url(#emblemGold)" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
