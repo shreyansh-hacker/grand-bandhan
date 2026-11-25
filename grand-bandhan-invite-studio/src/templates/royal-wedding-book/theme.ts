@@ -8,4 +8,7 @@ export const ROYAL_WEDDING_THEME = {
   devanagariFont: 'Noto Serif Devanagari',
   animationSpeed: 'normal' as const,
   revealStyle: 'bloom' as const,
+  pattern: 'damask' as const,
+  particleType: 'flowers' as const,
+  cardAnimation: 'float' as const,
 };

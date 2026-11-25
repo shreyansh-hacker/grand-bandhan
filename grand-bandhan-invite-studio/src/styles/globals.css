@@ -132,15 +132,157 @@
 /* 5. Royal Card Breathing Gold Aura Border */
 @keyframes royalCardAura {
   0%, 100% {
-    box-shadow: 0 18px 45px -10px rgba(44, 18, 25, 0.4), 0 0 12px rgba(212, 175, 55, 0.35);
+    box-shadow: 0 18px 45px -10px rgba(44, 18, 25, 0.4), 0 0 16px rgba(223, 186, 106, 0.2);
   }
   50% {
-    box-shadow: 0 25px 60px -10px rgba(44, 18, 25, 0.55), 0 0 25px rgba(223, 186, 106, 0.65);
+    box-shadow: 0 25px 60px -10px rgba(44, 18, 25, 0.55), 0 0 24px rgba(223, 186, 106, 0.4);
   }
 }
 
 .royal-aura-border {
   animation: royalCardAura 4s ease-in-out infinite;
+}
+
+/* 6. Card Smooth Floating & Entrance */
+@keyframes cardFloatMotion {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0.2deg);
+  }
+}
+
+.animate-card-float {
+  animation: cardFloatMotion 6s ease-in-out infinite;
+}
+
+@keyframes cardEntranceScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-card-entrance {
+  animation: cardEntranceScale 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 7. Birthday Cakes Floating & Helium Balloons */
+@keyframes cakeFloatFall {
+  0% {
+    transform: translateY(-50px) translateX(0) rotate(-10deg) scale(0.85);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(680px) translateX(var(--drift-x, 35px)) rotate(var(--rot, 25deg)) scale(1.05);
+    opacity: 0;
+  }
+}
+
+.animate-cake-fall {
+  animation: cakeFloatFall var(--duration, 7s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform, opacity;
+}
+
+@keyframes balloonRiseFloat {
+  0% {
+    transform: translateY(680px) translateX(0) rotate(5deg) scale(0.85);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-60px) translateX(var(--drift-x, -30px)) rotate(var(--rot, -15deg)) scale(1.05);
+    opacity: 0;
+  }
+}
+
+.animate-balloon-rise {
+  animation: balloonRiseFloat var(--duration, 8s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform, opacity;
+}
+
+/* ============================================================== */
+/* LUXURY CARD BACKGROUND PATTERNS                                */
+/* ============================================================== */
+
+/* A. Royal Damask / Brocade (Wedding Style 1) */
+.pattern-damask {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    radial-gradient(rgba(223, 186, 106, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* B. Sacred Vedic Mandap (Wedding Style 2) */
+.pattern-mandap {
+  background-image: 
+    linear-gradient(45deg, rgba(245, 158, 11, 0.08) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(245, 158, 11, 0.08) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(245, 158, 11, 0.08) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(245, 158, 11, 0.08) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* C. Palace Jaali Lattice (Wedding Style 3) */
+.pattern-palace {
+  background-image: radial-gradient(circle at center, rgba(223, 186, 106, 0.15) 2px, transparent 2.5px),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255, 255, 255, 0.05) 19px, rgba(255, 255, 255, 0.05) 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255, 255, 255, 0.05) 19px, rgba(255, 255, 255, 0.05) 20px);
+  background-size: 20px 20px;
+}
+
+/* D. Cosmic Galaxy Stars (Birthday Style 1) */
+.pattern-galaxy {
+  background-image: 
+    radial-gradient(1.5px 1.5px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 40px 70px, rgba(255, 215, 0, 0.8), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 90px 40px, #38bdf8, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 160px 120px, #f472b6, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* E. Golden Gala Confetti Bokeh (Birthday Style 2) */
+.pattern-confetti {
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(250, 204, 21, 0.15) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(244, 114, 182, 0.15) 0%, transparent 25%),
+    radial-gradient(circle at 50% 50%, rgba(234, 179, 8, 0.12) 0%, transparent 30%);
+  background-size: 100% 100%;
+}
+
+/* F. Rainbow Candy Carnival (Birthday Style 3) */
+.pattern-carnival {
+  background-image: radial-gradient(rgba(244, 63, 94, 0.15) 2px, transparent 2px),
+    radial-gradient(rgba(14, 165, 233, 0.15) 2px, transparent 2px);
+  background-size: 28px 28px;
+  background-position: 0 0, 14px 14px;
+}
+
+/* G. Tech Matrix Grid (Corporate) */
+.pattern-tech {
+  background-size: 24px 24px;
+  background-image: linear-gradient(to right, rgba(6, 182, 212, 0.08) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(6, 182, 212, 0.08) 1px, transparent 1px);
 }
 
 /* Custom Scrollbar for Luxury Editorial feel */

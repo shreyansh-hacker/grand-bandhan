@@ -83,6 +83,9 @@ export const DEFAULT_CUSTOM_DATA: GenericInvitationData = {
     devanagariFont: 'Noto Serif Devanagari',
     animationSpeed: 'normal',
     revealStyle: 'bloom',
+    pattern: 'mandap',
+    particleType: 'flowers',
+    cardAnimation: 'float',
   },
 
   music: {

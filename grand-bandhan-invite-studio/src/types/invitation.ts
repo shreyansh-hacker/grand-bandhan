@@ -115,6 +115,7 @@ export interface GenericInvitationData {
   coverButtonText: string;
   coverEmblemUrl: string;
   showEmblem: boolean;
+  heroPhotoUrl?: string; // Main couple or celebrant hero photograph
 
   // Dynamic modules
   functions: CeremonyFunction[]; // Ceremonies or agenda
@@ -134,6 +135,9 @@ export interface GenericInvitationData {
     devanagariFont: string;
     animationSpeed: 'slow' | 'normal' | 'fast';
     revealStyle: 'bloom' | 'fade' | 'slide';
+    pattern?: 'damask' | 'mandap' | 'palace' | 'galaxy' | 'confetti' | 'carnival' | 'tech' | 'none';
+    particleType?: 'flowers' | 'cakes' | 'confetti' | 'stars' | 'tech' | 'none';
+    cardAnimation?: 'float' | 'zoom' | 'breathe' | 'none';
   };
 
   // Music settings

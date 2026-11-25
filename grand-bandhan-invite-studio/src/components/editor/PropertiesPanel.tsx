@@ -34,7 +34,16 @@ import {
   Heart,
 } from 'lucide-react';
 import { useLanguage } from '../../locales';
-import { weddingMusic } from '../../services/sound';
+import { weddingMusic, SOUNDTRACK_PRESETS, SoundtrackPreset } from '../../services/sound';
+
+const EMBLEM_PRESETS = [
+  { name: 'श्री गणेश', url: '/assets/templates/royal-wedding-book/illustrations/ganesh.svg' },
+  { name: 'मंगल कलश', url: '/assets/templates/royal-wedding-book/illustrations/mandap.svg' },
+  { name: 'शहनाई', url: '/assets/templates/royal-wedding-book/illustrations/shehnai.svg' },
+  { name: 'वर-वधू 1', url: '/assets/templates/royal-wedding-book/photos/couple-1.svg' },
+  { name: 'वर-वधू 2', url: '/assets/templates/royal-wedding-book/photos/couple-2.svg' },
+  { name: 'वर-वधू 3', url: '/assets/templates/royal-wedding-book/photos/couple-3.svg' },
+];
 
 interface PropertiesPanelProps {
   data: GenericInvitationData;
@@ -61,6 +70,30 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   const [isPreviewPlaying, setIsPreviewPlaying] = useState<boolean>(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const emblemInputRef = useRef<HTMLInputElement>(null);
+  const heroPhotoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadEmblem = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        onUpdateField('coverEmblemUrl', dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadHeroPhoto = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        onUpdateField('heroPhotoUrl', dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Helper for array field updates (activities, agenda, speakers)
   const handleUpdateActivity = (index: number, updated: Partial<ActivityItem>) => {
@@ -297,6 +330,106 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 {selectedElement.label}
               </p>
             </div>
+
+            {/* 0. COVER EMBLEM OR HERO PHOTO */}
+            {(selectedElement.fieldKey === 'coverEmblemUrl' ||
+              selectedElement.fieldKey === 'heroPhotoUrl') && (
+              <div className="space-y-4">
+                <div className="p-3 bg-[#faf7f2] rounded-xl border border-[#e8decb] flex flex-col items-center">
+                  <span className="text-[10px] uppercase font-bold text-stone-500 mb-2">
+                    Current Cover Image / Symbol
+                  </span>
+                  <div className="w-24 h-24 rounded-full border-2 border-stone-300 overflow-hidden bg-white flex items-center justify-center shadow-md p-1">
+                    <img
+                      src={data.heroPhotoUrl || data.coverEmblemUrl}
+                      alt="Cover Preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+
+                {/* Upload File Button */}
+                <input
+                  ref={emblemInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadEmblem(file);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => emblemInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#6e1f2f] text-white font-semibold text-xs shadow hover:bg-[#521522] transition-all"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Custom Photo / Logo</span>
+                </button>
+
+                {/* Toggle Hero Photo vs Sacred Emblem */}
+                <div className="flex items-center justify-between pt-1 border-t border-[#e8decb]">
+                  <span className="text-xs text-stone-700">Display Hero Photo:</span>
+                  <input
+                    type="checkbox"
+                    checked={!!data.heroPhotoUrl}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        onUpdateField('heroPhotoUrl', data.storyPhotos?.[0]?.url || data.coverEmblemUrl);
+                      } else {
+                        onUpdateField('heroPhotoUrl', '');
+                      }
+                    }}
+                    className="w-4 h-4 accent-[#6e1f2f] rounded"
+                  />
+                </div>
+
+                {/* Custom URL Input */}
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1">
+                    Or Enter Image URL:
+                  </label>
+                  <input
+                    type="text"
+                    value={data.heroPhotoUrl || data.coverEmblemUrl}
+                    onChange={(e) => {
+                      if (data.heroPhotoUrl) {
+                        onUpdateField('heroPhotoUrl', e.target.value);
+                      } else {
+                        onUpdateField('coverEmblemUrl', e.target.value);
+                      }
+                    }}
+                    placeholder="https://..."
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-[#e8decb] outline-none font-mono"
+                  />
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                    Symbol Presets (प्रतीक चुनें):
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {EMBLEM_PRESETS.map((emb) => (
+                      <button
+                        key={emb.name}
+                        type="button"
+                        onClick={() => {
+                          onUpdateField('coverEmblemUrl', emb.url);
+                          onUpdateField('heroPhotoUrl', '');
+                        }}
+                        className="p-1.5 rounded-lg border border-[#e8decb] hover:border-[#6e1f2f] bg-white flex flex-col items-center gap-1 transition-all"
+                      >
+                        <img src={emb.url} alt={emb.name} className="w-8 h-8 object-contain" />
+                        <span className="text-[9px] text-stone-600 truncate max-w-[60px]">{emb.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* A. COVER TITLE & SUBTITLE */}
             {(selectedElement.fieldKey === 'coverTitle' ||
@@ -1039,42 +1172,165 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             </div>
 
-            {/* Color Presets Palette */}
-            <div>
-              <span className="text-xs font-bold text-[#6e1f2f] block mb-2 font-cinzel">
-                Theme Color Presets:
-              </span>
+            {/* Color Presets & Patterns (रंग व डिज़ाइन पैटर्न) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#6e1f2f] font-cinzel">
+                  Styles & Patterns ({data.category.toUpperCase()}):
+                </span>
+              </div>
+
+              {/* Event-specific preset cards */}
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { name: 'Royal Wine & Gold', cover: '#6e1f2f', accent: '#dfba6a', paper: '#faf7f2' },
-                  { name: 'Emerald & Ivory', cover: '#1b4332', accent: '#ecd599', paper: '#fbf9f4' },
-                  { name: 'Cosmic Space Navy', cover: '#1d3557', accent: '#ffd166', paper: '#fdfbf7' },
-                  { name: 'Executive Slate', cover: '#0f172a', accent: '#c99a3e', paper: '#f8fafc' },
-                ].map((p) => (
-                  <button
-                    key={p.name}
-                    type="button"
-                    onClick={() => {
-                      onUpdateTheme('coverColor', p.cover);
-                      onUpdateTheme('coverAccentColor', p.accent);
-                      onUpdateTheme('paperColor', p.paper);
-                    }}
-                    className="p-2 rounded-lg border border-[#e8decb] bg-white hover:shadow-sm text-left flex items-center gap-2 transition-all"
-                    aria-label={`Select ${p.name} theme`}
-                  >
-                    <div
-                      className="w-5 h-5 rounded-full border border-stone-200 shrink-0"
-                      style={{ backgroundColor: p.cover }}
-                    />
-                    <span className="text-[10px] font-medium text-stone-700 truncate">
-                      {p.name}
-                    </span>
-                  </button>
-                ))}
+                  // Wedding patterns
+                  {
+                    name: 'Royal Wine Damask',
+                    category: 'wedding',
+                    cover: '#6e1f2f',
+                    accent: '#dfba6a',
+                    paper: '#faf7f2',
+                    pattern: 'damask' as const,
+                    particles: 'flowers' as const,
+                  },
+                  {
+                    name: 'Vedic Saffron Mandap',
+                    category: 'wedding',
+                    cover: '#c2410c',
+                    accent: '#f59e0b',
+                    paper: '#fffbeb',
+                    pattern: 'mandap' as const,
+                    particles: 'flowers' as const,
+                  },
+                  {
+                    name: 'Imperial Emerald Palace',
+                    category: 'wedding',
+                    cover: '#1b4332',
+                    accent: '#ecd599',
+                    paper: '#fbf9f4',
+                    pattern: 'palace' as const,
+                    particles: 'flowers' as const,
+                  },
+                  {
+                    name: 'Blush Rose Floral',
+                    category: 'wedding',
+                    cover: '#831843',
+                    accent: '#f472b6',
+                    paper: '#fdf2f8',
+                    pattern: 'damask' as const,
+                    particles: 'flowers' as const,
+                  },
+                  // Birthday patterns
+                  {
+                    name: 'Cosmic Galaxy Stars',
+                    category: 'birthday',
+                    cover: '#1d3557',
+                    accent: '#ffd166',
+                    paper: '#fdfbf7',
+                    pattern: 'galaxy' as const,
+                    particles: 'cakes' as const,
+                  },
+                  {
+                    name: 'Golden Gala Confetti',
+                    category: 'birthday',
+                    cover: '#18181b',
+                    accent: '#eab308',
+                    paper: '#f8fafc',
+                    pattern: 'confetti' as const,
+                    particles: 'cakes' as const,
+                  },
+                  {
+                    name: 'Candy Carnival',
+                    category: 'birthday',
+                    cover: '#be185d',
+                    accent: '#38bdf8',
+                    paper: '#fffdfa',
+                    pattern: 'carnival' as const,
+                    particles: 'cakes' as const,
+                  },
+                  // Corporate patterns
+                  {
+                    name: 'Executive Slate Grid',
+                    category: 'corporate',
+                    cover: '#0f172a',
+                    accent: '#94a3b8',
+                    paper: '#f8fafc',
+                    pattern: 'tech' as const,
+                    particles: 'tech' as const,
+                  },
+                  {
+                    name: 'Tech Summit Electric',
+                    category: 'corporate',
+                    cover: '#030712',
+                    accent: '#06b6d4',
+                    paper: '#0f172a',
+                    pattern: 'tech' as const,
+                    particles: 'tech' as const,
+                  },
+                ]
+                  .filter((p) => p.category === data.category || data.category === 'custom')
+                  .map((p) => (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => {
+                        onUpdateTheme('coverColor', p.cover);
+                        onUpdateTheme('coverAccentColor', p.accent);
+                        onUpdateTheme('paperColor', p.paper);
+                        onUpdateTheme('pattern', p.pattern);
+                        onUpdateTheme('particleType', p.particles);
+                      }}
+                      className={`p-2 rounded-lg border text-left flex items-center gap-2 transition-all ${
+                        data.theme.pattern === p.pattern && data.theme.coverColor === p.cover
+                          ? 'border-[#6e1f2f] bg-[#faf7f2] shadow-xs'
+                          : 'border-[#e8decb] bg-white hover:border-[#6e1f2f]/60'
+                      }`}
+                    >
+                      <div
+                        className="w-5 h-5 rounded-full border border-stone-200 shrink-0"
+                        style={{ backgroundColor: p.cover }}
+                      />
+                      <span className="text-[10px] font-medium text-stone-800 truncate">
+                        {p.name}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+
+              {/* Direct Background Pattern Selector */}
+              <div className="pt-2">
+                <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                  Card Background Pattern (पैटर्न):
+                </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { id: 'damask', label: 'Damask' },
+                    { id: 'mandap', label: 'Mandap' },
+                    { id: 'palace', label: 'Jaali' },
+                    { id: 'galaxy', label: 'Galaxy' },
+                    { id: 'confetti', label: 'Confetti' },
+                    { id: 'carnival', label: 'Carnival' },
+                    { id: 'tech', label: 'Tech Grid' },
+                    { id: 'none', label: 'Plain' },
+                  ].map((pat) => (
+                    <button
+                      key={pat.id}
+                      type="button"
+                      onClick={() => onUpdateTheme('pattern', pat.id as any)}
+                      className={`py-1 px-1.5 rounded text-[10px] font-medium border text-center transition-all ${
+                        (data.theme.pattern || 'damask') === pat.id
+                          ? 'bg-[#6e1f2f] text-white border-[#6e1f2f]'
+                          : 'bg-[#faf7f2] text-stone-700 border-[#e8decb] hover:bg-[#f2ede4]'
+                      }`}
+                    >
+                      {pat.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Card Special Effects (कार्ड स्पेशल इफेक्ट्स) */}
+            {/* Card Special Effects (कार्ड स्पेशल इफेक्ट्स व एनिमेशन) */}
             <div className="p-3.5 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-[#dfba6a]/20 border border-[#dfba6a] flex items-center justify-center text-[#6e1f2f]">
@@ -1082,16 +1338,58 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 </div>
                 <div>
                   <span className="text-xs font-bold text-[#6e1f2f] block leading-tight font-cinzel">
-                    Card Visual Effects:
+                    Card Visual Effects & Particles:
                   </span>
                   <span className="text-[10px] text-stone-500 font-sans">
-                    3D Parallax Tilt, Gold Foil & Ambient Petals
+                    Flowers, Birthday Cakes, 3D Parallax & Shimmers
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-2 pt-1 border-t border-[#f2ede4] text-xs">
-                {/* 1. Gold Foil Shimmer */}
+              <div className="space-y-2.5 pt-1 border-t border-[#f2ede4] text-xs">
+                {/* Particle Selector */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                    Festive Particle Rain (एनिमेशन पार्टिकल्स):
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { id: 'flowers', label: '🌸 Flowers & Marigold', for: 'Wedding & Custom' },
+                      { id: 'cakes', label: '🎂 Cakes & Balloons', for: 'Birthday' },
+                      { id: 'confetti', label: '🎊 Party Confetti', for: 'All Celebrations' },
+                      { id: 'tech', label: '💠 Cyber Tech Nodes', for: 'Corporate' },
+                    ].map((pt) => (
+                      <button
+                        key={pt.id}
+                        type="button"
+                        onClick={() => onUpdateTheme('particleType', pt.id as any)}
+                        className={`p-1.5 rounded-lg border text-left text-[11px] font-medium transition-all ${
+                          (data.theme.particleType || (data.category === 'birthday' ? 'cakes' : 'flowers')) === pt.id
+                            ? 'bg-[#6e1f2f] text-white border-[#6e1f2f] shadow-xs'
+                            : 'bg-[#faf7f2] text-stone-700 border-[#e8decb] hover:bg-[#f2ede4]'
+                        }`}
+                      >
+                        <span className="block">{pt.label}</span>
+                        <span className="text-[9px] opacity-75 block">{pt.for}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card Motion Animation */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] font-medium text-stone-700">Card 3D Float Animation:</span>
+                  <select
+                    value={data.theme.cardAnimation || 'float'}
+                    onChange={(e) => onUpdateTheme('cardAnimation', e.target.value as any)}
+                    className="text-[11px] bg-[#faf7f2] border border-[#e8decb] rounded-lg px-2 py-0.5 outline-none font-sans"
+                  >
+                    <option value="float">3D Floating Breathe (सजीव)</option>
+                    <option value="none">Static Card (स्थिर)</option>
+                  </select>
+                </div>
+
+                {/* Gold Foil Shimmer */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px]">✨</span>
@@ -1105,8 +1403,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                   />
                 </div>
 
-                {/* 2. Animation Rhythm */}
-                <div className="flex items-center justify-between pt-1">
+                {/* Animation Rhythm */}
+                <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-stone-700">Animation Rhythm:</span>
                   <select
                     value={data.theme.animationSpeed || 'normal'}
@@ -1117,6 +1415,144 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     <option value="normal">Normal (सामान्य)</option>
                     <option value="fast">Swift (तेज़)</option>
                   </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Images & Media Manager (तस्वीरें व फोटो गैलरी) */}
+            <div className="p-3.5 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#dfba6a]/20 border border-[#dfba6a] flex items-center justify-center text-[#6e1f2f]">
+                    <Camera className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-[#6e1f2f] block leading-tight font-cinzel">
+                      Images & Media:
+                    </span>
+                    <span className="text-[10px] text-stone-500 font-sans">
+                      Cover Emblem, Hero Photo & Story Photos
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-1 border-t border-[#f2ede4]">
+                {/* 1. Cover Emblem / Logo */}
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#faf7f2] border border-[#e8decb]">
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={data.coverEmblemUrl}
+                      alt="Emblem"
+                      className="w-9 h-9 object-contain bg-white rounded border border-stone-200 p-0.5"
+                    />
+                    <div>
+                      <span className="text-xs font-semibold text-stone-800 block">Cover Emblem / Logo</span>
+                      <span className="text-[9px] text-stone-500">Sacred Ganesh, Rings, or Brand</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => emblemInputRef.current?.click()}
+                    className="px-2 py-1 rounded bg-white border border-[#e8decb] text-[#6e1f2f] text-[10px] font-bold hover:bg-[#f2ede4]"
+                  >
+                    Change
+                  </button>
+                </div>
+
+                {/* 2. Main Couple / Celebrant Hero Photo */}
+                <div className="flex items-center justify-between p-2 rounded-lg bg-[#faf7f2] border border-[#e8decb]">
+                  <div className="flex items-center gap-2.5">
+                    {data.heroPhotoUrl ? (
+                      <img
+                        src={data.heroPhotoUrl}
+                        alt="Hero"
+                        className="w-9 h-9 object-cover rounded-full border border-stone-200"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-stone-200 flex items-center justify-center text-stone-400">
+                        <User className="w-4 h-4" />
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-xs font-semibold text-stone-800 block">Celebrant Hero Photo</span>
+                      <span className="text-[9px] text-stone-500">
+                        {data.heroPhotoUrl ? 'Photo Active on Cover' : 'No photo uploaded'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <input
+                      ref={heroPhotoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadHeroPhoto(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => heroPhotoInputRef.current?.click()}
+                      className="px-2 py-1 rounded bg-[#6e1f2f] text-white text-[10px] font-bold hover:bg-[#521522]"
+                    >
+                      Upload
+                    </button>
+                    {data.heroPhotoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateField('heroPhotoUrl', '')}
+                        className="p-1 text-stone-400 hover:text-rose-600"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Story Album Photos */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold text-stone-700">
+                      Story Album Photos ({(data.storyPhotos || []).length}):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="text-[10px] font-bold text-[#6e1f2f] hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Photo</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto py-1">
+                    {(data.storyPhotos || []).map((photo, i) => (
+                      <div
+                        key={photo.id || i}
+                        className="w-12 h-12 rounded-lg border border-stone-200 overflow-hidden shrink-0 relative group bg-stone-100 shadow-2xs"
+                      >
+                        <img src={photo.url} alt={photo.title} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveStoryPhoto(i)}
+                          className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="w-12 h-12 rounded-lg border border-dashed border-[#dfba6a] flex flex-col items-center justify-center text-stone-400 hover:text-[#6e1f2f] hover:border-[#6e1f2f] shrink-0 text-[9px]"
+                    >
+                      <Upload className="w-3.5 h-3.5 mb-0.5" />
+                      <span>Upload</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1211,56 +1647,64 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 <div className="space-y-2.5 pt-2 border-t border-[#f2ede4]">
                   {/* Soundtrack Presets */}
                   <div>
-                    <label className="block text-[10px] font-semibold text-stone-600 mb-1">
-                      Soundtrack Presets:
+                    <label className="block text-[10px] font-semibold text-stone-600 mb-1.5">
+                      Soundtrack Presets ({SOUNDTRACK_PRESETS.length} Tracks Available):
                     </label>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {[
-                        {
-                          name: 'शाही शहनाई व बांसुरी (Royal Flute Synth)',
-                          type: 'synth' as const,
-                          url: '',
-                          desc: 'Zero-lag classical flute melody in Raga Bhupali',
-                        },
-                        {
-                          name: 'मांगलिक शहनाई (Auspicious Shehnai Bells)',
-                          type: 'mp3' as const,
-                          url: 'https://assets.mixkit.co/music/preview/mixkit-indian-traditional-sitar-694.mp3',
-                          desc: 'Rich ceremonial Shehnai & temple bells',
-                        },
-                        {
-                          name: 'जश्न व ढोलक (Celebration Sitar Beats)',
-                          type: 'mp3' as const,
-                          url: 'https://assets.mixkit.co/music/preview/mixkit-bollywood-nights-242.mp3',
-                          desc: 'Festive wedding celebration rhythm',
-                        },
-                      ].map((track) => (
-                        <button
-                          key={track.name}
-                          type="button"
-                          onClick={() => {
-                            const newMusic = {
-                              enabled: true,
-                              title: track.name,
-                              artist: 'Grand Bandhan Studio Ensemble',
-                              type: track.type,
-                              url: track.url,
-                            };
-                            onUpdateField('music', newMusic);
-                            if (isPreviewPlaying) {
-                              weddingMusic.play(newMusic);
-                            }
-                          }}
-                          className={`p-2 rounded-lg text-left border transition-all text-xs flex flex-col ${
-                            (data.music.type === track.type && (!track.url || data.music.url === track.url))
-                              ? 'bg-[#6e1f2f] text-white border-[#6e1f2f] shadow-xs'
-                              : 'bg-[#faf7f2] text-stone-800 border-[#e8decb] hover:bg-[#f2ede4]'
-                          }`}
-                        >
-                          <span className="font-semibold text-[11px]">{track.name}</span>
-                          <span className="text-[9px] opacity-80">{track.desc}</span>
-                        </button>
-                      ))}
+                    <div className="grid grid-cols-1 gap-1.5 max-h-[220px] overflow-y-auto pr-0.5">
+                      {SOUNDTRACK_PRESETS.map((track) => {
+                        const isSelected =
+                          data.music.title === track.name ||
+                          (data.music.type === track.type && (!track.url || data.music.url === track.url));
+
+                        return (
+                          <div
+                            key={track.id}
+                            className={`p-2 rounded-lg border transition-all text-xs flex items-center justify-between gap-2 ${
+                              isSelected
+                                ? 'bg-[#6e1f2f] text-white border-[#6e1f2f] shadow-xs'
+                                : 'bg-[#faf7f2] text-stone-800 border-[#e8decb] hover:bg-[#f2ede4]'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-[11px] truncate">{track.name}</span>
+                                <span
+                                  className={`text-[8px] px-1 py-0.2 rounded font-bold uppercase ${
+                                    isSelected ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'
+                                  }`}
+                                >
+                                  {track.category}
+                                </span>
+                              </div>
+                              <span className="text-[9px] opacity-80 block truncate">{track.desc}</span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newMusic = {
+                                  enabled: true,
+                                  title: track.name,
+                                  artist: track.artist,
+                                  type: track.type,
+                                  url: track.url,
+                                  category: track.category,
+                                };
+                                onUpdateField('music', newMusic);
+                                weddingMusic.play(newMusic);
+                                setIsPreviewPlaying(true);
+                              }}
+                              className={`shrink-0 px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                                isSelected
+                                  ? 'bg-[#dfba6a] text-[#6e1f2f] hover:bg-[#ebd08f]'
+                                  : 'bg-white border border-[#e8decb] text-[#6e1f2f] hover:bg-[#f2ede4]'
+                              }`}
+                            >
+                              {isSelected ? 'Active ✓' : 'Use Track'}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

@@ -41,17 +41,10 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
           className="absolute left-0 top-0 bottom-0 w-8 z-30 rounded-l-md pointer-events-none"
           style={{
             background:
-              'linear-gradient(90deg, rgba(30,5,10,0.85) 0%, rgba(70,15,25,0.4) 40%, rgba(212,175,55,0.25) 70%, rgba(30,5,10,0.6) 100%)',
+              'linear-gradient(90deg, rgba(20,5,10,0.9) 0%, rgba(50,10,20,0.5) 45%, rgba(0,0,0,0.3) 100%)',
             boxShadow: 'inset 2px 0 6px rgba(0,0,0,0.5)',
           }}
-        >
-          {/* Spine Golden Embossing Lines */}
-          <div className="h-full flex flex-col justify-between py-6 items-center">
-            <div className="w-4 h-0.5 bg-[#dfba6a] opacity-60"></div>
-            <div className="w-4 h-0.5 bg-[#dfba6a] opacity-60"></div>
-            <div className="w-4 h-0.5 bg-[#dfba6a] opacity-60"></div>
-          </div>
-        </div>
+        />
 
         {/* Realistic Book Pages Rim (Right side paper depth) */}
         <div
@@ -67,77 +60,87 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
         <div
           className={`relative w-full h-full rounded-r-2xl rounded-l-md p-6 flex flex-col items-center justify-between transition-transform duration-1000 origin-left transform-gpu z-20 royal-aura-border ${
             isOpen ? '-rotate-y-140 opacity-0 pointer-events-none' : 'rotate-y-0 opacity-100'
-          }`}
+          } ${data.theme.pattern ? `pattern-${data.theme.pattern}` : 'pattern-damask'}`}
           style={{
             backgroundColor: data.theme.coverColor || '#6e1f2f',
             backgroundImage: `
               radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
-              radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.4) 0%, transparent 70%)
+              radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.45) 0%, transparent 70%)
             `,
-            border: `2px solid ${data.theme.coverAccentColor || '#dfba6a'}`,
-            boxShadow: 'inset 0 0 20px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            boxShadow: 'inset 0 0 24px rgba(0,0,0,0.5), 0 20px 40px -15px rgba(0,0,0,0.6)',
           }}
         >
-          {/* Inner Golden Foil Border with Filigree Corners */}
+          {/* Subtle Soft Inner Vignette (Yellow lines removed for clean luxury look) */}
           <div
             className="absolute inset-3 rounded-r-xl rounded-l-xs pointer-events-none"
             style={{
-              border: `1.5px solid ${data.theme.coverAccentColor || '#dfba6a'}`,
-              boxShadow: 'inset 0 0 12px rgba(223, 186, 106, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: 'inset 0 0 16px rgba(0, 0, 0, 0.25)',
             }}
-          >
-            {/* Ornate Gold Filigree Corner Accents */}
-            <div className="absolute top-0.5 left-0.5 w-4 h-4 border-t-2 border-l-2 border-[#ffd700] rounded-tl-sm opacity-90"></div>
-            <div className="absolute top-0.5 right-0.5 w-4 h-4 border-t-2 border-r-2 border-[#ffd700] rounded-tr-sm opacity-90"></div>
-            <div className="absolute bottom-0.5 left-0.5 w-4 h-4 border-b-2 border-l-2 border-[#ffd700] rounded-bl-sm opacity-90"></div>
-            <div className="absolute bottom-0.5 right-0.5 w-4 h-4 border-b-2 border-r-2 border-[#ffd700] rounded-br-sm opacity-90"></div>
-          </div>
+          />
 
           {/* Top Flourish */}
-          <div className="pt-5 flex flex-col items-center">
+          <div className="pt-4 flex flex-col items-center">
             <span
-              className="text-xs uppercase tracking-[0.3em] font-cinzel font-semibold opacity-90 transition-all"
+              className="text-xs uppercase tracking-[0.3em] font-cinzel font-semibold opacity-90 transition-all drop-shadow-sm"
               style={{ color: data.theme.coverAccentColor || '#dfba6a' }}
             >
               GRAND BANDHAN
             </span>
-            <div className="w-16 h-0.5 mt-1 bg-gradient-to-r from-transparent via-[#dfba6a] to-transparent"></div>
           </div>
 
-          {/* Center: Medallion Emblem & Title */}
+          {/* Center: Medallion Emblem or Hero Couple/Celebrant Photo & Title */}
           <div className="flex flex-col items-center my-auto text-center w-full px-2">
-            {data.showEmblem && (
+            {data.heroPhotoUrl ? (
+              /* Uploaded Hero Photo */
               <div
-                className={`mb-4 relative flex items-center justify-center transition-all ${
+                className={`mb-4 relative w-28 h-28 rounded-full overflow-hidden border-2 border-white/20 shadow-xl cursor-pointer transition-all ${
                   isEditor ? 'hover:scale-105' : ''
-                } ${isSelected('coverEmblemUrl') ? 'ring-2 ring-[#dfba6a] ring-offset-2 ring-offset-[#6e1f2f] rounded-full' : ''}`}
+                } ${isSelected('heroPhotoUrl') ? 'ring-2 ring-white ring-offset-2 ring-offset-[#6e1f2f]' : ''}`}
                 onClick={(e) => {
                   if (isEditor && onSelectElement) {
                     e.stopPropagation();
-                    onSelectElement('coverEmblemUrl', 'कवर प्रतीक (Ganesh Emblem)');
+                    onSelectElement('heroPhotoUrl' as any, 'मुख्य फोटो (Hero Photo)');
                   }
                 }}
               >
-                {/* Rotating Sacred Golden Mandala Halo */}
-                <div className="absolute inset-0 -m-3 flex items-center justify-center pointer-events-none animate-mandala-spin opacity-85">
+                <img
+                  src={data.heroPhotoUrl}
+                  alt="Celebrants"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : data.showEmblem && (
+              <div
+                className={`mb-4 relative flex items-center justify-center transition-all ${
+                  isEditor ? 'hover:scale-105' : ''
+                } ${isSelected('coverEmblemUrl') ? 'ring-2 ring-white/60 ring-offset-2 ring-offset-[#6e1f2f] rounded-full' : ''}`}
+                onClick={(e) => {
+                  if (isEditor && onSelectElement) {
+                    e.stopPropagation();
+                    onSelectElement('coverEmblemUrl', 'कवर प्रतीक (Ganesh Emblem / Logo)');
+                  }
+                }}
+              >
+                {/* Rotating Soft Divine Glow Halo */}
+                <div className="absolute inset-0 -m-3 flex items-center justify-center pointer-events-none animate-mandala-spin opacity-40">
                   <svg width="124" height="124" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="47" stroke="#dfba6a" strokeWidth="1" strokeDasharray="3 3" opacity="0.75" />
-                    <circle cx="50" cy="50" r="42" stroke="#dfba6a" strokeWidth="0.8" opacity="0.6" />
-                    {Array.from({ length: 12 }).map((_, idx) => (
-                      <g key={idx} transform={`rotate(${idx * 30} 50 50)`}>
-                        <path d="M50 3C47.5 13 52.5 13 50 3Z" fill="#dfba6a" opacity="0.75" />
-                        <circle cx="50" cy="6" r="1.2" fill="#ffd700" />
+                    <circle cx="50" cy="50" r="46" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="0.8" />
+                    {Array.from({ length: 8 }).map((_, idx) => (
+                      <g key={idx} transform={`rotate(${idx * 45} 50 50)`}>
+                        <circle cx="50" cy="5" r="1.5" fill="rgba(255, 255, 255, 0.6)" />
                       </g>
                     ))}
                   </svg>
                 </div>
 
                 {/* Soft Warm Radiant Glow */}
-                <div className="absolute w-24 h-24 rounded-full bg-amber-400/20 blur-md pointer-events-none"></div>
+                <div className="absolute w-24 h-24 rounded-full bg-white/10 blur-lg pointer-events-none"></div>
 
                 <img
                   src={data.coverEmblemUrl}
-                  alt="Ganesh Medallion"
+                  alt="Emblem"
                   className="w-24 h-24 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] object-contain relative z-10"
                 />
               </div>

@@ -92,6 +92,9 @@ export const DEFAULT_BIRTHDAY_DATA: GenericInvitationData = {
     devanagariFont: 'Noto Serif Devanagari',
     animationSpeed: 'normal',
     revealStyle: 'bloom',
+    pattern: 'galaxy',
+    particleType: 'cakes',
+    cardAnimation: 'float',
   },
 
   music: {

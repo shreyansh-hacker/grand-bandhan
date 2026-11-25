@@ -282,9 +282,11 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
       <div className="w-full flex justify-center py-2 overflow-visible">
         <CardEffectsLayer
           category={data.category}
+          particleType={data.theme?.particleType}
           enablePetals={enablePetals}
           enableDiya={enableDiya}
           enableFoilShimmer={enableFoilShimmer}
+          cardAnimation={data.theme?.cardAnimation || 'float'}
         >
           {renderCurrentScene()}
         </CardEffectsLayer>

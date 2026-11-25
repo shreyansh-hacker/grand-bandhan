@@ -43,19 +43,21 @@ export const BirthdayBoxScene: React.FC<BirthdayBoxSceneProps> = ({
   return (
     <div className="relative w-full min-h-[580px] max-w-sm mx-auto flex items-center justify-center p-4 select-none perspective-[1200px]">
       <div
-        className="relative w-full max-w-[340px] h-[520px] rounded-2xl flex flex-col items-center justify-between p-6 transition-all duration-700 shadow-2xl overflow-hidden"
+        className={`relative w-full max-w-[340px] h-[520px] rounded-2xl flex flex-col items-center justify-between p-6 transition-all duration-700 shadow-2xl overflow-hidden ${
+          data.theme.pattern ? `pattern-${data.theme.pattern}` : 'pattern-galaxy'
+        }`}
         style={{
           backgroundColor: data.theme.coverColor || '#1d3557',
-          border: `2px solid ${data.theme.coverAccentColor || '#ffd166'}`,
+          border: '1px solid rgba(255, 255, 255, 0.16)',
+          boxShadow: 'inset 0 0 24px rgba(0,0,0,0.4), 0 20px 40px -15px rgba(0,0,0,0.5)',
           color: '#ffffff',
         }}
       >
         {/* Decorative Space Stars / Confetti Dots */}
         <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-6 left-6 w-2 h-2 rounded-full bg-yellow-300 animate-ping"></div>
           <div className="absolute top-16 right-10 w-2 h-2 rounded-full bg-cyan-300"></div>
           <div className="absolute bottom-16 left-12 w-2 h-2 rounded-full bg-pink-400"></div>
-          <div className="absolute bottom-10 right-8 w-3 h-3 rounded-full bg-amber-300 animate-pulse"></div>
+          <div className="absolute bottom-10 right-8 w-2 h-2 rounded-full bg-white/60 animate-pulse"></div>
         </div>
 
         {/* Top Header Tag */}
@@ -66,7 +68,6 @@ export const BirthdayBoxScene: React.FC<BirthdayBoxSceneProps> = ({
           >
             {data.subtitle || 'BIRTHDAY CELEBRATION'}
           </span>
-          <div className="w-16 h-0.5 mt-1 mx-auto bg-gradient-to-r from-transparent via-[#ffd166] to-transparent"></div>
         </div>
 
         {/* 3D Gift Box Animation Area */}

@@ -48,7 +48,6 @@ export const ClosingScene: React.FC<ClosingSceneProps> = ({
         <h3 className="text-lg font-devanagari text-[#6e1f2f] font-bold mt-0.5">
           सस्नेह विदाई व आभार
         </h3>
-        <div className="w-12 h-0.5 mt-1 bg-gradient-to-r from-transparent via-[#c99a3e] to-transparent"></div>
       </div>
 
       {/* Center Blessing & Family Card */}
@@ -81,9 +80,6 @@ export const ClosingScene: React.FC<ClosingSceneProps> = ({
             "{data.closingBlessing}"
           </p>
         </div>
-
-        {/* Decorative Golden Divider */}
-        <div className="w-24 h-0.5 my-3 bg-gradient-to-r from-transparent via-[#c99a3e] to-transparent"></div>
 
         {/* Family Names */}
         <div

@@ -79,6 +79,8 @@ const TEMPLATE_EMERALD_PALACE: TemplateCatalogEntry = {
       coverColor: '#143d2b',       // Deep Royal Emerald Green
       coverAccentColor: '#ecd599', // Antique Champagne Gold
       paperColor: '#fbf9f4',       // Warm Ivory Paper
+      pattern: 'palace',
+      particleType: 'flowers',
     },
     music: {
       enabled: true,
@@ -129,6 +131,8 @@ const TEMPLATE_SAFFRON_MANDAP: TemplateCatalogEntry = {
       coverColor: '#9a3412',       // Auspicious Saffron Terracotta
       coverAccentColor: '#f59e0b', // Rich Marigold Gold
       paperColor: '#fdfbf7',       // Sandalwood Paper
+      pattern: 'mandap',
+      particleType: 'flowers',
     },
     music: {
       enabled: true,
@@ -182,6 +186,8 @@ const TEMPLATE_BLUSH_ROSE: TemplateCatalogEntry = {
       coverAccentColor: '#ffd166', // Soft Champagne
       paperColor: '#fdf8f7',       // Rosewater Ivory Paper
       headingFont: 'Playfair Display',
+      pattern: 'damask',
+      particleType: 'flowers',
     },
     music: {
       enabled: true,
@@ -250,6 +256,8 @@ const TEMPLATE_GOLDEN_GALA_BIRTHDAY: TemplateCatalogEntry = {
       coverColor: '#0f172a',       // Midnight Slate
       coverAccentColor: '#dfba6a', // Champagne Gold
       paperColor: '#f8fafc',       // Ice White
+      pattern: 'confetti',
+      particleType: 'cakes',
     },
     activities: [
       {
@@ -331,6 +339,8 @@ const TEMPLATE_TECH_EXPO: TemplateCatalogEntry = {
       coverColor: '#020617',       // Deepest Obsidian
       coverAccentColor: '#38bdf8', // Electric Cyan
       paperColor: '#f8fafc',
+      pattern: 'tech',
+      particleType: 'tech',
     },
   },
   defaultScenes: DEFAULT_CORPORATE_SCENES,
@@ -396,6 +406,8 @@ const TEMPLATE_SILVER_JUBILEE: TemplateCatalogEntry = {
       coverColor: '#581c2b',       // Elegant Royal Burgundy
       coverAccentColor: '#dfba6a', // Royal Gold
       paperColor: '#faf7f2',
+      pattern: 'palace',
+      particleType: 'flowers',
     },
     activities: [
       {

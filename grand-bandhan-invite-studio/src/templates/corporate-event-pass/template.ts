@@ -111,6 +111,9 @@ export const DEFAULT_CORPORATE_DATA: GenericInvitationData = {
     devanagariFont: 'Noto Serif Devanagari',
     animationSpeed: 'normal',
     revealStyle: 'slide',
+    pattern: 'tech',
+    particleType: 'tech',
+    cardAnimation: 'float',
   },
 
   music: {
