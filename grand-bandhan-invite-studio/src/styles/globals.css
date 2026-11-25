@@ -29,6 +29,120 @@
   }
 }
 
+/* ============================================================== */
+/* LUXURY CARD VISUAL EFFECTS & SHIMMERS                          */
+/* ============================================================== */
+
+/* 1. Continuous Diagonal Gold Foil Shimmer Sweep */
+@keyframes goldFoilSweep {
+  0% {
+    transform: translateX(-150%) skewX(-25deg);
+  }
+  50%, 100% {
+    transform: translateX(250%) skewX(-25deg);
+  }
+}
+
+.animate-gold-foil {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 235, 180, 0.08) 25%,
+    rgba(255, 215, 120, 0.35) 50%,
+    rgba(255, 255, 255, 0.45) 55%,
+    rgba(255, 215, 120, 0.25) 60%,
+    transparent 100%
+  );
+  animation: goldFoilSweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 25;
+}
+
+/* 2. Floating Auspicious Flower Petal Fall */
+@keyframes petalFall {
+  0% {
+    transform: translateY(-40px) translateX(0px) rotate(0deg) scale(0.9);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(680px) translateX(var(--drift-x, 40px)) rotate(var(--rot, 360deg)) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.animate-petal {
+  animation: petalFall var(--duration, 7s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform, opacity;
+}
+
+/* 3. Sacred Diya Light Flame Flicker */
+@keyframes diyaFlicker {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+    filter: drop-shadow(0 0 16px rgba(255, 170, 40, 0.8));
+  }
+  25% {
+    opacity: 0.9;
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 24px rgba(255, 190, 60, 0.95));
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 14px rgba(245, 140, 30, 0.75));
+  }
+  75% {
+    opacity: 0.85;
+    transform: scale(1.03);
+    filter: drop-shadow(0 0 20px rgba(255, 180, 50, 0.9));
+  }
+}
+
+.animate-diya-glow {
+  animation: diyaFlicker 2.8s ease-in-out infinite;
+}
+
+/* 4. Slow Rotating Sacred Mandala Chakra */
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-mandala-spin {
+  animation: spinSlow 35s linear infinite;
+}
+
+/* 5. Royal Card Breathing Gold Aura Border */
+@keyframes royalCardAura {
+  0%, 100% {
+    box-shadow: 0 18px 45px -10px rgba(44, 18, 25, 0.4), 0 0 12px rgba(212, 175, 55, 0.35);
+  }
+  50% {
+    box-shadow: 0 25px 60px -10px rgba(44, 18, 25, 0.55), 0 0 25px rgba(223, 186, 106, 0.65);
+  }
+}
+
+.royal-aura-border {
+  animation: royalCardAura 4s ease-in-out infinite;
+}
+
 /* Custom Scrollbar for Luxury Editorial feel */
 ::-webkit-scrollbar {
   width: 6px;

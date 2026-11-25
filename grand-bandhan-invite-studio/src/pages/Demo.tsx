@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { TemplateCatalogEntry } from '../templates/catalog';
 import { InvitationPlayer } from '../components/invitation/InvitationPlayer';
 import { ArrowLeft, Edit3 } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../locales';
+import { weddingMusic } from '../services/sound';
 
 interface DemoProps {
   template: TemplateCatalogEntry;
@@ -17,12 +18,29 @@ export const Demo: React.FC<DemoProps> = ({
 }) => {
   const { lang, t } = useLanguage();
 
+  // Stop soundtrack when leaving the demo
+  useEffect(() => {
+    return () => {
+      weddingMusic.stop();
+    };
+  }, []);
+
+  const handleBack = () => {
+    weddingMusic.stop();
+    onBackToGallery();
+  };
+
+  const handleUse = (tmpl: TemplateCatalogEntry) => {
+    weddingMusic.stop();
+    onUseTemplate(tmpl);
+  };
+
   return (
     <div className="min-h-screen bg-[#1c080e] flex flex-col items-center justify-between overflow-x-hidden text-white select-none">
       {/* Top Floating Control Bar */}
       <header className="sticky top-0 z-50 w-full max-w-4xl bg-black/75 backdrop-blur-md px-3 sm:px-4 py-2.5 flex items-center justify-between border-b border-[#dfba6a]/30 shadow-lg">
         <button
-          onClick={onBackToGallery}
+          onClick={handleBack}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/20 text-xs font-semibold text-white/90 hover:bg-white/10 active:scale-95 transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -42,7 +60,7 @@ export const Demo: React.FC<DemoProps> = ({
           <LanguageSwitcher />
 
           <button
-            onClick={() => onUseTemplate(template)}
+            onClick={() => handleUse(template)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#dfba6a] text-[#420f1b] text-xs font-bold hover:bg-[#ecd599] active:scale-95 transition-all shadow"
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -68,7 +86,7 @@ export const Demo: React.FC<DemoProps> = ({
           Ready to customize this design?
         </span>
         <button
-          onClick={() => onUseTemplate(template)}
+          onClick={() => handleUse(template)}
           className="px-4 py-1.5 rounded-full bg-[#dfba6a] text-[#420f1b] text-xs font-bold hover:bg-[#ecd599] active:scale-95 transition-all"
         >
           {t.useTemplate} →

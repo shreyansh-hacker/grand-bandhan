@@ -10,6 +10,7 @@ import { GuestPreview } from './pages/GuestPreview';
 import { Dashboard } from './pages/Dashboard';
 import { PublishedGuestPage } from './pages/PublishedGuestPage';
 import { LanguageProvider } from './locales';
+import { weddingMusic } from './services/sound';
 
 type StudioView = 'events' | 'gallery' | 'demo' | 'studio' | 'preview' | 'dashboard' | 'published';
 
@@ -67,6 +68,7 @@ export const AppContent: React.FC = () => {
   }, []);
 
   const navigateTo = (newView: StudioView, extraHash = '') => {
+    weddingMusic.stop(); // Stop audio immediately when switching views
     setView(newView);
     if (newView === 'published') {
       window.location.hash = `#/i/${extraHash || guestSlug}`;

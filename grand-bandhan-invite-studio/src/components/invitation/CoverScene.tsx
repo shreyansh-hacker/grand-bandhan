@@ -65,7 +65,7 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
 
         {/* Front Cover Face */}
         <div
-          className={`relative w-full h-full rounded-r-2xl rounded-l-md p-6 flex flex-col items-center justify-between transition-transform duration-1000 origin-left transform-gpu z-20 ${
+          className={`relative w-full h-full rounded-r-2xl rounded-l-md p-6 flex flex-col items-center justify-between transition-transform duration-1000 origin-left transform-gpu z-20 royal-aura-border ${
             isOpen ? '-rotate-y-140 opacity-0 pointer-events-none' : 'rotate-y-0 opacity-100'
           }`}
           style={{
@@ -78,19 +78,19 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
             boxShadow: 'inset 0 0 20px rgba(0,0,0,0.4)',
           }}
         >
-          {/* Inner Golden Foil Border */}
+          {/* Inner Golden Foil Border with Filigree Corners */}
           <div
             className="absolute inset-3 rounded-r-xl rounded-l-xs pointer-events-none"
             style={{
               border: `1.5px solid ${data.theme.coverAccentColor || '#dfba6a'}`,
-              boxShadow: 'inset 0 0 10px rgba(223, 186, 106, 0.25)',
+              boxShadow: 'inset 0 0 12px rgba(223, 186, 106, 0.3)',
             }}
           >
-            {/* Corner Ornamental Dots */}
-            <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-[#dfba6a]"></div>
-            <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#dfba6a]"></div>
-            <div className="absolute bottom-1 left-1 w-2 h-2 rounded-full bg-[#dfba6a]"></div>
-            <div className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-[#dfba6a]"></div>
+            {/* Ornate Gold Filigree Corner Accents */}
+            <div className="absolute top-0.5 left-0.5 w-4 h-4 border-t-2 border-l-2 border-[#ffd700] rounded-tl-sm opacity-90"></div>
+            <div className="absolute top-0.5 right-0.5 w-4 h-4 border-t-2 border-r-2 border-[#ffd700] rounded-tr-sm opacity-90"></div>
+            <div className="absolute bottom-0.5 left-0.5 w-4 h-4 border-b-2 border-l-2 border-[#ffd700] rounded-bl-sm opacity-90"></div>
+            <div className="absolute bottom-0.5 right-0.5 w-4 h-4 border-b-2 border-r-2 border-[#ffd700] rounded-br-sm opacity-90"></div>
           </div>
 
           {/* Top Flourish */}
@@ -108,7 +108,7 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
           <div className="flex flex-col items-center my-auto text-center w-full px-2">
             {data.showEmblem && (
               <div
-                className={`mb-4 relative transition-all ${
+                className={`mb-4 relative flex items-center justify-center transition-all ${
                   isEditor ? 'hover:scale-105' : ''
                 } ${isSelected('coverEmblemUrl') ? 'ring-2 ring-[#dfba6a] ring-offset-2 ring-offset-[#6e1f2f] rounded-full' : ''}`}
                 onClick={(e) => {
@@ -118,10 +118,27 @@ export const CoverScene: React.FC<CoverSceneProps> = ({
                   }
                 }}
               >
+                {/* Rotating Sacred Golden Mandala Halo */}
+                <div className="absolute inset-0 -m-3 flex items-center justify-center pointer-events-none animate-mandala-spin opacity-85">
+                  <svg width="124" height="124" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="47" stroke="#dfba6a" strokeWidth="1" strokeDasharray="3 3" opacity="0.75" />
+                    <circle cx="50" cy="50" r="42" stroke="#dfba6a" strokeWidth="0.8" opacity="0.6" />
+                    {Array.from({ length: 12 }).map((_, idx) => (
+                      <g key={idx} transform={`rotate(${idx * 30} 50 50)`}>
+                        <path d="M50 3C47.5 13 52.5 13 50 3Z" fill="#dfba6a" opacity="0.75" />
+                        <circle cx="50" cy="6" r="1.2" fill="#ffd700" />
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+
+                {/* Soft Warm Radiant Glow */}
+                <div className="absolute w-24 h-24 rounded-full bg-amber-400/20 blur-md pointer-events-none"></div>
+
                 <img
                   src={data.coverEmblemUrl}
                   alt="Ganesh Medallion"
-                  className="w-24 h-24 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] object-contain"
+                  className="w-24 h-24 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] object-contain relative z-10"
                 />
               </div>
             )}

@@ -14,8 +14,9 @@ import { BirthdayActivitiesScene } from './BirthdayActivitiesScene';
 import { CorporateAgendaScene } from './CorporateAgendaScene';
 import { CustomProgramScene } from './CustomProgramScene';
 import { RsvpScene } from './RsvpScene';
-import { Volume2, VolumeX, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { Volume2, VolumeX, ChevronLeft, ChevronRight, RotateCcw, Sparkles } from 'lucide-react';
 import { weddingMusic } from '../../services/sound';
+import { CardEffectsLayer } from '../effects/CardEffectsLayer';
 
 interface InvitationPlayerProps {
   data: GenericInvitationData;
@@ -45,6 +46,16 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
   const [currentSceneIndex, setCurrentSceneIndex] = useState<number>(0);
   const [isBookOpen, setIsBookOpen] = useState<boolean>(false);
   const [isPlayingMusic, setIsPlayingMusic] = useState<boolean>(false);
+  const [enablePetals, setEnablePetals] = useState<boolean>(true);
+  const [enableDiya, setEnableDiya] = useState<boolean>(true);
+  const [enableFoilShimmer, setEnableFoilShimmer] = useState<boolean>(true);
+
+  // Stop soundtrack when player unmounts
+  useEffect(() => {
+    return () => {
+      weddingMusic.stop();
+    };
+  }, []);
 
   // Synchronize with external activeSceneId in editor mode
   useEffect(() => {
@@ -267,14 +278,21 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
 
   return (
     <div className="relative w-full flex flex-col items-center justify-center">
-      {/* Active Scene Display */}
-      <div className="w-full flex justify-center py-2">
-        {renderCurrentScene()}
+      {/* Active Scene Display with 3D Parallax Tilt, Petals & Gold Shimmer */}
+      <div className="w-full flex justify-center py-2 overflow-visible">
+        <CardEffectsLayer
+          category={data.category}
+          enablePetals={enablePetals}
+          enableDiya={enableDiya}
+          enableFoilShimmer={enableFoilShimmer}
+        >
+          {renderCurrentScene()}
+        </CardEffectsLayer>
       </div>
 
       {/* Floating Bottom Navigator for Demo & Guest Preview Mode */}
       {mode !== 'editor' && (
-        <div className="sticky bottom-4 z-40 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-lg border border-[#dfba6a]/50 flex items-center gap-3">
+        <div className="sticky bottom-4 z-40 bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-full shadow-lg border border-[#dfba6a]/50 flex items-center gap-2.5">
           {/* Previous Button */}
           <button
             onClick={handlePrevScene}
@@ -320,7 +338,19 @@ export const InvitationPlayer: React.FC<InvitationPlayerProps> = ({
             <ChevronRight className="w-5 h-5" />
           </button>
 
-          <div className="w-[1px] h-4 bg-[#dfba6a]/40 mx-1"></div>
+          <div className="w-[1px] h-4 bg-[#dfba6a]/40 mx-0.5"></div>
+
+          {/* Card Effects Toggle (Flower Petals & Sparkle) */}
+          <button
+            onClick={() => setEnablePetals(!enablePetals)}
+            className={`p-1.5 rounded-full transition-all ${
+              enablePetals ? 'bg-[#dfba6a]/25 text-[#6e1f2f]' : 'text-stone-400 hover:bg-[#faf7f2]'
+            }`}
+            title={enablePetals ? 'Flower Petal Rain: ON' : 'Flower Petal Rain: OFF'}
+            aria-label="Toggle flower petal shower effect"
+          >
+            <Sparkles className="w-4 h-4 text-[#c99a3e]" />
+          </button>
 
           {/* Music Controller */}
           <button

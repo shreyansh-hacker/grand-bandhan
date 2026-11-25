@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InvitationDraft } from '../types/invitation';
 import { InvitationPlayer } from '../components/invitation/InvitationPlayer';
 import { ArrowLeft, Share2, Check, UserCheck, Send, ExternalLink } from 'lucide-react';
 import { useLanguage, LanguageSwitcher } from '../locales';
+import { weddingMusic } from '../services/sound';
 
 interface GuestPreviewProps {
   draft: InvitationDraft;
@@ -20,6 +21,18 @@ export const GuestPreview: React.FC<GuestPreviewProps> = ({
   const [guestName, setGuestName] = useState<string>('Mr. & Mrs. Sharma');
   const [usePersonalizedLink, setUsePersonalizedLink] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  // Stop soundtrack when leaving preview
+  useEffect(() => {
+    return () => {
+      weddingMusic.stop();
+    };
+  }, []);
+
+  const handleBack = () => {
+    weddingMusic.stop();
+    onBackToStudio();
+  };
 
   const guestSlug = draft.slug || 'demo-event';
   const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/i/${guestSlug}${
@@ -39,7 +52,7 @@ export const GuestPreview: React.FC<GuestPreviewProps> = ({
         {/* Left: Back to Studio & Live Status */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            onClick={onBackToStudio}
+            onClick={handleBack}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#dfba6a] text-[#420f1b] text-xs font-bold hover:bg-[#ecd599] active:scale-95 transition-all shadow-sm"
           >
             <ArrowLeft className="w-4 h-4" />

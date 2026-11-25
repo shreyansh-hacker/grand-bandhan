@@ -1074,6 +1074,53 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               </div>
             </div>
 
+            {/* Card Special Effects (कार्ड स्पेशल इफेक्ट्स) */}
+            <div className="p-3.5 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#dfba6a]/20 border border-[#dfba6a] flex items-center justify-center text-[#6e1f2f]">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-[#6e1f2f] block leading-tight font-cinzel">
+                    Card Visual Effects:
+                  </span>
+                  <span className="text-[10px] text-stone-500 font-sans">
+                    3D Parallax Tilt, Gold Foil & Ambient Petals
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1 border-t border-[#f2ede4] text-xs">
+                {/* 1. Gold Foil Shimmer */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px]">✨</span>
+                    <span className="text-[11px] font-medium text-stone-700">Gold Foil Shimmer Sweep</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={data.theme.revealStyle !== 'fade'}
+                    onChange={(e) => onUpdateTheme('revealStyle', e.target.checked ? 'bloom' : 'fade')}
+                    className="w-4 h-4 accent-[#6e1f2f] rounded"
+                  />
+                </div>
+
+                {/* 2. Animation Rhythm */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] font-medium text-stone-700">Animation Rhythm:</span>
+                  <select
+                    value={data.theme.animationSpeed || 'normal'}
+                    onChange={(e) => onUpdateTheme('animationSpeed', e.target.value as any)}
+                    className="text-[11px] bg-[#faf7f2] border border-[#e8decb] rounded-lg px-2 py-0.5 outline-none font-sans"
+                  >
+                    <option value="slow">Royal Slow (धीमी)</option>
+                    <option value="normal">Normal (सामान्य)</option>
+                    <option value="fast">Swift (तेज़)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {/* Guest RSVP Settings */}
             <div className="p-3 rounded-xl bg-white border border-[#e8decb] shadow-xs space-y-3">
               <div className="flex items-center justify-between">
