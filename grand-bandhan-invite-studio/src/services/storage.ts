@@ -3,6 +3,7 @@ import { DEFAULT_ROYAL_WEDDING_DATA, DEFAULT_SCENES } from '../templates/royal-w
 import { DEFAULT_BIRTHDAY_DATA, DEFAULT_BIRTHDAY_SCENES } from '../templates/birthday-surprise-box/template';
 import { DEFAULT_CORPORATE_DATA, DEFAULT_CORPORATE_SCENES } from '../templates/corporate-event-pass/template';
 import { DEFAULT_CUSTOM_DATA, DEFAULT_CUSTOM_SCENES } from '../templates/custom-floral-arch/template';
+import { getTemplateById } from '../templates/catalog';
 
 const DRAFTS_INDEX_KEY = 'gb_invite_drafts_v2';
 const PUBLISHED_INDEX_KEY = 'gb_published_invites_v2';
@@ -117,33 +118,16 @@ export function checkCanPublish(draftId: string): { allowed: boolean; reason?: s
 }
 
 export function createInitialDraft(templateId = 'royal-wedding-book'): InvitationDraft {
-  let defaultData: GenericInvitationData;
-  let defaultScenes = DEFAULT_SCENES;
-  let draftName = 'Royal Wedding Invitation';
-  let category: any = 'wedding';
-  let slug = 'kabir-meera-wedding';
-
-  if (templateId === 'birthday-surprise-box') {
-    defaultData = JSON.parse(JSON.stringify(DEFAULT_BIRTHDAY_DATA));
-    defaultScenes = JSON.parse(JSON.stringify(DEFAULT_BIRTHDAY_SCENES));
-    draftName = "Aarav's 7th Birthday Party";
-    category = 'birthday';
-    slug = 'aarav-7th-birthday';
-  } else if (templateId === 'corporate-event-pass') {
-    defaultData = JSON.parse(JSON.stringify(DEFAULT_CORPORATE_DATA));
-    defaultScenes = JSON.parse(JSON.stringify(DEFAULT_CORPORATE_SCENES));
-    draftName = 'Tech Leadership Summit 2027';
-    category = 'corporate';
-    slug = 'tech-summit-2027';
-  } else if (templateId === 'custom-floral-door') {
-    defaultData = JSON.parse(JSON.stringify(DEFAULT_CUSTOM_DATA));
-    defaultScenes = JSON.parse(JSON.stringify(DEFAULT_CUSTOM_SCENES));
-    draftName = 'Shubh Griha Pravesh';
-    category = 'custom';
-    slug = 'sharma-housewarming';
-  } else {
-    defaultData = JSON.parse(JSON.stringify(DEFAULT_ROYAL_WEDDING_DATA));
-  }
+  const tmpl = getTemplateById(templateId);
+  const defaultData: GenericInvitationData = tmpl
+    ? JSON.parse(JSON.stringify(tmpl.defaultData))
+    : JSON.parse(JSON.stringify(DEFAULT_ROYAL_WEDDING_DATA));
+  const defaultScenes = tmpl
+    ? JSON.parse(JSON.stringify(tmpl.defaultScenes))
+    : JSON.parse(JSON.stringify(DEFAULT_SCENES));
+  const draftName = tmpl ? tmpl.nameEn : 'Royal Wedding Invitation';
+  const category = tmpl ? tmpl.category : 'wedding';
+  const slug = `${templateId.replace(/[^a-z0-9]/gi, '-')}-${Date.now().toString(36).slice(2, 6)}`;
 
   const newDraft: InvitationDraft = {
     id: `draft_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,

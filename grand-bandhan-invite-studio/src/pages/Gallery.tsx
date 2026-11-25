@@ -23,15 +23,45 @@ export const Gallery: React.FC<GalleryProps> = ({
   onOpenDashboard,
 }) => {
   const { lang, t } = useLanguage();
+  const [activeTab, setActiveTab] = React.useState<EventCategory | 'all'>(selectedCategory || 'all');
 
-  const categoriesList: { id: EventCategory; label: string }[] = [
-    { id: 'wedding', label: t.categories.wedding.name },
-    { id: 'birthday', label: t.categories.birthday.name },
-    { id: 'corporate', label: t.categories.corporate.name },
-    { id: 'custom', label: t.categories.custom.name },
+  React.useEffect(() => {
+    if (selectedCategory) {
+      setActiveTab(selectedCategory);
+    }
+  }, [selectedCategory]);
+
+  const categoriesList: { id: EventCategory | 'all'; label: string; count: number }[] = [
+    {
+      id: 'all',
+      label: lang === 'hi' ? 'सभी टेम्पलेट्स' : 'All Templates',
+      count: TEMPLATE_CATALOG.length,
+    },
+    {
+      id: 'wedding',
+      label: t.categories.wedding.name,
+      count: TEMPLATE_CATALOG.filter((t) => t.category === 'wedding').length,
+    },
+    {
+      id: 'birthday',
+      label: t.categories.birthday.name,
+      count: TEMPLATE_CATALOG.filter((t) => t.category === 'birthday').length,
+    },
+    {
+      id: 'corporate',
+      label: t.categories.corporate.name,
+      count: TEMPLATE_CATALOG.filter((t) => t.category === 'corporate').length,
+    },
+    {
+      id: 'custom',
+      label: t.categories.custom.name,
+      count: TEMPLATE_CATALOG.filter((t) => t.category === 'custom').length,
+    },
   ];
 
-  const templates = TEMPLATE_CATALOG.filter((t) => t.category === selectedCategory);
+  const templates = activeTab === 'all'
+    ? TEMPLATE_CATALOG
+    : TEMPLATE_CATALOG.filter((t) => t.category === activeTab);
 
   return (
     <div className="min-h-screen bg-[#faf7f2] flex flex-col justify-between p-4 sm:p-8 select-none">
@@ -73,14 +103,24 @@ export const Gallery: React.FC<GalleryProps> = ({
           {categoriesList.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => onSelectCategoryFilter(cat.id)}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                selectedCategory === cat.id
+              onClick={() => {
+                setActiveTab(cat.id);
+                if (cat.id !== 'all') onSelectCategoryFilter(cat.id);
+              }}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === cat.id
                   ? 'bg-[#6e1f2f] text-white shadow-md'
                   : 'bg-white text-[#7d6a58] border border-[#e8decb] hover:bg-[#faf7f2]'
               }`}
             >
-              {cat.label}
+              <span>{cat.label}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  activeTab === cat.id ? 'bg-[#dfba6a] text-[#420f1b]' : 'bg-stone-100 text-stone-600'
+                }`}
+              >
+                {cat.count}
+              </span>
             </button>
           ))}
         </div>
@@ -109,14 +149,7 @@ export const Gallery: React.FC<GalleryProps> = ({
               <div
                 className="relative h-56 p-6 flex flex-col items-center justify-center text-center overflow-hidden"
                 style={{
-                  background:
-                    tmpl.category === 'birthday'
-                      ? 'radial-gradient(circle at 50% 30%, #1d3557 0%, #102038 100%)'
-                      : tmpl.category === 'corporate'
-                      ? 'radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%)'
-                      : tmpl.category === 'custom'
-                      ? 'radial-gradient(circle at 50% 30%, #7f1d1d 0%, #450a0a 100%)'
-                      : 'radial-gradient(circle at 50% 30%, #852b3d 0%, #4b121e 70%, #2c0810 100%)',
+                  background: `radial-gradient(circle at 50% 30%, ${tmpl.defaultData.theme.coverColor || '#6e1f2f'}dd 0%, ${tmpl.defaultData.theme.coverColor || '#6e1f2f'} 65%, #050203 100%)`,
                 }}
               >
                 {/* Gold Frame Border */}
